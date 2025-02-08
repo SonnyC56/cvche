@@ -127,8 +127,8 @@ const MusicReactiveOceanGame = () => {
   // New ref to hold current amplitude (for potential reactivity)
   const amplitudeRef = useRef<number>(0);
 
-  // Helper: Compute complementary color (works for hex or rgba)
-  const getComplementaryColor = (color: string): string => {
+   // Helper: Compute complementary color (works for hex or rgba)
+   const getComplementaryColor = (color: string): string => {
     if (color.startsWith('#')) {
       let hex = color.slice(1);
       if (hex.length === 3) hex = hex.split('').map(ch => ch + ch).join('');
@@ -592,8 +592,8 @@ const MusicReactiveOceanGame = () => {
         const newItem: GameItem = {
           x: canvas.width,
           y: Math.random() * (canvas.height - 50),
-          width: 60,
-          height: 60,
+          width: 80,
+          height: 80,
           type: 'obstacle',
           speed: 3 + Math.random() * 2,
           pickupImage: obstacleImageRef.current || undefined,
@@ -716,18 +716,6 @@ const MusicReactiveOceanGame = () => {
     });
   }, [gameLoop]);
 
-  const resetColorEvents = useCallback(() => {
-    colorEventsRef.current.forEach(event => { event.triggered = false; });
-    activeColorTransitionRef.current = {
-      backgroundColor: "#FDEE03",
-      waveColor: "rgba(0,102,255,0.4)",
-      progress: 1,
-      targetBackgroundColor: "#FDEE03",
-      targetWaveColor: "rgba(0,102,255,0.4)",
-      transitionDuration: 2
-    };
-  }, []);
-
   const startGame = useCallback(() => {
     setGameStarted(true);
     backgroundColorRef.current = "#FDEE03";
@@ -811,18 +799,20 @@ const MusicReactiveOceanGame = () => {
         justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
-          <button
-            onClick={togglePause}
-            style={{
-              background: '#0066FF',
-              border: 'none',
-              color: '#fff',
-              padding: '5px 15px',
-              cursor: 'pointer',
-              borderRadius: '4px',
-            }}>
-            {isPaused ? 'Play' : 'Pause'}
-          </button>
+          {gameStarted && (
+            <button
+              onClick={togglePause}
+              style={{
+                background: '#0066FF',
+                border: 'none',
+                color: '#fff',
+                padding: '5px 15px',
+                cursor: 'pointer',
+                borderRadius: '4px',
+              }}>
+              {isPaused ? 'Play' : 'Pause'}
+            </button>
+          )}
           <div>Level 1 - WELCOME TO CVCHE</div>
           <div>Score: {score}</div>
         </div>
@@ -850,25 +840,47 @@ const MusicReactiveOceanGame = () => {
       {!gameStarted && (
         <div style={{
           position: 'absolute',
-          top: '50%',
+          top: '50dvh',
           left: '50%',
           transform: 'translate(-50%, -50%)',
           zIndex: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '2rem',
+          textAlign: 'center'
         }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <h1 style={{
+              fontSize: '4rem',
+              margin: 0,
+              color: 'black',
+              textShadow: '0 0 10px rgba(0,0,0,0.3)',
+              lineHeight: '1.2'
+              
+            }}>
+              Welcome to CVCHE
+            </h1>
+
+          </div>
           <button
             onClick={startGame}
             style={{
-              background: '#0066FF',
               border: 'none',
               color: '#fff',
-              padding: '20px 40px',
+              padding: '20px 60px',
               fontSize: '24px',
               borderRadius: '8px',
               cursor: 'pointer',
               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-              transition: 'transform 0.2s',
+              transition: 'transform 0.2s'
             }}>
-            Click to Start
+            Play
           </button>
         </div>
       )}
