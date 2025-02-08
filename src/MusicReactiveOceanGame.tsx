@@ -128,7 +128,7 @@ const MusicReactiveOceanGame = () => {
   const amplitudeRef = useRef<number>(0);
 
    // Helper: Compute complementary color (works for hex or rgba)
-   const getComplementaryColor = (color: string): string => {
+/*    const getComplementaryColor = (color: string): string => {
     if (color.startsWith('#')) {
       let hex = color.slice(1);
       if (hex.length === 3) hex = hex.split('').map(ch => ch + ch).join('');
@@ -148,7 +148,7 @@ const MusicReactiveOceanGame = () => {
     }
     return color;
   };
-
+ */
   // Helper: Interpolate between two colors
   const interpolateColor = (color1: string, color2: string, factor: number) => {
     if (color1.startsWith('rgba') && color2.startsWith('rgba')) {
