@@ -1,3 +1,4 @@
+// @ts-expect-error React is used for JSX
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 // Global declaration for Safari
@@ -70,7 +71,7 @@ const MusicReactiveOceanGame = () => {
   const gameLoopRef = useRef<boolean>(false);
   const lastBeatTimeRef = useRef<number>(0);
   const beatThreshold = 30; // Lower threshold for more frequent beat detection
-  const levelStartDelay = 0; // delay (in ms) before the level starts moving
+  const levelStartDelay = 0; // Delay (in ms) before the level starts moving
 
   // Store the requestAnimationFrame ID so we can cancel it on pause
   const animationFrameIdRef = useRef<number | null>(null);
@@ -84,7 +85,8 @@ const MusicReactiveOceanGame = () => {
   const waterBottleRef = useRef<HTMLImageElement | null>(null);
   const plasticBagRef = useRef<HTMLImageElement | null>(null);
   const obstacleImageRef = useRef<HTMLImageElement | null>(null);
-
+    // Speed multiplier ref
+    const speedMultiplier = useRef<number>(1);
   useEffect(() => {
     // Fish image (player)
     const fishImg = new Image();
@@ -127,8 +129,8 @@ const MusicReactiveOceanGame = () => {
   // Timed text events
   const timedTextEventsRef = useRef<TimedTextEvent[]>([
     { timestamp: 9.5, text: "Welcome to CVCHE!", triggered: false },
-    { timestamp: 30, text: "Keep going!", triggered: false },
-    { timestamp: 60, text: "You are awesome!", triggered: false },
+    { timestamp: 45, text: "Keep going!", triggered: false },
+    { timestamp: 90, text: "You are awesome!", triggered: false },
   ]);
   const activeTimedTextsRef = useRef<ActiveTimedText[]>([]);
 
@@ -332,7 +334,7 @@ const MusicReactiveOceanGame = () => {
   ) => {
     ctx.save();
     if (item.type === 'trash' && item.pickupImage) {
-      // Rotate 4× slower (increment by 0.0125 instead of 0.05)
+      // Rotate 4× slower than before (increment by 0.0125)
       item.rotation = (item.rotation || 0) + 0.0125;
       const effectiveWidth = item.width * pulse;
       const effectiveHeight = item.height * pulse;
@@ -342,7 +344,6 @@ const MusicReactiveOceanGame = () => {
       ctx.rotate(item.rotation!);
       ctx.drawImage(item.pickupImage, -effectiveWidth / 2, -effectiveHeight / 2, effectiveWidth, effectiveHeight);
     } else if (item.type === 'obstacle' && item.pickupImage) {
-      // Draw oil barrel (obstacle) image centered without rotation
       const effectiveWidth = item.width;
       const effectiveHeight = item.height;
       const centerX = item.x + effectiveWidth / 2;
@@ -358,8 +359,8 @@ const MusicReactiveOceanGame = () => {
   const updateAndDrawParticles = (ctx: CanvasRenderingContext2D, particles: Particle[]) => {
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
-      p.x += p.vx;
-      p.y += p.vy;
+      p.x += p.vx * speedMultiplier.current;
+      p.y += p.vy; // vertical motion unchanged
       p.life -= 0.02;
       p.opacity *= 0.97;
       if (p.life <= 0) {
@@ -453,7 +454,7 @@ const MusicReactiveOceanGame = () => {
     activeTimedTextsRef.current = activeTimedTextsRef.current.filter(item => item.lifetime > 0);
   };
 
-  // The main game loop
+  // Main game loop
   const gameLoop = useCallback(() => {
     if (!gameLoopRef.current || !canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
@@ -466,6 +467,12 @@ const MusicReactiveOceanGame = () => {
     const amplitude = getAverageAmplitude();
     const pulse = 1 + amplitude / 100;
 
+    // Compute speed multiplier based on song progress.
+    // Use the audio's currentTime (in ms) minus the levelStartDelay.
+    const audioTimeMs = audioRef.current ? audioRef.current.currentTime * 1000 : 0;
+    const effectiveTime = Math.max(0, audioTimeMs - levelStartDelay);
+    speedMultiplier.current = 1 + (effectiveTime / 1000) / 60;
+
     // Spawn items on beat
     if (detectBeat(amplitude)) {
       const isTrash = Math.random() > 0.5;
@@ -475,7 +482,7 @@ const MusicReactiveOceanGame = () => {
         const newItem: GameItem = {
           x: canvas.width,
           y: Math.random() * (canvas.height - 50),
-          width: 60, // 2× original 30
+          width: 60,
           height: 60,
           type: 'trash',
           speed: 3 + Math.random() * 2,
@@ -520,7 +527,7 @@ const MusicReactiveOceanGame = () => {
     // Update and draw trash items (pickups)
     for (let i = trashList.length - 1; i >= 0; i--) {
       const item = trashList[i];
-      item.x -= item.speed;
+      item.x -= item.speed * speedMultiplier.current;
       if (item.x + item.width * pulse < 0) {
         trashList.splice(i, 1);
         continue;
@@ -547,7 +554,7 @@ const MusicReactiveOceanGame = () => {
     // Update and draw obstacles
     for (let i = obstacles.length - 1; i >= 0; i--) {
       const item = obstacles[i];
-      item.x -= item.speed;
+      item.x -= item.speed * speedMultiplier.current;
       if (item.x + item.width < 0) {
         obstacles.splice(i, 1);
         continue;
@@ -576,12 +583,11 @@ const MusicReactiveOceanGame = () => {
     drawPlayer(ctx, player, fishImageRef.current);
 
     setScore(gameStateRef.current.score);
-    requestAnimationFrame(() => {
-      animationFrameIdRef.current = requestAnimationFrame(gameLoop);
-    });
+    // Request next frame and store its ID so we can cancel on pause
+    animationFrameIdRef.current = requestAnimationFrame(gameLoop);
   }, []);
 
-  // Use a separate animation loop to update the song progress and times
+  // Separate loop to update song progress and time display
   useEffect(() => {
     let progressAnimationFrameId: number;
     const updateProgress = () => {
@@ -603,7 +609,7 @@ const MusicReactiveOceanGame = () => {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
-  // Handle pause/resume so that the simulation does not speed up
+  // Handle pause/resume so that simulation speed is not affected by pausing
   const togglePause = useCallback(() => {
     setIsPaused(prev => {
       const newPaused = !prev;
@@ -705,6 +711,7 @@ const MusicReactiveOceanGame = () => {
             onClick={() => {
               setGameStarted(true);
               audioRef.current?.play();
+              // After the level start delay, start the simulation (the simulation’s speed will then be based on audio time)
               setTimeout(() => {
                 gameLoopRef.current = true;
                 gameLoop();
