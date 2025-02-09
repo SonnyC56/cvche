@@ -52,6 +52,7 @@ const UnderwaterTinyWingsSoundWaveGame: React.FC<Props> = ({ onGameStart }) => {
   // Game state
   const [gameStarted, setGameStarted] = useState(false);
   const [score, setScore] = useState(0);
+  console.log('score', score); 
   const distanceRef = useRef(0);
 
   // Terrain parameters – now with 3× vertical variance
@@ -145,7 +146,7 @@ const UnderwaterTinyWingsSoundWaveGame: React.FC<Props> = ({ onGameStart }) => {
   }, []);
 
   // Given an x coordinate, interpolate terrain y
-  const getTerrainYAt = useCallback((x: number, canvasWidth: number): number => {
+  const getTerrainYAt = useCallback((x: number): number => {
     const buffer = terrainBufferRef.current;
     const indexFloat = (x + scrollOffsetRef.current) / TERRAIN_SPACING;
     const index = Math.floor(indexFloat);
@@ -181,25 +182,25 @@ const UnderwaterTinyWingsSoundWaveGame: React.FC<Props> = ({ onGameStart }) => {
   }, []);
 
   // Spawn trash items occasionally.
-  const maybeSpawnTrash = useCallback((canvasWidth: number, effectiveSpeed: number) => {
+  const maybeSpawnTrash = useCallback((canvasWidth: number) => {
     if (Math.random() < 0.005) {
       const trashImg = new Image();
       trashImg.src = Math.random() > 0.5 ? '/sprites/waterBottle.webp' : '/sprites/plasticBag.webp';
       const width = 40, height = 40;
       const x = canvasWidth + 10;
-      const y = getTerrainYAt(x, canvasWidth) - height;
+      const y = getTerrainYAt(x) - height;
       trashItemsRef.current.push({ x, y, width, height, image: trashImg, collected: false });
     }
   }, [getTerrainYAt]);
 
   // Update trash items: scroll and check for collisions.
-  const updateTrash = useCallback((canvasWidth: number, effectiveSpeed: number) => {
+  const updateTrash = useCallback((effectiveSpeed: number) => {
     const fish = fishRef.current;
     const items = trashItemsRef.current;
     for (let i = items.length - 1; i >= 0; i--) {
       const item = items[i];
       item.x -= effectiveSpeed;
-      item.y = getTerrainYAt(item.x, canvasWidth) - item.height;
+      item.y = getTerrainYAt(item.x) - item.height;
       if (item.x + item.width < 0) {
         items.splice(i, 1);
         continue;
@@ -245,7 +246,7 @@ const UnderwaterTinyWingsSoundWaveGame: React.FC<Props> = ({ onGameStart }) => {
   }, []);
 
   // Draw the terrain using quadratic curves.
-  const drawTerrain = useCallback((ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number) => {
+  const drawTerrain = useCallback((ctx: CanvasRenderingContext2D, canvasHeight: number) => {
     const buffer = terrainBufferRef.current;
     const points: { x: number; y: number }[] = [];
     for (let i = 0; i < buffer.length; i++) {
@@ -292,8 +293,8 @@ const UnderwaterTinyWingsSoundWaveGame: React.FC<Props> = ({ onGameStart }) => {
 
     // Compute terrain slope at fish's position.
     const deltaX = TERRAIN_SPACING;
-    const y0 = getTerrainYAt(fish.x, canvas.width);
-    const y1 = getTerrainYAt(fish.x + deltaX, canvas.width);
+    const y0 = getTerrainYAt(fish.x);
+    const y1 = getTerrainYAt(fish.x + deltaX);
     const slopeAngle = Math.atan2(y1 - y0, deltaX);
 
     // Calculate effective horizontal speed.
@@ -311,8 +312,8 @@ const UnderwaterTinyWingsSoundWaveGame: React.FC<Props> = ({ onGameStart }) => {
 
     // Update terrain and trash.
     updateTerrainBuffer(effectiveSpeed);
-    maybeSpawnTrash(canvas.width, effectiveSpeed);
-    updateTrash(canvas.width, effectiveSpeed);
+    maybeSpawnTrash(canvas.width);
+    updateTrash(canvas.width);
 
     // --- Core Mechanics: Accumulated Speed & Launch from Downward Slopes ---
     // Only accumulate speed when on the ground and on a downward slope.
@@ -355,7 +356,7 @@ const UnderwaterTinyWingsSoundWaveGame: React.FC<Props> = ({ onGameStart }) => {
     }
 
     // --- Fish Physics ---
-    const groundY = getTerrainYAt(fish.x, canvas.width);
+    const groundY = getTerrainYAt(fish.x);
     if (!fish.onGround) {
       // If the fish was just launched, use reduced gravity for a graceful arc.
       const currentGravity = fish.launchTimer > 0 ? GRAVITY * 0.5 : GRAVITY + (isPressingDownRef.current ? EXTRA_GRAVITY : 0);
@@ -386,7 +387,7 @@ const UnderwaterTinyWingsSoundWaveGame: React.FC<Props> = ({ onGameStart }) => {
     // --- Rendering ---
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    drawTerrain(ctx, canvas.width, canvas.height);
+    drawTerrain(ctx, canvas.height);
     trashItemsRef.current.forEach(item => {
       if (item.image.complete) {
         ctx.drawImage(item.image, item.x, item.y, item.width, item.height);

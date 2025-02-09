@@ -98,11 +98,6 @@ interface GameState {
   highestStreak: number;
 }
 
-// Extend HTMLAudioElement for our audio context.
-interface ExtendedHTMLAudioElement extends HTMLAudioElement {
-  _mediaElementSource?: MediaElementAudioSourceNode;
-  _audioCtx?: AudioContext;
-}
 
 interface Props {
   onGameStart?: () => void;
@@ -125,7 +120,7 @@ function cloneAudioBuffer(audioBuffer: AudioBuffer, context: AudioContext): Audi
 
 // ----------------- Helper Drawing Functions -----------------
 
-const interpolateColor = (color1: string, color2: string, factor: number) => {
+/* const interpolateColor = (color1: string, color2: string, factor: number) => {
   if (color1.startsWith('rgba') && color2.startsWith('rgba')) {
     const c1 = color1.match(/[\d.]+/g)?.map(Number) || [];
     const c2 = color2.match(/[\d.]+/g)?.map(Number) || [];
@@ -143,7 +138,7 @@ const interpolateColor = (color1: string, color2: string, factor: number) => {
   const g = Math.round(g1 + (g2 - g1) * factor);
   const b = Math.round(b1 + (b2 - b1) * factor);
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
-};
+}; */
 
 const drawBackgroundPattern = (ctx: CanvasRenderingContext2D, amplitudeFactor: number, canvas: HTMLCanvasElement) => {
   ctx.save();
@@ -230,7 +225,7 @@ const drawSpectrum = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, 
   }
 };
 
-const drawFlora = (ctx: CanvasRenderingContext2D, amplitude: number, canvas: HTMLCanvasElement, speedMultiplier: number, floraItems: Flora[], floraImages: HTMLImageElement[]) => {
+const drawFlora = (ctx: CanvasRenderingContext2D, amplitude: number, canvas: HTMLCanvasElement, speedMultiplier: number, floraItems: Flora[]) => {
   const time = Date.now() / 1000;
   floraItems.forEach((flora) => {
     flora.x -= flora.scrollSpeed * speedMultiplier;
@@ -379,6 +374,8 @@ const UnderwaterDoodleJump: React.FC<Props> = ({ onGameStart }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [levelEnded, setLevelEnded] = useState(false);
+
+  console.log('score', score);
 
   const [currentLevel, setCurrentLevel] = useState<Level>({
     id: 2,
@@ -635,7 +632,7 @@ const UnderwaterDoodleJump: React.FC<Props> = ({ onGameStart }) => {
     drawBackground(ctx, amplitude / 100, backgroundColorRef.current, canvas);
     drawBeatPulse(ctx, canvas, beatPulseRef.current);
     drawSpectrum(ctx, canvas, waveColorRef.current, analyserRef.current, dataArrayRef.current);
-    drawFlora(ctx, amplitude, canvas, speedMultiplier.current, floraItemsRef.current, floraImagesRef.current);
+    drawFlora(ctx, amplitude, canvas, speedMultiplier.current, floraItemsRef.current);
     updateAndDrawBubbles(ctx, canvas, amplitude, bubblesRef.current);
 
     // Update player physics.
@@ -770,7 +767,7 @@ const UnderwaterDoodleJump: React.FC<Props> = ({ onGameStart }) => {
     updateAndDrawScorePopups(ctx, gameStateRef.current.scorePopups);
     drawPlayer(ctx, player, fishImageRef.current);
 
-    setScore(gameStateRef.current.score);
+   setScore(gameStateRef.current.score);
     animationFrameIdRef.current = requestAnimationFrame(gameLoop);
   }, [getAverageAmplitude, startForwardPlayback, startReversePlayback, resetGame]);
 
