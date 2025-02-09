@@ -866,7 +866,7 @@ const MusicReactiveOceanGame = () => {
     // Update speed multiplier
     const audioTimeMs = audioRef.current ? audioRef.current.currentTime * 1000 : 0;
     const effectiveTime = Math.max(0, audioTimeMs - levelStartDelay);
-    speedMultiplier.current = 1 + (effectiveTime / 1000) / 120;
+    speedMultiplier.current = 1 + ((effectiveTime / 1000) / 120) * 0.75; // Reduced to 75% of original speed
 
     // On beat, spawn trash or obstacle
     if (detectBeat(amplitude)) {
@@ -886,8 +886,11 @@ const MusicReactiveOceanGame = () => {
         gameStateRef.current.trashList.push(newItem);
         gameStateRef.current.trashStats.totalSpawned++;
       } else {
-        // Original level spawns both trash and obstacles
-        if (Math.random() > 0.5) {
+        const songProgress = (audioRef.current?.currentTime || 0) / songDuration;
+        const hookSizeMultiplier = 1 - (Math.min(Math.max((songProgress - 0.25) * 4, 0), 1) * 0.25);
+
+        // Always spawn trash with 50% chance
+        if (Math.random() < 0.5) {
           const pickupImage = (Math.random() > 0.5 ? waterBottleRef.current : plasticBagRef.current) || undefined;
           const newItem: GameItem = {
             x: canvas.width,
@@ -901,22 +904,11 @@ const MusicReactiveOceanGame = () => {
           };
           gameStateRef.current.trashList.push(newItem);
           gameStateRef.current.trashStats.totalSpawned++;
-        } else {
-          const currentAudioTime = audioRef.current?.currentTime || 0;
-          if (currentAudioTime >= songDuration * 0.01 && Math.random() < 0.3) {
-            const fishhookY = canvas.height * (Math.random() * -0.25);
-            const newItem: GameItem = {
-              x: canvas.width,
-              y: fishhookY,
-              width: 100,
-              height: 300,
-              type: 'fishhook',
-              speed: 3 + Math.random() * 2,
-              pickupImage: fishHookRef.current || undefined,
-              baseY: fishhookY
-            };
-            gameStateRef.current.obstacles.push(newItem);
-          } else {
+        } 
+        // Obstacle spawning based on song progress
+        else {
+          // 0-25%: Barrels only
+          if (songProgress < 0.25 && songProgress > 0.1) {
             const newItem: GameItem = {
               x: canvas.width,
               y: Math.random() * (canvas.height - 50),
@@ -925,10 +917,69 @@ const MusicReactiveOceanGame = () => {
               type: 'obstacle',
               speed: 3 + Math.random() * 2,
               pickupImage: obstacleImageRef.current || undefined,
-              baseY: undefined,
+              baseY: Math.random() * (canvas.height - 50)
             };
-            newItem.baseY = newItem.y;
             gameStateRef.current.obstacles.push(newItem);
+          }
+          // 25-50%: Hooks only (with size reduction)
+          else if (songProgress >= 0.25 && songProgress < 0.5) {
+            const fishhookY = canvas.height * (Math.random() * -0.25);
+            const baseHookHeight = 300;
+            const newItem: GameItem = {
+              x: canvas.width,
+              y: fishhookY,
+              width: 100 * hookSizeMultiplier,
+              height: baseHookHeight * hookSizeMultiplier,
+              type: 'fishhook',
+              speed: 3 + Math.random() * 2,
+              pickupImage: fishHookRef.current || undefined,
+              baseY: fishhookY
+            };
+            gameStateRef.current.obstacles.push(newItem);
+          }
+          // 50-70%: Back to barrels only
+          else if (songProgress >= 0.5 && songProgress < 0.7) {
+            const newItem: GameItem = {
+              x: canvas.width,
+              y: Math.random() * (canvas.height - 50),
+              width: 80,
+              height: 100,
+              type: 'obstacle',
+              speed: 3 + Math.random() * 2,
+              pickupImage: obstacleImageRef.current || undefined,
+              baseY: Math.random() * (canvas.height - 50)
+            };
+            gameStateRef.current.obstacles.push(newItem);
+          }
+          // 70-100%: Both hooks and barrels
+          else if (songProgress >= 0.7) {
+            if (Math.random() < 0.5) {
+              const fishhookY = canvas.height * (Math.random() * -0.25);
+              const baseHookHeight = 300;
+              const newItem: GameItem = {
+                x: canvas.width,
+                y: fishhookY,
+                width: 100 * hookSizeMultiplier,
+                height: baseHookHeight * hookSizeMultiplier,
+                type: 'fishhook',
+                speed: 3 + Math.random() * 2,
+                pickupImage: fishHookRef.current || undefined,
+                baseY: fishhookY
+              };
+              gameStateRef.current.obstacles.push(newItem);
+            } else {
+              const newItem: GameItem = {
+                x: canvas.width,
+                y: Math.random() * (canvas.height - 50),
+                width: 80,
+                height: 100,
+                type: 'obstacle',
+                speed: 3 + Math.random() * 2,
+                pickupImage: obstacleImageRef.current || undefined,
+                baseY: Math.random() * (canvas.height - 50)
+              };
+              gameStateRef.current.obstacles.push(newItem);
+            }
           }
         }
       }

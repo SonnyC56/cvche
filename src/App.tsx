@@ -29,7 +29,13 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ 
+      width: '100vw', 
+      height: '100vh', 
+      position: 'relative', 
+      overflow: 'hidden',
+      fontFamily: 'Orbitron, sans-serif'
+    }}>
       {!isLandscape && (
         <div
           style={{
