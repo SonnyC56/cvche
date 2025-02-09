@@ -24,10 +24,11 @@ interface GameItem {
   y: number;
   width: number;
   height: number;
-  type: 'trash' | 'obstacle';
+  type: 'trash' | 'obstacle' | 'fishhook';
   speed: number;
   rotation?: number;
   pickupImage?: HTMLImageElement;
+  baseY?: number;
 }
 
 interface ExtendedHTMLAudioElement extends HTMLAudioElement {
@@ -71,7 +72,6 @@ interface ActiveColor {
   transitionDuration: number;
 }
 
-// Type for a star in the sparkling stars effect
 interface Star {
   x: number;
   y: number;
@@ -80,7 +80,29 @@ interface Star {
   speed: number;
 }
 
+interface Bubble {
+  x: number;
+  y: number;
+  radius: number;
+  speed: number;
+  opacity: number;
+}
+
+interface Flora {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  image: HTMLImageElement;
+  swayOffset: number;
+  swaySpeed: number;
+  scrollSpeed: number; // Add scroll speed property
+}
+
 const MusicReactiveOceanGame = () => {
+  // Add new state for flora loading
+  const [floraLoaded, setFloraLoaded] = useState(false);
+  
   // UI state
   const [audioProgress, setAudioProgress] = useState(0);
   const [score, setScore] = useState(0);
@@ -88,6 +110,7 @@ const MusicReactiveOceanGame = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [levelEnded, setLevelEnded] = useState(false);
 
   // Instead of state for colors, use refs so updates are immediate.
   const backgroundColorRef = useRef("#FDEE03");
@@ -121,34 +144,25 @@ const MusicReactiveOceanGame = () => {
   const waterBottleRef = useRef<HTMLImageElement | null>(null);
   const plasticBagRef = useRef<HTMLImageElement | null>(null);
   const obstacleImageRef = useRef<HTMLImageElement | null>(null);
+  const fishHookRef = useRef<HTMLImageElement | null>(null);
+
   // Speed multiplier ref
   const speedMultiplier = useRef<number>(1);
 
   // New ref to hold current amplitude (for potential reactivity)
   const amplitudeRef = useRef<number>(0);
 
-   // Helper: Compute complementary color (works for hex or rgba)
-/*    const getComplementaryColor = (color: string): string => {
-    if (color.startsWith('#')) {
-      let hex = color.slice(1);
-      if (hex.length === 3) hex = hex.split('').map(ch => ch + ch).join('');
-      const r = 255 - parseInt(hex.substring(0, 2), 16);
-      const g = 255 - parseInt(hex.substring(2, 4), 16);
-      const b = 255 - parseInt(hex.substring(4, 6), 16);
-      return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-    } else if (color.startsWith('rgba')) {
-      const components = color.match(/[\d.]+/g);
-      if (components && components.length >= 3) {
-        const r = 255 - Number(components[0]);
-        const g = 255 - Number(components[1]);
-        const b = 255 - Number(components[2]);
-        const a = components[3] ? Number(components[3]) : 1;
-        return `rgba(${r},${g},${b},${a})`;
-      }
-    }
-    return color;
-  };
- */
+  // Bubbles ref
+  const bubblesRef = useRef<Bubble[]>([]);
+
+  // Add flora refs
+  const floraImagesRef = useRef<HTMLImageElement[]>([]);
+  const floraItemsRef = useRef<Flora[]>([]);
+
+  // Add new refs for sound effects
+  const pickupSoundRef = useRef<HTMLAudioElement | null>(null);
+  const hitSoundRef = useRef<HTMLAudioElement | null>(null);
+
   // Helper: Interpolate between two colors
   const interpolateColor = (color1: string, color2: string, factor: number) => {
     if (color1.startsWith('rgba') && color2.startsWith('rgba')) {
@@ -171,7 +185,6 @@ const MusicReactiveOceanGame = () => {
   };
 
   useEffect(() => {
-    // Preload images for player and pickups/obstacles
     const fishImg = new Image();
     fishImg.onload = () => { fishImageRef.current = fishImg; };
     fishImg.src = '/sprites/cvcheFish.png';
@@ -186,20 +199,90 @@ const MusicReactiveOceanGame = () => {
 
     const barrelImg = new Image();
     barrelImg.onload = () => { obstacleImageRef.current = barrelImg; };
-    barrelImg.src = '/sprites/oilBarrel.png';
+    barrelImg.src = '/sprites/oilBarrel.webp';
+
+    const hookImg = new Image();
+    hookImg.onload = () => { fishHookRef.current = hookImg; };
+    hookImg.src = '/sprites/fishHook.png';
+
+    // Initialize sound effects
+    const pickupSound = new Audio('/sounds/pickup.mp3');
+    pickupSound.volume = 0.3;
+    pickupSoundRef.current = pickupSound;
+
+    const hitSound = new Audio('/sounds/hit.mp3');
+    hitSound.volume = 0.3;
+    hitSoundRef.current = hitSound;
   }, []);
 
-  // Persistent game state
+  useEffect(() => {
+    // Load flora images
+    const floraFileNames = ['1 (1).webp', ...Array.from({ length: 45 }, (_, i) => `1 (${i + 16}).webp`)];
+    let loadedCount = 0;
+
+    floraFileNames.forEach(fileName => {
+      const img = new Image();
+      img.onload = () => {
+        floraImagesRef.current.push(img);
+        loadedCount++;
+        // Initialize flora when we have all images
+        if (loadedCount === floraFileNames.length) {
+          initializeFlora();
+          setFloraLoaded(true);
+        }
+      };
+      img.src = `/sprites/flora/${fileName}`;
+    });
+  }, []);
+
+  const initializeFlora = useCallback(() => {
+    if (!canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    floraItemsRef.current = [];
+
+    // Create more flora with better spacing
+    for (let x = 0; x < canvas.width * 2; x += 50) { // Reduced spacing
+      if (Math.random() < 0.8) { // Increased probability
+        const randomImage = floraImagesRef.current[Math.floor(Math.random() * floraImagesRef.current.length)];
+        const height = 30 + Math.random() * 80; // Adjusted size range
+        const width = (height / randomImage.height) * randomImage.width;
+        
+        floraItemsRef.current.push({
+          x: x + (Math.random() * 50 - 25), // Add some random offset
+          y: canvas.height,
+          width,
+          height,
+          image: randomImage,
+          swayOffset: Math.random() * Math.PI * 2,
+          swaySpeed: 0.3 + Math.random() * 0.4, // Slightly slower sway
+          scrollSpeed: 1.5 + Math.random() // Slightly slower scroll
+        });
+      }
+    }
+  }, []);
+
+  // Persistent game state (includes trash stats and player rotation)
   const gameStateRef = useRef({
-    player: { x: 100, y: window.innerHeight / 2, width: 50, height: 30, speed: 5 },
+    player: { 
+      x: 100, 
+      y: window.innerHeight / 2, 
+      width: 50, 
+      height: 30, 
+      speed: 5, 
+      rotation: 0,
+      spinRotation: 0, // Add this new property
+      vy: 0  // Add vertical velocity tracking
+    },
     trashList: [] as GameItem[],
     obstacles: [] as GameItem[],
     particles: [] as Particle[],
     score: 0,
     scorePopups: [] as ScorePopup[],
+    trashStats: { totalSpawned: 0, collected: 0, missed: 0 }
   });
 
-  // Timed text events
+  // Timed text events remain in use
   const timedTextEventsRef = useRef<TimedTextEvent[]>([
     { timestamp: 9.5, text: "WELCOME TO CVCHE!", triggered: false },
     { timestamp: 60, text: "Keep going!", triggered: false },
@@ -341,7 +424,7 @@ const MusicReactiveOceanGame = () => {
     return false;
   };
 
-  // Draw background and spectrum (same as before)
+  // Draw background pattern and spectrum
   const drawBackgroundPattern = (ctx: CanvasRenderingContext2D, amplitudeFactor: number) => {
     if (!canvasRef.current) return;
     ctx.save();
@@ -353,7 +436,7 @@ const MusicReactiveOceanGame = () => {
       const offset = i * 50, timeOffset = Date.now() / (1000 + i * 500);
       for (let x = 0; x < width; x += 5) {
         const frequency = (4 + Math.sin(timeOffset) * 2) * (1 + amplitudeFactor * 0.5);
-        const y = height / 2 + Math.sin((x / width * frequency * Math.PI) + timeOffset + offset) * (50 + amplitudeFactor * 70);
+        const y = height / 1 + Math.sin((x / width * frequency * Math.PI) + timeOffset + offset) * (50 + amplitudeFactor * 70);
         if (x === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -422,7 +505,14 @@ const MusicReactiveOceanGame = () => {
     const aspect = fishImg.naturalWidth / fishImg.naturalHeight;
     const drawWidth = player.width * 1.25;
     const drawHeight = drawWidth / aspect;
-    ctx.drawImage(fishImg, player.x - drawWidth / 2 + 20, player.y - drawHeight / 2, drawWidth, drawHeight);
+    ctx.save();
+    const centerX = player.x + player.width / 2;
+    const centerY = player.y + player.height / 2;
+    ctx.translate(centerX, centerY);
+    // Combine movement rotation and spin rotation
+    ctx.rotate(player.rotation + player.spinRotation);
+    ctx.drawImage(fishImg, -drawWidth / 2 + 20, -drawHeight / 2, drawWidth, drawHeight);
+    ctx.restore();
   };
 
   const drawItem = (ctx: CanvasRenderingContext2D, item: GameItem, pulse: number) => {
@@ -437,6 +527,11 @@ const MusicReactiveOceanGame = () => {
       ctx.rotate(item.rotation!);
       ctx.drawImage(item.pickupImage, -effectiveWidth / 2, -effectiveHeight / 2, effectiveWidth, effectiveHeight);
     } else if (item.type === 'obstacle' && item.pickupImage) {
+      const effectiveWidth = item.width, effectiveHeight = item.height;
+      const centerX = item.x + effectiveWidth / 2, centerY = item.y + effectiveHeight / 2;
+      ctx.drawImage(item.pickupImage, centerX - effectiveWidth / 2, centerY - effectiveHeight / 2, effectiveWidth, effectiveHeight);
+    } else if (item.type === 'fishhook' && item.pickupImage) {
+      // Use the preloaded fishHook image for fishhooks.
       const effectiveWidth = item.width, effectiveHeight = item.height;
       const centerX = item.x + effectiveWidth / 2, centerY = item.y + effectiveHeight / 2;
       ctx.drawImage(item.pickupImage, centerX - effectiveWidth / 2, centerY - effectiveHeight / 2, effectiveWidth, effectiveHeight);
@@ -478,8 +573,8 @@ const MusicReactiveOceanGame = () => {
   };
 
   const createSwimParticles = (particles: Particle[], player: typeof gameStateRef.current.player) => {
-    const fishCenterX = player.x + (player.width * 1.25) / 2;
-    const fishCenterY = player.y + player.height / 2 - 10;
+    const fishCenterX = player.x + (player.width );
+    const fishCenterY = player.y + player.height / 2 ;
     const tailX = fishCenterX - player.width;
     particles.push({
       x: tailX,
@@ -492,6 +587,8 @@ const MusicReactiveOceanGame = () => {
       opacity: 0.8,
     });
   };
+
+  // Dramatic bubble effect with increased spawn frequency, larger bubbles, and horizontal drift.
 
   const updateAndDrawScorePopups = (ctx: CanvasRenderingContext2D) => {
     const popups = gameStateRef.current.scorePopups;
@@ -526,6 +623,74 @@ const MusicReactiveOceanGame = () => {
     activeTimedTextsRef.current = activeTimedTextsRef.current.filter(item => item.lifetime > 0);
   };
 
+  const updateAndDrawBubbles = (ctx: CanvasRenderingContext2D) => {
+    const canvas = ctx.canvas;
+    const amplitude = amplitudeRef.current;
+    // Spawn new bubbles based on amplitude (more when louder)
+    if (Math.random() < (amplitude / 255) * 0.5) {
+      bubblesRef.current.push({
+        x: Math.random() * canvas.width,
+        y: canvas.height,
+        radius: 2 + Math.random() * 3,
+        speed: 1 + Math.random() * 2,
+        opacity: 1,
+      });
+    }
+    // Update and draw each bubble
+    for (let i = bubblesRef.current.length - 1; i >= 0; i--) {
+      const bubble = bubblesRef.current[i];
+      bubble.y -= bubble.speed;
+      bubble.opacity -= 0.005;
+      if (bubble.opacity <= 0 || bubble.y + bubble.radius < 0) {
+        bubblesRef.current.splice(i, 1);
+        continue;
+      }
+      ctx.beginPath();
+      ctx.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(173,216,230,${bubble.opacity})`;
+      ctx.fill();
+    }
+  };
+
+  // Replace drawFlora with this optimized version
+  const drawFlora = useCallback((ctx: CanvasRenderingContext2D, amplitude: number) => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const time = Date.now() / 1000;
+    
+    floraItemsRef.current.forEach((flora) => {
+      flora.x -= flora.scrollSpeed * speedMultiplier.current;
+
+      if (flora.x + flora.width < 0) {
+        flora.x = canvas.width + (Math.random() * 100);
+      }
+
+      flora.y = canvas.height;
+
+      ctx.save();
+      
+      const sway = Math.sin(time * flora.swaySpeed + flora.swayOffset) * (5 + amplitude / 10);
+      const pivotX = flora.x + flora.width / 2;
+      const pivotY = flora.y;
+      
+      ctx.translate(pivotX, pivotY);
+      ctx.rotate(sway * 0.05);
+      
+      // Draw with semi-transparency
+      ctx.globalAlpha = 0.50;
+      ctx.drawImage(
+        flora.image,
+        -flora.width / 2,
+        -flora.height,
+        flora.width,
+        flora.height
+      );
+
+
+      ctx.restore();
+    });
+  }, []);
+
   // Main game loop
   const gameLoop = useCallback(() => {
     if (!gameLoopRef.current || !canvasRef.current) return;
@@ -536,6 +701,8 @@ const MusicReactiveOceanGame = () => {
     canvas.height = window.innerHeight;
 
     const audioTime = audioRef.current?.currentTime || 0;
+    const songDuration = audioRef.current?.duration || 1;
+
     // Handle color transitions
     colorEventsRef.current.forEach(event => {
       if (!event.triggered && audioTime >= event.timestamp) {
@@ -562,20 +729,19 @@ const MusicReactiveOceanGame = () => {
       if (containerRef.current) containerRef.current.style.background = newBg;
     }
 
-    // Update amplitude and shared ref for reactivity
+    // Update amplitude and pulse factor
     const amplitude = getAverageAmplitude();
     amplitudeRef.current = amplitude;
     const pulse = 1 + amplitude / 100;
 
-    // Slower speed multiplier (max speed is half)
+    // Update speed multiplier
     const audioTimeMs = audioRef.current ? audioRef.current.currentTime * 1000 : 0;
     const effectiveTime = Math.max(0, audioTimeMs - levelStartDelay);
     speedMultiplier.current = 1 + (effectiveTime / 1000) / 120;
 
-    // On beat, spawn trash or obstacle (no extra music particles)
+    // On beat, spawn trash or obstacle
     if (detectBeat(amplitude)) {
-      const isTrash = Math.random() > 0.5;
-      if (isTrash) {
+      if (Math.random() > 0.5) {
         const pickupImage = (Math.random() > 0.5 ? waterBottleRef.current : plasticBagRef.current) || undefined;
         const newItem: GameItem = {
           x: canvas.width,
@@ -588,39 +754,91 @@ const MusicReactiveOceanGame = () => {
           pickupImage,
         };
         gameStateRef.current.trashList.push(newItem);
+        gameStateRef.current.trashStats.totalSpawned++;
       } else {
-        const newItem: GameItem = {
-          x: canvas.width,
-          y: Math.random() * (canvas.height - 50),
-          width: 80,
-          height: 80,
-          type: 'obstacle',
-          speed: 3 + Math.random() * 2,
-          pickupImage: obstacleImageRef.current || undefined,
-        };
-        gameStateRef.current.obstacles.push(newItem);
+        const currentAudioTime = audioRef.current?.currentTime || 0;
+        if (currentAudioTime >= songDuration * 0.01 && Math.random() < 0.3) {
+          const fishhookY = canvas.height * ( Math.random() * -0.25);
+          const newItem: GameItem = {
+            x: canvas.width,
+            y: fishhookY,
+            width: 200,
+            height: 300,
+            type: 'fishhook',
+            speed: 3 + Math.random() * 2,
+            pickupImage: fishHookRef.current || undefined,
+            baseY: fishhookY
+          };
+          gameStateRef.current.obstacles.push(newItem);
+        } else {
+          const newItem: GameItem = {
+            x: canvas.width,
+            y: Math.random() * (canvas.height - 50),
+            width: 80,
+            height: 100,
+            type: 'obstacle',
+            speed: 3 + Math.random() * 2,
+            pickupImage: obstacleImageRef.current || undefined,
+            baseY: undefined,
+          };
+          newItem.baseY = newItem.y;
+          gameStateRef.current.obstacles.push(newItem);
+        }
       }
     }
 
     drawBackground(ctx, amplitude / 100);
     drawSpectrum(ctx);
-
+    drawFlora(ctx, amplitude); // Add this line here
+    // Process timed text events (timedTextEventsRef remains in use)
     timedTextEventsRef.current.forEach(event => {
       if (!event.triggered && audioTime >= event.timestamp) {
         event.triggered = true;
         activeTimedTextsRef.current.push({ text: event.text, lifetime: 200 });
       }
     });
+
+    // Update and draw dramatic bubbles
+    updateAndDrawBubbles(ctx);
     updateAndDrawTimedTexts(ctx);
 
     if (inputRef.current.isDesktop || inputRef.current.isTouching) {
-      gameStateRef.current.player.y += (inputRef.current.touchY - (gameStateRef.current.player.y + gameStateRef.current.player.height / 2)) * 0.1;
+      const targetY = inputRef.current.touchY - (gameStateRef.current.player.height / 2);
+      const currentY = gameStateRef.current.player.y;
+      const dy = targetY - currentY;
+      
+      // Update velocity with smoothing
+      gameStateRef.current.player.vy = gameStateRef.current.player.vy * 0.9 + dy * 0.1;
+      
+      // Update position
+      gameStateRef.current.player.y += gameStateRef.current.player.vy * 0.1;
+      
+      // Calculate movement-based rotation
+      const targetRotation = Math.atan2(gameStateRef.current.player.vy * 0.1, 2) * 0.5;
+      gameStateRef.current.player.rotation = targetRotation;
+    } else {
+      // Gradually return to neutral rotation when not moving
+      gameStateRef.current.player.vy *= 0.95;
+      gameStateRef.current.player.rotation *= 0.95;
     }
 
+    // Update spin rotation (add this section)
+    if (gameStateRef.current.player.spinRotation !== 0) {
+      gameStateRef.current.player.spinRotation *= 0.97;
+      if (Math.abs(gameStateRef.current.player.spinRotation) < 0.01) {
+        gameStateRef.current.player.spinRotation = 0;
+      }
+    }
+
+    // Process trash items
     for (let i = gameStateRef.current.trashList.length - 1; i >= 0; i--) {
       const item = gameStateRef.current.trashList[i];
       item.x -= item.speed * speedMultiplier.current;
-      if (item.x + item.width * pulse < 0) { gameStateRef.current.trashList.splice(i, 1); continue; }
+      if (item.x + item.width * pulse < 0) { 
+        gameStateRef.current.trashStats.missed++; 
+        gameStateRef.current.trashList.splice(i, 1); 
+        continue; 
+      }
       const effectiveWidth = item.width * pulse;
       const effectiveHeight = item.height * pulse;
       if (
@@ -630,20 +848,30 @@ const MusicReactiveOceanGame = () => {
         gameStateRef.current.player.y + gameStateRef.current.player.height > item.y
       ) {
         gameStateRef.current.score += 10;
+        gameStateRef.current.trashStats.collected++;
         const popupX = item.x + effectiveWidth / 2;
         const popupY = item.y + effectiveHeight / 2;
         gameStateRef.current.scorePopups.push({ x: popupX, y: popupY, text: "+10", opacity: 1, lifetime: 100 });
         createParticles(gameStateRef.current.particles, item.x, item.y, '#00FF00', 20);
+        pickupSoundRef.current?.play().catch(console.error); // Add this line
         gameStateRef.current.trashList.splice(i, 1);
       } else {
         drawItem(ctx, item, pulse);
       }
     }
 
+    // Process obstacles (oil barrels and fishhooks)
     for (let i = gameStateRef.current.obstacles.length - 1; i >= 0; i--) {
       const item = gameStateRef.current.obstacles[i];
       item.x -= item.speed * speedMultiplier.current;
-      if (item.x + item.width < 0) { gameStateRef.current.obstacles.splice(i, 1); continue; }
+      if (audioTime >= songDuration * 0.5 && item.baseY !== undefined) {
+        const bobbingOffset = Math.sin(Date.now() / 200) * 10 * (amplitudeRef.current / 100);
+        item.y = item.baseY + bobbingOffset;
+      }
+      if (item.x + item.width < 0) { 
+        gameStateRef.current.obstacles.splice(i, 1); 
+        continue; 
+      }
       if (
         gameStateRef.current.player.x < item.x + item.width &&
         gameStateRef.current.player.x + gameStateRef.current.player.width > item.x &&
@@ -655,15 +883,35 @@ const MusicReactiveOceanGame = () => {
         const popupY = item.y + item.height / 2;
         gameStateRef.current.scorePopups.push({ x: popupX, y: popupY, text: "-20", opacity: 1, lifetime: 100 });
         createParticles(gameStateRef.current.particles, item.x, item.y, '#FF0000', 20);
+        hitSoundRef.current?.play().catch(console.error);
+        
+        // Set spin rotation instead of regular rotation
+        if (item.type === 'fishhook') {
+          gameStateRef.current.player.spinRotation = Math.PI * 4; // Four full rotations
+        } else {
+          gameStateRef.current.player.spinRotation = -Math.PI * 4; // Four full rotations in opposite direction
+        }
+        
         gameStateRef.current.obstacles.splice(i, 1);
+        continue;
       } else {
         drawItem(ctx, item, 1);
       }
     }
 
+    // Restore the fish trail from behind the player
     createSwimParticles(gameStateRef.current.particles, gameStateRef.current.player);
     updateAndDrawParticles(ctx, gameStateRef.current.particles);
     updateAndDrawScorePopups(ctx);
+    
+    // Damp the flip spin effect
+    if (gameStateRef.current.player.rotation !== 0) {
+      // More gradual deceleration for smoother spin
+      gameStateRef.current.player.rotation *= 0.97;
+      if (Math.abs(gameStateRef.current.player.rotation) < 0.01) {
+        gameStateRef.current.player.rotation = 0;
+      }
+    }
     drawPlayer(ctx, gameStateRef.current.player, fishImageRef.current);
 
     setScore(gameStateRef.current.score);
@@ -740,24 +988,21 @@ const MusicReactiveOceanGame = () => {
   }, [gameLoop]);
 
   // Sparkling Stars Effect at the Top
-  // This replaces the fractal effect.
-  // We create a set of stars that twinkle over time.
-  const stars = useRef<Star[]>([]);
+/*   const stars = useRef<Star[]>([]);
   useEffect(() => {
     const starsCanvas = starsCanvasRef.current;
     if (!starsCanvas) return;
     const ctx = starsCanvas.getContext("2d");
     if (!ctx) return;
-    // Initialize stars (e.g., 100 stars)
     const numStars = 100;
     stars.current = [];
     for (let i = 0; i < numStars; i++) {
       stars.current.push({
         x: Math.random() * window.innerWidth,
-        y: Math.random() * 200, // Top 200 pixels
-        size: 1 + Math.random() * 2, // Size between 1 and 3
+        y: Math.random() * 200,
+        size: 1 + Math.random() * 2,
         phase: Math.random() * Math.PI * 2,
-        speed: 0.5 + Math.random(), // Speed between 0.5 and 1.5
+        speed: 0.5 + Math.random(),
       });
     }
     const drawStars = () => {
@@ -775,7 +1020,25 @@ const MusicReactiveOceanGame = () => {
       requestAnimationFrame(drawStars);
     };
     drawStars();
-  }, []);
+  }, []); */
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (canvasRef.current) {
+        canvasRef.current.width = window.innerWidth;
+        canvasRef.current.height = window.innerHeight;
+        
+        // Update all flora Y positions to new canvas height
+        floraItemsRef.current.forEach(flora => {
+          flora.y = canvasRef.current!.height;
+        });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Call once on mount
+    return () => window.removeEventListener('resize', handleResize);
+  }, [initializeFlora]);
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%', minHeight: '100vh', background: backgroundColorRef.current }}>
@@ -862,26 +1125,34 @@ const MusicReactiveOceanGame = () => {
               color: 'black',
               textShadow: '0 0 10px rgba(0,0,0,0.3)',
               lineHeight: '1.2'
-              
             }}>
               Welcome to CVCHE
             </h1>
-
           </div>
-          <button
-            onClick={startGame}
-            style={{
-              border: 'none',
-              color: '#fff',
+          {!floraLoaded ? (
+            <div style={{
               padding: '20px 60px',
               fontSize: '24px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-              transition: 'transform 0.2s'
+              color: '#000'
             }}>
-            Play
-          </button>
+              Loading...
+            </div>
+          ) : (
+            <button
+              onClick={startGame}
+              style={{
+                border: 'none',
+                color: '#fff',
+                padding: '20px 60px',
+                fontSize: '24px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                transition: 'transform 0.2s'
+              }}>
+              Play
+            </button>
+          )}
         </div>
       )}
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
@@ -904,7 +1175,43 @@ const MusicReactiveOceanGame = () => {
             }
           }
         }}
+        onEnded={() => {
+          setLevelEnded(true);
+          gameLoopRef.current = false;
+          if (animationFrameIdRef.current) {
+            cancelAnimationFrame(animationFrameIdRef.current);
+            animationFrameIdRef.current = null;
+          }
+        }}
       />
+      {/* Level End Overlay */}
+      {levelEnded && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          color: '#fff',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 30,
+        }}>
+          <h1>Level Complete</h1>
+          <div>Score: {score}</div>
+          <div>
+            Trash Collected: {gameStateRef.current.trashStats.collected} / {gameStateRef.current.trashStats.totalSpawned} (
+            {gameStateRef.current.trashStats.totalSpawned > 0 ? Math.round((gameStateRef.current.trashStats.collected / gameStateRef.current.trashStats.totalSpawned) * 100) : 0}%
+            )
+          </div>
+          <button onClick={() => window.location.reload()} style={{ padding: '10px 20px', fontSize: '16px', marginTop: '20px', cursor: 'pointer' }}>
+            Restart
+          </button>
+        </div>
+      )}
     </div>
   );
 };
