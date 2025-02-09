@@ -72,14 +72,6 @@ interface ActiveColor {
   transitionDuration: number;
 }
 
-interface Star {
-  x: number;
-  y: number;
-  size: number;
-  phase: number;
-  speed: number;
-}
-
 interface Bubble {
   x: number;
   y: number;
