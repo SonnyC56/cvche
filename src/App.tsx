@@ -49,7 +49,7 @@ const App: React.FC = () => {
           }}
         >
           <img 
-            src="/sprites/cvcheFish.png" 
+            src="/sprites/cvcheFish.webp" 
             alt="CVCHE Fish" 
             style={{ 
               width: '150px',
