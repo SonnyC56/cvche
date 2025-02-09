@@ -99,6 +99,21 @@ interface StreakDisplay {
   opacity: number;
 }
 
+interface Level {
+  id: number;
+  title: string;
+  songFile: string;
+  initialBackground: string;
+  initialWaveColor: string;
+  unlocked: boolean;
+  isCaveMechanic?: boolean;
+}
+
+interface CaveBoundary {
+  points: { x: number; y: number }[];
+  amplitude: number;
+}
+
 const MusicReactiveOceanGame = () => {
   // Add new state for flora loading
   const [floraLoaded, setFloraLoaded] = useState(false);
@@ -111,6 +126,38 @@ const MusicReactiveOceanGame = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [levelEnded, setLevelEnded] = useState(false);
+
+  // Add new state for levels
+  const [currentLevel, setCurrentLevel] = useState<Level>({
+    id: 1,
+    title: "WELCOME TO CVCHE",
+    songFile: "/sounds/welcomeToCVCHE.mp3",
+    initialBackground: "#FDEE03",
+    initialWaveColor: "rgba(0,102,255,0.4)",
+    unlocked: true,
+    isCaveMechanic: false
+  });
+
+  const [levels, setLevels] = useState<Level[]>([
+    {
+      id: 1,
+      title: "WELCOME TO CVCHE",
+      songFile: "/sounds/welcomeToCVCHE.mp3",
+      initialBackground: "#FDEE03",
+      initialWaveColor: "rgba(0,102,255,0.4)",
+      unlocked: true,
+      isCaveMechanic: false
+    },
+    {
+      id: 2,
+      title: "SOUL FOOD",
+      songFile: "/sounds/soulFood2.mp3",
+      initialBackground: "#8A2BE2",
+      initialWaveColor: "rgba(255,140,0,0.4)",
+      unlocked: true,
+      isCaveMechanic: true
+    }
+  ]);
 
   // Instead of state for colors, use refs so updates are immediate.
   const backgroundColorRef = useRef("#FDEE03");
@@ -170,6 +217,24 @@ const MusicReactiveOceanGame = () => {
     scale: 1,
     opacity: 1
   });
+
+  // Add refs for cave mechanics
+  const caveRef = useRef<{
+    upper: CaveBoundary;
+    lower: CaveBoundary;
+  }>({
+    upper: { points: [], amplitude: 0 },
+    lower: { points: [], amplitude: 0 }
+  });
+
+  // Add new state for proximity score visualization
+  const [proximityScore, setProximityScore] = useState(0);
+
+  // Add this near other refs
+  const lastCollisionTimeRef = useRef<number>(0);
+  const COLLISION_COOLDOWN = 1000; // 1 second between collisions
+  const lastProximityScoreTimeRef = useRef<number>(0);
+  const PROXIMITY_SCORE_COOLDOWN = 500; // 0.5 seconds between proximity scores
 
   // Helper: Interpolate between two colors
   const interpolateColor = (color1: string, color2: string, factor: number) => {
@@ -723,6 +788,41 @@ const MusicReactiveOceanGame = () => {
     });
   }, []);
 
+  // Add cave boundary update function
+  const updateCaveBoundaries = useCallback((amplitude: number) => {
+    if (!canvasRef.current || !currentLevel.isCaveMechanic) return;
+    
+    const canvas = canvasRef.current;
+    const time = Date.now() / 1000;
+    
+    caveRef.current.upper.points = [];
+    caveRef.current.lower.points = [];
+    
+    const playerMinWidth = gameStateRef.current.player.width;
+    const minCaveHeight = playerMinWidth * 3; // Minimum space between cave walls
+    const maxAmplitude = (canvas.height - minCaveHeight) / 2; // Increased range
+    const beatAmplitude = Math.min(amplitude * 4, maxAmplitude); // More dramatic amplitude
+    const centerY = canvas.height / 2;
+  
+    // Generate more dramatic wave patterns
+    for (let x = 0; x <= canvas.width; x += 10) { // Reduced step size for smoother curves
+      const waveOffset = Math.sin(x / 150 + time * 3) * beatAmplitude + // Primary wave
+                        Math.sin(x / 75 + time * 2) * (beatAmplitude * 0.5) + // Secondary wave
+                        Math.sin(x / 37.5 + time * 4) * (beatAmplitude * 0.25); // Tertiary wave
+      const curveY = centerY + waveOffset;
+      
+      caveRef.current.upper.points.push({
+        x,
+        y: curveY - minCaveHeight - (beatAmplitude * 0.5)
+      });
+      
+      caveRef.current.lower.points.push({
+        x,
+        y: curveY + minCaveHeight + (beatAmplitude * 0.5)
+      });
+    }
+  }, [currentLevel.isCaveMechanic]);
+
   // Main game loop
   const gameLoop = useCallback(() => {
     if (!gameLoopRef.current || !canvasRef.current) return;
@@ -773,7 +873,8 @@ const MusicReactiveOceanGame = () => {
 
     // On beat, spawn trash or obstacle
     if (detectBeat(amplitude)) {
-      if (Math.random() > 0.5) {
+      if (currentLevel.isCaveMechanic) {
+        // Cave levels only spawn trash items
         const pickupImage = (Math.random() > 0.5 ? waterBottleRef.current : plasticBagRef.current) || undefined;
         const newItem: GameItem = {
           x: canvas.width,
@@ -788,33 +889,50 @@ const MusicReactiveOceanGame = () => {
         gameStateRef.current.trashList.push(newItem);
         gameStateRef.current.trashStats.totalSpawned++;
       } else {
-        const currentAudioTime = audioRef.current?.currentTime || 0;
-        if (currentAudioTime >= songDuration * 0.01 && Math.random() < 0.3) {
-          const fishhookY = canvas.height * ( Math.random() * -0.25);
-          const newItem: GameItem = {
-            x: canvas.width,
-            y: fishhookY,
-            width: 100,
-            height: 300,
-            type: 'fishhook',
-            speed: 3 + Math.random() * 2,
-            pickupImage: fishHookRef.current || undefined,
-            baseY: fishhookY
-          };
-          gameStateRef.current.obstacles.push(newItem);
-        } else {
+        // Original level spawns both trash and obstacles
+        if (Math.random() > 0.5) {
+          const pickupImage = (Math.random() > 0.5 ? waterBottleRef.current : plasticBagRef.current) || undefined;
           const newItem: GameItem = {
             x: canvas.width,
             y: Math.random() * (canvas.height - 50),
-            width: 80,
-            height: 100,
-            type: 'obstacle',
+            width: 60,
+            height: 60,
+            type: 'trash',
             speed: 3 + Math.random() * 2,
-            pickupImage: obstacleImageRef.current || undefined,
-            baseY: undefined,
+            rotation: 0,
+            pickupImage,
           };
-          newItem.baseY = newItem.y;
-          gameStateRef.current.obstacles.push(newItem);
+          gameStateRef.current.trashList.push(newItem);
+          gameStateRef.current.trashStats.totalSpawned++;
+        } else {
+          const currentAudioTime = audioRef.current?.currentTime || 0;
+          if (currentAudioTime >= songDuration * 0.01 && Math.random() < 0.3) {
+            const fishhookY = canvas.height * (Math.random() * -0.25);
+            const newItem: GameItem = {
+              x: canvas.width,
+              y: fishhookY,
+              width: 100,
+              height: 300,
+              type: 'fishhook',
+              speed: 3 + Math.random() * 2,
+              pickupImage: fishHookRef.current || undefined,
+              baseY: fishhookY
+            };
+            gameStateRef.current.obstacles.push(newItem);
+          } else {
+            const newItem: GameItem = {
+              x: canvas.width,
+              y: Math.random() * (canvas.height - 50),
+              width: 80,
+              height: 100,
+              type: 'obstacle',
+              speed: 3 + Math.random() * 2,
+              pickupImage: obstacleImageRef.current || undefined,
+              baseY: undefined,
+            };
+            newItem.baseY = newItem.y;
+            gameStateRef.current.obstacles.push(newItem);
+          }
         }
       }
     }
@@ -988,9 +1106,220 @@ const MusicReactiveOceanGame = () => {
       streakDisplayRef.current.scale = 1 + (amplitude / 255) * 0.2;
     }
 
+    // After getting amplitude:
+    if (currentLevel.isCaveMechanic) {
+      updateCaveBoundaries(amplitude);
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
+      // Draw cave boundaries with transparency
+      ctx.save();
+      ctx.fillStyle = `rgba(26, 26, 26, 0.75)`; // 75% opacity
+      
+      // Draw upper cave
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      caveRef.current.upper.points.forEach(point => {
+        ctx.lineTo(point.x, point.y);
+      });
+      ctx.lineTo(canvas.width, 0);
+      ctx.fill();
+      
+      // Draw lower cave
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height);
+      caveRef.current.lower.points.forEach(point => {
+        ctx.lineTo(point.x, point.y);
+      });
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.fill();
+      
+      // Calculate proximity for center line color
+      const player = gameStateRef.current.player;
+      const playerCenterX = player.x + player.width / 2;
+      const playerCenterY = player.y + player.height / 2;
+      
+      // Find nearest center point
+      let nearestCenterY = 0;
+      let nearestPoint = caveRef.current.upper.points[0];
+      
+      for (let i = 0; i < caveRef.current.upper.points.length; i++) {
+        const point = caveRef.current.upper.points[i];
+        const lowerPoint = caveRef.current.lower.points[i];
+        const centerY = (point.y + lowerPoint.y) / 2;
+        
+        if (Math.abs(point.x - playerCenterX) < Math.abs(nearestPoint.x - playerCenterX)) {
+          nearestPoint = point;
+          nearestCenterY = centerY;
+        }
+      }
+      
+      const maxDistance = canvas.height / 6; // Reduced range for scoring
+      const distance = Math.abs(playerCenterY - nearestCenterY);
+      const proximity = 1 - Math.min(distance / maxDistance, 1);
+      
+      // Draw center line with color based on proximity
+      ctx.beginPath();
+      const hue = proximity * 120; // 0 = red, 120 = green
+      ctx.strokeStyle = `hsla(${hue}, 100%, 50%, ${0.3 + (amplitude / 255) * 0.7})`;
+      ctx.lineWidth = 4 + (amplitude / 255) * 6;
+      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+      ctx.shadowBlur = amplitude / 10;
+      
+      // Draw center line
+      caveRef.current.upper.points.forEach((point, i) => {
+        const lowerPoint = caveRef.current.lower.points[i];
+        const centerY = (point.y + lowerPoint.y) / 2;
+        if (i === 0) {
+          ctx.moveTo(point.x, centerY);
+        } else {
+          ctx.lineTo(point.x, centerY);
+        }
+      });
+      ctx.stroke();
+      ctx.restore();
+      
+      // Add bonus points based on proximity with rate limiting
+      const now = Date.now();
+      if (proximity > 0.5 && now - lastProximityScoreTimeRef.current > PROXIMITY_SCORE_COOLDOWN) {
+        lastProximityScoreTimeRef.current = now;
+        const proximityBonus = Math.floor(proximity * 50); // Small bonus for staying on track
+        if (proximityBonus > 0) {
+          gameStateRef.current.score += proximityBonus;
+          gameStateRef.current.scorePopups.push({
+            x: player.x,
+            y: player.y - 30,
+            text: `+${proximityBonus}`,
+            opacity: 1,
+            lifetime: 60
+          });
+        }
+      }
+
+      // Enhanced collision check with particles and point loss
+      const checkCollision = () => {
+        const player = gameStateRef.current.player;
+        const playerBox = {
+          top: player.y,
+          bottom: player.y + player.height,
+          left: player.x,
+          right: player.x + player.width
+        };
+    
+        for (let i = 1; i < caveRef.current.upper.points.length; i++) {
+          const upperP1 = caveRef.current.upper.points[i - 1];
+          const upperP2 = caveRef.current.upper.points[i];
+          const lowerP1 = caveRef.current.lower.points[i - 1];
+          const lowerP2 = caveRef.current.lower.points[i];
+          
+          if (playerBox.right >= upperP1.x && playerBox.left <= upperP2.x) {
+            const t = (playerBox.left - upperP1.x) / (upperP2.x - upperP1.x);
+            const upperY = upperP1.y + t * (upperP2.y - upperP1.y);
+            const lowerY = lowerP1.y + t * (lowerP2.y - lowerP1.y);
+            
+            if (playerBox.top <= upperY || playerBox.bottom >= lowerY) {
+              // Create explosion particles at collision point
+              const collisionX = playerBox.top <= upperY ? player.x : player.x;
+              const collisionY = playerBox.top <= upperY ? upperY : lowerY;
+              
+              // Create more dramatic particle effects
+              createParticles(
+                gameStateRef.current.particles,
+                collisionX,
+                collisionY,
+                '#FF0000',
+                30  // More particles
+              );
+    
+              // Add white spark particles
+              createParticles(
+                gameStateRef.current.particles,
+                collisionX,
+                collisionY,
+                '#FFFFFF',
+                15
+              );
+    
+              // Point loss and effects
+              gameStateRef.current.score = Math.max(0, gameStateRef.current.score - 30);
+              gameStateRef.current.streak = 0;
+              gameStateRef.current.multiplier = 1;
+              
+              // Add score popup
+              gameStateRef.current.scorePopups.push({
+                x: collisionX,
+                y: collisionY,
+                text: "-30",
+                opacity: 1,
+                lifetime: 100
+              });
+    
+              // Play hit sound
+              hitSoundRef.current?.play().catch(console.error);
+              
+              // Add spin effect
+              player.spinRotation = Math.PI * 2;
+              
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+      
+
+      const isColliding = checkCollision();
+      
+      if (isColliding && now - lastCollisionTimeRef.current > COLLISION_COOLDOWN) {
+        lastCollisionTimeRef.current = now;
+        
+        // Create collision effects
+        createParticles(
+          gameStateRef.current.particles,
+          player.x,
+          player.y,
+          '#FF0000',
+          30
+        );
+        
+        // Add white spark particles
+        createParticles(
+          gameStateRef.current.particles,
+          player.x,
+          player.y,
+          '#FFFFFF',
+          15
+        );
+        
+        // Point loss and effects
+        gameStateRef.current.score = Math.max(0, gameStateRef.current.score - 20);
+        gameStateRef.current.streak = 0;
+        gameStateRef.current.multiplier = 1;
+        
+        // Score popup
+        gameStateRef.current.scorePopups.push({
+          x: player.x,
+          y: player.y,
+          text: "-20",
+          opacity: 1,
+          lifetime: 100
+        });
+        
+        hitSoundRef.current?.play().catch(console.error);
+        player.spinRotation = Math.PI * 2;
+        
+        // Visual feedback
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+    }
+
     setScore(gameStateRef.current.score);
     animationFrameIdRef.current = requestAnimationFrame(gameLoop);
-  }, []);
+  }, [currentLevel.isCaveMechanic, updateCaveBoundaries]);
 
   // Separate loop to update song progress
   useEffect(() => {
@@ -1040,9 +1369,11 @@ const MusicReactiveOceanGame = () => {
 
   const startGame = useCallback(() => {
     setGameStarted(true);
-    backgroundColorRef.current = "#FDEE03";
-    waveColorRef.current = "rgba(0,102,255,0.4)";
-    if (containerRef.current) containerRef.current.style.background = "#FDEE03";
+    backgroundColorRef.current = currentLevel.initialBackground;
+    waveColorRef.current = currentLevel.initialWaveColor;
+    if (containerRef.current) {
+      containerRef.current.style.background = currentLevel.initialBackground;
+    }
     colorEventsRef.current.forEach((event, index) => { event.triggered = index === 0; });
     activeColorTransitionRef.current = {
       backgroundColor: "#1a1a2e",
@@ -1059,7 +1390,77 @@ const MusicReactiveOceanGame = () => {
         requestAnimationFrame(gameLoop);
       }).catch(console.error);
     }
-  }, [gameLoop]);
+  }, [currentLevel, gameLoop]);
+
+  // Add level selection handler
+  const selectLevel = useCallback((level: Level) => {
+    if (!level.unlocked) return;
+    
+    // Reset game state
+    gameStateRef.current = {
+      player: {
+        x: 100,
+        y: window.innerHeight / 2,
+        width: 50,
+        height: 30,
+        speed: 5,
+        rotation: 0,
+        spinRotation: 0,
+        vy: 0
+      },
+      trashList: [],
+      obstacles: [],
+      particles: [],
+      score: 0,
+      scorePopups: [],
+      trashStats: { totalSpawned: 0, collected: 0, missed: 0 },
+      streak: 0,
+      multiplier: 1,
+      highestStreak: 0,
+    };
+
+    // Reset timed text events
+    timedTextEventsRef.current = timedTextEventsRef.current.map(event => ({
+      ...event,
+      triggered: false
+    }));
+
+    // Reset color events
+    colorEventsRef.current = colorEventsRef.current.map(event => ({
+      ...event,
+      triggered: event.timestamp === 0
+    }));
+
+    // Update current level
+    setCurrentLevel(level);
+    
+    // Update colors
+    backgroundColorRef.current = level.initialBackground;
+    waveColorRef.current = level.initialWaveColor;
+    if (containerRef.current) {
+      containerRef.current.style.background = level.initialBackground;
+    }
+
+    // Update audio source
+    if (audioRef.current) {
+      audioRef.current.src = level.songFile;
+      audioRef.current.currentTime = 0;
+    }
+
+    // Reset level end state
+    setLevelEnded(false);
+  }, []);
+
+  // Modify the level end handler to unlock next level
+  useEffect(() => {
+    if (levelEnded) {
+      setLevels(prev => prev.map(level => 
+        level.id === currentLevel.id + 1 
+          ? { ...level, unlocked: true }
+          : level
+      ));
+    }
+  }, [levelEnded, currentLevel.id]);
 
   // Sparkling Stars Effect at the Top
 /*   const stars = useRef<Star[]>([]);
@@ -1123,6 +1524,18 @@ const MusicReactiveOceanGame = () => {
     });
   }, []);
 
+  // Add near the top of component, after state declarations
+  useEffect(() => {
+    // Dev console command to unlock all levels
+    (window as any).unlockAllLevels = () => {
+      setLevels(prev => prev.map(level => ({
+        ...level,
+        unlocked: true
+      })));
+      console.log('All levels unlocked!');
+    };
+  }, [levels]);
+
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%', minHeight: '100vh', background: backgroundColorRef.current, fontFamily: 'Orbitron, sans-serif' }}>
       {/* Sparkling Stars Canvas at the Top */}
@@ -1160,7 +1573,7 @@ const MusicReactiveOceanGame = () => {
               {isPaused ? 'Play' : 'Pause'}
             </button>
           )}
-          <div>Level 1 - WELCOME TO CVCHE</div>
+          <div>Level {currentLevel.id} - {currentLevel.title}</div>
           <div>Score: {score}</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, maxWidth: '500px' }}>
@@ -1251,7 +1664,7 @@ const MusicReactiveOceanGame = () => {
               textShadow: '0 0 10px rgba(0,0,0,0.3)',
               lineHeight: '1.2'
             }}>
-              Welcome to CVCHE
+              {currentLevel.title}
             </h1>
           </div>
           {!floraLoaded ? (
@@ -1278,6 +1691,52 @@ const MusicReactiveOceanGame = () => {
               Play
             </button>
           )}
+        </div>
+      )}
+      {/* Level Selection UI */}
+      {!gameStarted && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '20px',
+          transform: 'translateY(-50%)',
+          zIndex: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+          fontFamily: 'Orbitron, sans-serif',
+        }}>
+          {levels.map((level) => (
+            <button
+              key={level.id}
+              onClick={() => selectLevel(level)}
+              disabled={!level.unlocked}
+              style={{
+                padding: '10px 20px',
+                width: '180px',
+                fontSize: '16px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: level.unlocked ? 'pointer' : 'not-allowed',
+                backgroundColor: currentLevel.id === level.id ? '#0066FF' : 'rgba(0, 0, 0, 0.5)',
+                color: '#fff',
+                opacity: level.unlocked ? 1 : 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                transition: 'transform 0.2s, opacity 0.2s',
+                transform: currentLevel.id === level.id ? 'scale(1.1)' : 'scale(1)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '14px' }}>LVL {level.id}</span>
+                <span style={{ fontSize: '14px' }}>{level.title}</span>
+              </div>
+              {!level.unlocked && (
+                <span style={{ fontSize: '12px' }}>🔒</span>
+              )}
+            </button>
+          ))}
         </div>
       )}
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
@@ -1339,21 +1798,52 @@ const MusicReactiveOceanGame = () => {
               : 0}%
             )
           </div>
-          <button 
-            onClick={() => window.location.reload()} 
-            style={{ 
-              padding: '15px 30px', 
-              fontSize: '20px', 
-              marginTop: '20px', 
-              cursor: 'pointer',
-              backgroundColor: '#0066FF',
-              border: 'none',
-              borderRadius: '8px',
-              color: '#fff',
-            }}
-          >
-            Play Again
-          </button>
+          <div style={{ 
+            display: 'flex', 
+            gap: '20px', 
+            marginTop: '20px' 
+          }}>
+            <button 
+              onClick={() => window.location.reload()} 
+              style={{ 
+                padding: '15px 30px', 
+                fontSize: '20px', 
+                cursor: 'pointer',
+                backgroundColor: '#444',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#fff',
+              }}
+            >
+              Play Again
+            </button>
+            {levels.find(l => l.id === currentLevel.id + 1) && (
+              <button 
+                onClick={() => {
+                  const nextLevel = levels.find(l => l.id === currentLevel.id + 1);
+                  if (nextLevel && nextLevel.unlocked) {
+                    selectLevel(nextLevel);
+                    setLevelEnded(false);
+                    setGameStarted(true);
+                    if (audioRef.current) {
+                      audioRef.current.play().catch(console.error);
+                    }
+                  }
+                }}
+                style={{ 
+                  padding: '15px 30px', 
+                  fontSize: '20px', 
+                  cursor: 'pointer',
+                  backgroundColor: '#0066FF',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#fff',
+                }}
+              >
+                Next Level
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
