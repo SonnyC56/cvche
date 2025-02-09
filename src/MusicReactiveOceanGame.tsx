@@ -92,6 +92,13 @@ interface Flora {
   active: boolean; // Add this property
 }
 
+interface StreakDisplay {
+  x: number;
+  y: number;
+  scale: number;
+  opacity: number;
+}
+
 const MusicReactiveOceanGame = () => {
   // Add new state for flora loading
   const [floraLoaded, setFloraLoaded] = useState(false);
@@ -155,6 +162,14 @@ const MusicReactiveOceanGame = () => {
   // Add new refs for sound effects
   const pickupSoundRef = useRef<HTMLAudioElement | null>(null);
   const hitSoundRef = useRef<HTMLAudioElement | null>(null);
+
+  // Add new ref for streak display animation
+  const streakDisplayRef = useRef<StreakDisplay>({
+    x: 0,
+    y: 0,
+    scale: 1,
+    opacity: 1
+  });
 
   // Helper: Interpolate between two colors
   const interpolateColor = (color1: string, color2: string, factor: number) => {
@@ -271,12 +286,17 @@ const MusicReactiveOceanGame = () => {
     particles: [] as Particle[],
     score: 0,
     scorePopups: [] as ScorePopup[],
-    trashStats: { totalSpawned: 0, collected: 0, missed: 0 }
+    trashStats: { totalSpawned: 0, collected: 0, missed: 0 },
+    streak: 0,
+    multiplier: 1,
+    highestStreak: 0,
   });
 
   // Timed text events remain in use
   const timedTextEventsRef = useRef<TimedTextEvent[]>([
-    { timestamp: 9.5, text: "WELCOME TO CVCHE!", triggered: false },
+    { timestamp: .1, text: "Collect Trash!", triggered: false },
+    { timestamp: 1.5, text: "Avoid Hazards!", triggered: false },
+    { timestamp: 9.25, text: "WELCOME TO CVCHE!", triggered: false },
     { timestamp: 60, text: "Keep going!", triggered: false },
     { timestamp: 120, text: "You are awesome!", triggered: false },
     { timestamp: 180, text: "Keep it up!", triggered: false },
@@ -290,12 +310,12 @@ const MusicReactiveOceanGame = () => {
   // Color events configuration (timed color changes)
   const colorEventsRef = useRef<TimedColorEvent[]>([
     { timestamp: 0, backgroundColor: "#FDEE03", waveColor: "rgba(0,102,255,0.4)", triggered: true, transitionDuration: 3 },
-    { timestamp: 60, backgroundColor: "#4a1259", waveColor: "rgba(255,0,255,0.4)", triggered: false, transitionDuration: 3 },
-    { timestamp: 120, backgroundColor: "#591212", waveColor: "rgba(255,100,100,0.4)", triggered: false, transitionDuration: 3 },
-    { timestamp: 180, backgroundColor: "#123459", waveColor: "rgba(100,200,255,0.4)", triggered: false, transitionDuration: 3 },
-    { timestamp: 240, backgroundColor: "#125934", waveColor: "rgba(100,255,150,0.4)", triggered: false, transitionDuration: 3 },
-    { timestamp: 300, backgroundColor: "#593412", waveColor: "rgba(255,150,100,0.4)", triggered: false, transitionDuration: 3 },
-    { timestamp: 360, backgroundColor: "#1a1a2e", waveColor: "rgba(0,102,255,0.4)", triggered: false, transitionDuration: 3 },
+    { timestamp: 60, backgroundColor: "#88D201", waveColor: "rgba(0, 255, 38, 0.4)", triggered: false, transitionDuration: 3 },
+    { timestamp: 120, backgroundColor: "#05B8FC", waveColor: "rgba(100, 159, 255, 0.4)", triggered: false, transitionDuration: 3 },
+    { timestamp: 180, backgroundColor: "#0090DE", waveColor: "rgba(100, 105, 255, 0.4)", triggered: false, transitionDuration: 3 },
+    { timestamp: 240, backgroundColor: "#C6029B", waveColor: "rgba(34, 149, 23, 0.4)", triggered: false, transitionDuration: 3 },
+    { timestamp: 300, backgroundColor: "#FD0100", waveColor: "rgba(17, 0, 255, 0.4)", triggered: false, transitionDuration: 3 },
+    { timestamp: 360, backgroundColor: "#FF6503", waveColor: "rgba(13, 255, 255, 0.4)", triggered: false, transitionDuration: 3 },
     { timestamp: 420, backgroundColor: "#FDEE03", waveColor: "rgba(0,102,255,0.4)", triggered: false, transitionDuration: 3 },
   ]);
 
@@ -564,20 +584,40 @@ const MusicReactiveOceanGame = () => {
     }
   };
 
+  const getMultiplierFromStreak = (streak: number) => {
+    return Math.min(10, 1 + Math.floor(streak / 5));
+  };
+
+  const getParticleColorFromStreak = (streak: number): string => {
+    if (streak >= 45) return '#FF00FF'; // Purple for max multiplier
+    if (streak >= 35) return '#FF0088'; // Pink
+    if (streak >= 25) return '#FF0000'; // Red
+    if (streak >= 15) return '#FFA500'; // Orange
+    if (streak >= 5) return '#FFFF00';  // Yellow
+    return '#FFD700'; // Default gold
+  };
+
   const createSwimParticles = (particles: Particle[], player: typeof gameStateRef.current.player) => {
-    const fishCenterX = player.x + (player.width );
-    const fishCenterY = player.y + player.height / 2 ;
+    const streak = gameStateRef.current.streak;
+    const fishCenterX = player.x + player.width;
+    const fishCenterY = player.y + player.height / 2;
     const tailX = fishCenterX - player.width;
-    particles.push({
-      x: tailX,
-      y: fishCenterY,
-      vx: -2 - Math.random() * 2,
-      vy: (Math.random() - 0.5) * 0.5,
-      life: 1.0,
-      color: '#FFD700',
-      size: 4 + Math.random() * 3,
-      opacity: 0.8,
-    });
+    
+    // Create more particles based on streak
+    const particleCount = 1 + Math.floor(streak / 10);
+    
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: tailX + (Math.random() - 0.5) * 10,
+        y: fishCenterY + (Math.random() - 0.5) * 10,
+        vx: -2 - Math.random() * 2 - (streak * 0.1),
+        vy: (Math.random() - 0.5) * (0.5 + streak * 0.05),
+        life: 1.0,
+        color: getParticleColorFromStreak(streak),
+        size: 4 + Math.random() * 3 + (streak * 0.1),
+        opacity: 0.8,
+      });
+    }
   };
 
   // Dramatic bubble effect with increased spawn frequency, larger bubbles, and horizontal drift.
@@ -587,7 +627,7 @@ const MusicReactiveOceanGame = () => {
     for (let i = popups.length - 1; i >= 0; i--) {
       const popup = popups[i];
       ctx.save();
-      ctx.font = "20px Arial";
+      ctx.font = "20px Orbitron";
       ctx.fillStyle = "black";
       ctx.globalAlpha = popup.opacity;
       ctx.fillText(popup.text, popup.x, popup.y);
@@ -604,7 +644,7 @@ const MusicReactiveOceanGame = () => {
     activeTimedTextsRef.current.forEach((item) => {
       const opacity = item.lifetime / 200;
       ctx.save();
-      ctx.font = "80px Arial";
+      ctx.font = "80px Orbitron";
       ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -754,7 +794,7 @@ const MusicReactiveOceanGame = () => {
           const newItem: GameItem = {
             x: canvas.width,
             y: fishhookY,
-            width: 200,
+            width: 100,
             height: 300,
             type: 'fishhook',
             speed: 3 + Math.random() * 2,
@@ -839,14 +879,46 @@ const MusicReactiveOceanGame = () => {
         gameStateRef.current.player.y < item.y + effectiveHeight &&
         gameStateRef.current.player.y + gameStateRef.current.player.height > item.y
       ) {
-        gameStateRef.current.score += 10;
+        const streak = gameStateRef.current.streak + 1;
+        const multiplier = getMultiplierFromStreak(streak);
+        const points = 10 * multiplier;
+        
+        gameStateRef.current.streak = streak;
+        gameStateRef.current.multiplier = multiplier;
+        gameStateRef.current.highestStreak = Math.max(gameStateRef.current.highestStreak, streak);
+        gameStateRef.current.score += points;
         gameStateRef.current.trashStats.collected++;
+        
         const popupX = item.x + effectiveWidth / 2;
         const popupY = item.y + effectiveHeight / 2;
-        gameStateRef.current.scorePopups.push({ x: popupX, y: popupY, text: "+10", opacity: 1, lifetime: 100 });
-        createParticles(gameStateRef.current.particles, item.x, item.y, '#00FF00', 20);
-        pickupSoundRef.current?.play().catch(console.error); // Add this line
+        
+        // Add multiplier to score popup if > 1
+        const scoreText = multiplier > 1 ? `+${points} (${multiplier}x)` : `+${points}`;
+        gameStateRef.current.scorePopups.push({ 
+          x: popupX, 
+          y: popupY, 
+          text: scoreText, 
+          opacity: 1, 
+          lifetime: 100 
+        });
+        
+        // Add streak popup if milestone reached
+        if (streak % 5 === 0) {
+          gameStateRef.current.scorePopups.push({
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            text: `${streak} STREAK! ${multiplier}x MULTIPLIER!`,
+            opacity: 1,
+            lifetime: 120
+          });
+        }
+        
+        createParticles(gameStateRef.current.particles, item.x, item.y, getParticleColorFromStreak(streak), 20);
+        pickupSoundRef.current?.play().catch(console.error);
         gameStateRef.current.trashList.splice(i, 1);
+
+        // Add pop animation to streak display
+        streakDisplayRef.current.scale = 1.3;
       } else {
         drawItem(ctx, item, pulse);
       }
@@ -871,6 +943,8 @@ const MusicReactiveOceanGame = () => {
         gameStateRef.current.player.y + gameStateRef.current.player.height > item.y
       ) {
         gameStateRef.current.score = Math.max(0, gameStateRef.current.score - 20);
+        gameStateRef.current.streak = 0;
+        gameStateRef.current.multiplier = 1;
         const popupX = item.x + item.width / 2;
         const popupY = item.y + item.height / 2;
         gameStateRef.current.scorePopups.push({ x: popupX, y: popupY, text: "-20", opacity: 1, lifetime: 100 });
@@ -885,6 +959,9 @@ const MusicReactiveOceanGame = () => {
         }
         
         gameStateRef.current.obstacles.splice(i, 1);
+
+        // Add shake animation to streak display
+        streakDisplayRef.current.scale = 0.8;
         continue;
       } else {
         drawItem(ctx, item, 1);
@@ -905,6 +982,11 @@ const MusicReactiveOceanGame = () => {
       }
     }
     drawPlayer(ctx, gameStateRef.current.player, fishImageRef.current);
+
+    // Add streak display animation
+    if (streakDisplayRef.current) {
+      streakDisplayRef.current.scale = 1 + (amplitude / 255) * 0.2;
+    }
 
     setScore(gameStateRef.current.score);
     animationFrameIdRef.current = requestAnimationFrame(gameLoop);
@@ -1032,8 +1114,17 @@ const MusicReactiveOceanGame = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [initializeFlora]);
 
+  // Add useEffect for font loading
+  useEffect(() => {
+    // Load Orbitron font
+    const font = new FontFace('Orbitron', 'url(/fonts/Orbitron/Orbitron-VariableFont_wght.ttf)');
+    font.load().then(() => {
+      document.fonts.add(font);
+    });
+  }, []);
+
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%', minHeight: '100vh', background: backgroundColorRef.current }}>
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', minHeight: '100vh', background: backgroundColorRef.current, fontFamily: 'Orbitron, sans-serif' }}>
       {/* Sparkling Stars Canvas at the Top */}
       <canvas
         ref={starsCanvasRef}
@@ -1052,6 +1143,7 @@ const MusicReactiveOceanGame = () => {
         zIndex: 10,
         color: '#fff',
         justifyContent: 'space-between',
+        fontFamily: 'Orbitron, sans-serif',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
           {gameStarted && (
@@ -1091,6 +1183,46 @@ const MusicReactiveOceanGame = () => {
           </div>
         </div>
       </div>
+      {/* Streak Counter */}
+      <div style={{
+        position: 'fixed',
+        top: '60px',
+        right: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: '5px',
+        zIndex: 10,
+        fontFamily: 'Orbitron, sans-serif',
+      }}>
+        <div style={{
+          background: `rgba(0, 0, 0, ${0.5 + (amplitudeRef.current / 255) * 0.3})`,
+          padding: '10px 20px',
+          borderRadius: '8px',
+          transform: `scale(${streakDisplayRef.current.scale})`,
+          transition: 'transform 0.1s ease-out',
+          fontFamily: 'Orbitron, sans-serif',
+        }}>
+          <div style={{
+            color: getParticleColorFromStreak(gameStateRef.current.streak),
+            fontSize: '24px',
+            fontWeight: 'bold',
+            textShadow: '0 0 10px rgba(255,255,255,0.3)',
+            transition: 'color 0.3s',
+            fontFamily: 'Orbitron, sans-serif',
+          }}>
+            {gameStateRef.current.streak} STREAK
+          </div>
+          <div style={{
+            color: '#fff',
+            fontSize: '18px',
+            opacity: 0.8,
+            fontFamily: 'Orbitron, sans-serif',
+          }}>
+            {gameStateRef.current.multiplier}x MULTIPLIER
+          </div>
+        </div>
+      </div>
       {/* Start Button */}
       {!gameStarted && (
         <div style={{
@@ -1103,7 +1235,8 @@ const MusicReactiveOceanGame = () => {
           flexDirection: 'column',
           alignItems: 'center',
           gap: '2rem',
-          textAlign: 'center'
+          textAlign: 'center',
+          fontFamily: 'Orbitron, sans-serif',
         }}>
           <div style={{
             display: 'flex',
@@ -1154,7 +1287,6 @@ const MusicReactiveOceanGame = () => {
         ref={audioRef}
         crossOrigin="anonymous"
         src="/sounds/welcomeToCVCHE.mp3"
-        loop
         style={{ display: 'none' }}
         onTimeUpdate={() => {
           if (audioRef.current) {
@@ -1164,15 +1296,17 @@ const MusicReactiveOceanGame = () => {
               setAudioProgress((curTime / dur) * 100);
               setCurrentTime(curTime);
               setDuration(dur);
+              
+              // Check if we're near the end of the song
+              if (dur - curTime < 0.1) {
+                setLevelEnded(true);
+                gameLoopRef.current = false;
+                if (animationFrameIdRef.current) {
+                  cancelAnimationFrame(animationFrameIdRef.current);
+                  animationFrameIdRef.current = null;
+                }
+              }
             }
-          }
-        }}
-        onEnded={() => {
-          setLevelEnded(true);
-          gameLoopRef.current = false;
-          if (animationFrameIdRef.current) {
-            cancelAnimationFrame(animationFrameIdRef.current);
-            animationFrameIdRef.current = null;
           }
         }}
       />
@@ -1184,23 +1318,41 @@ const MusicReactiveOceanGame = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
           color: '#fff',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 30,
+          fontFamily: 'Orbitron, sans-serif',
         }}>
-          <h1>Level Complete</h1>
-          <div>Score: {score}</div>
-          <div>
+          <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>Level Complete!</h1>
+          <div style={{ fontSize: '24px', marginBottom: '10px' }}>Final Score: {score}</div>
+          <div style={{ fontSize: '24px', marginBottom: '10px' }}>
+            Highest Streak: {gameStateRef.current.highestStreak}
+          </div>
+          <div style={{ fontSize: '24px', marginBottom: '20px' }}>
             Trash Collected: {gameStateRef.current.trashStats.collected} / {gameStateRef.current.trashStats.totalSpawned} (
-            {gameStateRef.current.trashStats.totalSpawned > 0 ? Math.round((gameStateRef.current.trashStats.collected / gameStateRef.current.trashStats.totalSpawned) * 100) : 0}%
+            {gameStateRef.current.trashStats.totalSpawned > 0 
+              ? Math.round((gameStateRef.current.trashStats.collected / gameStateRef.current.trashStats.totalSpawned) * 100) 
+              : 0}%
             )
           </div>
-          <button onClick={() => window.location.reload()} style={{ padding: '10px 20px', fontSize: '16px', marginTop: '20px', cursor: 'pointer' }}>
-            Restart
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{ 
+              padding: '15px 30px', 
+              fontSize: '20px', 
+              marginTop: '20px', 
+              cursor: 'pointer',
+              backgroundColor: '#0066FF',
+              border: 'none',
+              borderRadius: '8px',
+              color: '#fff',
+            }}
+          >
+            Play Again
           </button>
         </div>
       )}
