@@ -1,4 +1,3 @@
-// @ts-expect-error React is used for JSX
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 // Global declaration for Safari
@@ -107,6 +106,7 @@ interface Level {
   initialWaveColor: string;
   unlocked: boolean;
   isCaveMechanic?: boolean;
+  highScore?: number; // Add this property
 }
 
 interface CaveBoundary {
@@ -114,7 +114,11 @@ interface CaveBoundary {
   amplitude: number;
 }
 
-const MusicReactiveOceanGame = () => {
+interface Props {
+  onGameStart?: () => void;
+}
+
+const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   // Add new state for flora loading
   const [floraLoaded, setFloraLoaded] = useState(false);
   
@@ -138,26 +142,35 @@ const MusicReactiveOceanGame = () => {
     isCaveMechanic: false
   });
 
-  const [levels, setLevels] = useState<Level[]>([
-    {
-      id: 1,
-      title: "WELCOME TO CVCHE",
-      songFile: "/sounds/welcomeToCVCHE.mp3",
-      initialBackground: "#FDEE03",
-      initialWaveColor: "rgba(0,102,255,0.4)",
-      unlocked: true,
-      isCaveMechanic: false
-    },
-    {
-      id: 2,
-      title: "SOUL FOOD",
-      songFile: "/sounds/soulFood2.mp3",
-      initialBackground: "#8A2BE2",
-      initialWaveColor: "rgba(255,140,0,0.4)",
-      unlocked: true,
-      isCaveMechanic: true
-    }
-  ]);
+  // Add new state for high scores
+  const [levels, setLevels] = useState<Level[]>(() => {
+    // Try to load high scores from localStorage
+    const savedLevels = localStorage.getItem('gameLevels');
+    const defaultLevels = [
+      {
+        id: 1,
+        title: "WELCOME TO CVCHE",
+        songFile: "/sounds/welcomeToCVCHE.mp3",
+        initialBackground: "#FDEE03",
+        initialWaveColor: "rgba(0,102,255,0.4)",
+        unlocked: true,
+        isCaveMechanic: false,
+        highScore: 0
+      },
+      {
+        id: 2,
+        title: "SOUL FOOD",
+        songFile: "/sounds/soulFood2.mp3",
+        initialBackground: "#8A2BE2",
+        initialWaveColor: "rgba(255,140,0,0.4)",
+        unlocked: true,
+        isCaveMechanic: true,
+        highScore: 0
+      }
+    ];
+    
+    return savedLevels ? JSON.parse(savedLevels) : defaultLevels;
+  });
 
   // Instead of state for colors, use refs so updates are immediate.
   const backgroundColorRef = useRef("#FDEE03");
@@ -1417,6 +1430,7 @@ const MusicReactiveOceanGame = () => {
 
   const startGame = useCallback(() => {
     setGameStarted(true);
+    onGameStart?.();
     backgroundColorRef.current = currentLevel.initialBackground;
     waveColorRef.current = currentLevel.initialWaveColor;
     if (containerRef.current) {
@@ -1438,7 +1452,7 @@ const MusicReactiveOceanGame = () => {
         requestAnimationFrame(gameLoop);
       }).catch(console.error);
     }
-  }, [currentLevel, gameLoop]);
+  }, [currentLevel, gameLoop, onGameStart]);
 
   // Add level selection handler
   const selectLevel = useCallback((level: Level) => {
@@ -1509,6 +1523,24 @@ const MusicReactiveOceanGame = () => {
       ));
     }
   }, [levelEnded, currentLevel.id]);
+
+  // Add effect to save high scores
+  useEffect(() => {
+    if (levelEnded) {
+      setLevels(prev => {
+        const newLevels = prev.map(level => 
+          level.id === currentLevel.id 
+            ? { 
+                ...level, 
+                highScore: Math.max(level.highScore || 0, score)
+              }
+            : level
+        );
+        localStorage.setItem('gameLevels', JSON.stringify(newLevels));
+        return newLevels;
+      });
+    }
+  }, [levelEnded, score, currentLevel.id]);
 
   // Sparkling Stars Effect at the Top
 /*   const stars = useRef<Star[]>([]);
@@ -1621,7 +1653,7 @@ const MusicReactiveOceanGame = () => {
               {isPaused ? 'Play' : 'Pause'}
             </button>
           )}
-          <div>Level {currentLevel.id} - {currentLevel.title}</div>
+          <div>High Score: {currentLevel.highScore || 0}</div>
           <div>Score: {score}</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, maxWidth: '500px' }}>
@@ -1714,6 +1746,13 @@ const MusicReactiveOceanGame = () => {
             }}>
               {currentLevel.title}
             </h1>
+            <div style={{
+              fontSize: '2rem',
+              color: 'black',
+              textShadow: '0 0 10px rgba(0,0,0,0.3)'
+            }}>
+              High Score: {currentLevel.highScore || 0}
+            </div>
           </div>
           {!floraLoaded ? (
             <div style={{
