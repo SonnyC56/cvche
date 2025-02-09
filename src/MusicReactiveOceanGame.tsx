@@ -96,7 +96,8 @@ interface Flora {
   image: HTMLImageElement;
   swayOffset: number;
   swaySpeed: number;
-  scrollSpeed: number; // Add scroll speed property
+  scrollSpeed: number;
+  active: boolean; // Add this property
 }
 
 const MusicReactiveOceanGame = () => {
@@ -187,15 +188,15 @@ const MusicReactiveOceanGame = () => {
   useEffect(() => {
     const fishImg = new Image();
     fishImg.onload = () => { fishImageRef.current = fishImg; };
-    fishImg.src = '/sprites/cvcheFish.png';
+    fishImg.src = '/sprites/cvcheFish.webp';
 
     const bottleImg = new Image();
     bottleImg.onload = () => { waterBottleRef.current = bottleImg; };
-    bottleImg.src = '/sprites/waterBottle.png';
+    bottleImg.src = '/sprites/waterBottle.webp';
 
     const bagImg = new Image();
     bagImg.onload = () => { plasticBagRef.current = bagImg; };
-    bagImg.src = '/sprites/plasticBag.png';
+    bagImg.src = '/sprites/plasticBag.webp';
 
     const barrelImg = new Image();
     barrelImg.onload = () => { obstacleImageRef.current = barrelImg; };
@@ -203,7 +204,7 @@ const MusicReactiveOceanGame = () => {
 
     const hookImg = new Image();
     hookImg.onload = () => { fishHookRef.current = hookImg; };
-    hookImg.src = '/sprites/fishHook.png';
+    hookImg.src = '/sprites/fishHook.webp';
 
     // Initialize sound effects
     const pickupSound = new Audio('/sounds/pickup.mp3');
@@ -217,7 +218,7 @@ const MusicReactiveOceanGame = () => {
 
   useEffect(() => {
     // Load flora images
-    const floraFileNames = ['1 (1).webp', ...Array.from({ length: 45 }, (_, i) => `1 (${i + 16}).webp`)];
+    const floraFileNames = ['1 (1).webp', ...Array.from({ length: 20 }, (_, i) => `1 (${i + 16}).webp`)]; // Reduced number of images
     let loadedCount = 0;
 
     floraFileNames.forEach(fileName => {
@@ -225,7 +226,6 @@ const MusicReactiveOceanGame = () => {
       img.onload = () => {
         floraImagesRef.current.push(img);
         loadedCount++;
-        // Initialize flora when we have all images
         if (loadedCount === floraFileNames.length) {
           initializeFlora();
           setFloraLoaded(true);
@@ -239,26 +239,26 @@ const MusicReactiveOceanGame = () => {
     if (!canvasRef.current) return;
     
     const canvas = canvasRef.current;
+    const MAX_FLORA = 15; // Significantly reduced from previous amount
     floraItemsRef.current = [];
 
-    // Create more flora with better spacing
-    for (let x = 0; x < canvas.width * 2; x += 50) { // Reduced spacing
-      if (Math.random() < 0.8) { // Increased probability
-        const randomImage = floraImagesRef.current[Math.floor(Math.random() * floraImagesRef.current.length)];
-        const height = 30 + Math.random() * 80; // Adjusted size range
-        const width = (height / randomImage.height) * randomImage.width;
-        
-        floraItemsRef.current.push({
-          x: x + (Math.random() * 50 - 25), // Add some random offset
-          y: canvas.height,
-          width,
-          height,
-          image: randomImage,
-          swayOffset: Math.random() * Math.PI * 2,
-          swaySpeed: 0.3 + Math.random() * 0.4, // Slightly slower sway
-          scrollSpeed: 1.5 + Math.random() // Slightly slower scroll
-        });
-      }
+    // Create a pool of flora objects
+    for (let i = 0; i < MAX_FLORA; i++) {
+      const randomImage = floraImagesRef.current[Math.floor(Math.random() * floraImagesRef.current.length)];
+      const height = 30 + Math.random() * 80;
+      const width = (height / randomImage.height) * randomImage.width;
+      
+      floraItemsRef.current.push({
+        x: canvas.width + (Math.random() * canvas.width), // Spread initial positions
+        y: canvas.height,
+        width,
+        height,
+        image: randomImage,
+        swayOffset: Math.random() * Math.PI * 2,
+        swaySpeed: 0.3 + Math.random() * 0.4,
+        scrollSpeed: 1.5 + Math.random(),
+        active: true
+      });
     }
   }, []);
 
