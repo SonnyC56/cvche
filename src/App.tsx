@@ -208,7 +208,7 @@ const App: React.FC = () => {
             gap: '2rem',
             fontSize: '1.2rem'
           }}>
-            <button 
+       {/*      <button 
               onClick={() => setSelectedGame('doodle')} 
               style={{ 
                 color: '#FDEE03',
@@ -221,7 +221,7 @@ const App: React.FC = () => {
               }}
             >
               Play Fluffy Jump
-            </button>
+            </button> */}
             <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
               <a href="#music" style={{ color: '#FDEE03' }}>Music</a>
               <a href="#socials" style={{ color: '#FDEE03' }}>Socials</a>
@@ -234,7 +234,7 @@ const App: React.FC = () => {
           {selectedGame === 'ocean' && <MusicReactiveOceanGame onGameStart={() => setIsPlaying(true)} />}
           {selectedGame === 'wings' && <UnderwaterTinyWingsGame onGameStart={() => setIsPlaying(true)} />}
           {selectedGame === 'doodle' && <UnderwaterDoodleJump onGameStart={() => setIsPlaying(true)} />}
-          {!isPlaying && (
+      {/*     {!isPlaying && (
             <div style={{
               position: 'absolute',
               top: '1rem',
@@ -248,7 +248,7 @@ const App: React.FC = () => {
               <button onClick={() => setSelectedGame('wings')}>Fluffy Flys</button>
 
             </div>
-          )}
+          )} */}
         </>
       ) : (
         <UnderwaterDoodleJump onGameStart={() => setIsPlaying(true)} />

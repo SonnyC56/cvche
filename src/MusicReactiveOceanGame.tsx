@@ -321,7 +321,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     if (!canvasRef.current) return;
     
     const canvas = canvasRef.current;
-    const MAX_FLORA = 15; // Significantly reduced from previous amount
+    const MAX_FLORA = 50; // Significantly reduced from previous amount
     floraItemsRef.current = [];
 
     // Create a pool of flora objects
@@ -908,8 +908,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           const newItem: GameItem = {
             x: canvas.width,
             y: Math.random() * (canvas.height - 50),
-            width: 60,
-            height: 60,
+            width: 30,
+            height: 50,
             type: 'trash',
             speed: 3 + Math.random() * 2,
             rotation: 0,
