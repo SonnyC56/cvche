@@ -937,7 +937,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           // 25-50%: Hooks only (with size reduction)
           else if (songProgress >= 0.25 && songProgress < 0.5) {
             const fishhookY = canvas.height * (Math.random() * -0.25);
-            const baseHookHeight = 300;
+            const baseHookHeight = 200;
             const newItem: GameItem = {
               x: canvas.width,
               y: fishhookY,
