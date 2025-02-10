@@ -18,16 +18,17 @@ interface Particle {
 
 const App: React.FC = () => {
   const [isLandscape, setIsLandscape] = useState(true);
-  const [selectedGame, setSelectedGame] = useState('ocean');
+  const [selectedGame] = useState('ocean');
   const [isPlaying, setIsPlaying] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fishImageRef = useRef<HTMLImageElement | null>(null);
   const particlesRef = useRef<Particle[]>([]);
   const animationFrameRef = useRef<number | null>(null);
-  const fishPositionRef = useRef({ x: 0, y: 0, rotation: 0 });
+  const fishPositionRef = useRef({ x: 0, y: 0, rotation: 0 });``
 
   // Check device orientation: landscape if window.innerWidth > window.innerHeight
   useEffect(() => {
+    console.log('App mounted, isPlaying:', isPlaying);
     // Prevent pull-to-refresh and other touch gestures
     document.body.addEventListener('touchmove', (e) => {
       e.preventDefault();
