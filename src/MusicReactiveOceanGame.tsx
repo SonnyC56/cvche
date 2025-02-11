@@ -269,7 +269,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   // Add this near other refs
   const lastCollisionTimeRef = useRef<number>(0);
  // const COLLISION_COOLDOWN = 1000; // 1 second between collisions
-  const lastProximityScoreTimeRef = useRef<number>(0);
+ const lastProximityScoreTimeRef = useRef<number>(0);
   const PROXIMITY_SCORE_COOLDOWN = 500; // 0.5 seconds between proximity scores
 
   // ─── NEW: Level Progression Toggles ─────────────────────────────
@@ -385,6 +385,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   }, []);
 
   // Persistent game state
+  // NOTE: The player object now includes an extra property "hitType"
   const gameStateRef = useRef({
     player: { 
       x: 100, 
@@ -395,7 +396,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       rotation: 0,
       spinRotation: 0,
       vy: 0,
-      hitTime: undefined as number | undefined  // NEW: track when the fish was hit
+      hitTime: undefined as number | undefined,  // NEW: track when the fish was hit
+      hitType: undefined as 'obstacle' | 'fishhook' | 'trash' | undefined
     },
     trashList: [] as GameItem[],
     obstacles: [] as GameItem[],
@@ -697,8 +699,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
 
   // Modified drawPlayer:
   // After drawing the fish image, if a hit effect is active,
-  // we overlay a black tint that fades out over 1 second.
-  // The tint is applied only to the non-transparent portions using an offscreen canvas.
+  // we overlay a tint on the non-transparent portions using an offscreen canvas.
   const drawPlayer = (ctx: CanvasRenderingContext2D, player: typeof gameStateRef.current.player, fishImg: HTMLImageElement | null) => {
     if (!fishImg || !fishImg.complete) return;
     const aspect = fishImg.naturalWidth / fishImg.naturalHeight;
@@ -710,11 +711,13 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     ctx.translate(centerX, centerY);
     ctx.rotate(player.rotation + player.spinRotation);
     ctx.drawImage(fishImg, -drawWidth / 2 + 20, -drawHeight / 2, drawWidth, drawHeight);
-    // NEW: if the fish was hit (by an obstacle), tint only its non-transparent parts
+    // NEW: if the fish was hit (by an obstacle or hook), overlay a tint
     if (player.hitTime) {
       const elapsed = Date.now() - player.hitTime;
       if (elapsed < 3000) {
         const overlayAlpha = 1 - (elapsed / 3000);
+        // Use red tint for fishhook hits and black tint for obstacles
+        const tintColor = player.hitType === 'fishhook' ? '255,0,0' : '0,0,0';
         // Create an offscreen canvas to tint only the fish pixels
         const offscreen = document.createElement('canvas');
         offscreen.width = drawWidth;
@@ -725,13 +728,14 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           offCtx.drawImage(fishImg, 0, 0, drawWidth, drawHeight);
           // Set composite mode so that fill only applies to non-transparent pixels
           offCtx.globalCompositeOperation = 'source-atop';
-          offCtx.fillStyle = `rgba(0,0,0,${overlayAlpha})`;
+          offCtx.fillStyle = `rgba(${tintColor},${overlayAlpha})`;
           offCtx.fillRect(0, 0, drawWidth, drawHeight);
           // Draw the tinted fish from the offscreen canvas onto the main canvas
           ctx.drawImage(offscreen, -drawWidth/2 + 20, -drawHeight/2);
         }
       } else {
         player.hitTime = undefined;
+        player.hitType = undefined;
       }
     }
     ctx.restore();
@@ -830,7 +834,6 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       });
     }
   };
-
   const updateAndDrawScorePopups = (ctx: CanvasRenderingContext2D) => {
     const popups = gameStateRef.current.scorePopups;
     for (let i = popups.length - 1; i >= 0; i--) {
@@ -851,13 +854,24 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   const updateAndDrawTimedTexts = (ctx: CanvasRenderingContext2D) => {
     if (!canvasRef.current) return;
     activeTimedTextsRef.current.forEach((item) => {
-      const opacity = item.lifetime / 200;
+      let fontSize = 80;
+      const margin = 40;
       ctx.save();
-      ctx.font = "80px Orbitron";
-      ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(item.text, canvasRef.current!.width / 2, canvasRef.current!.height / 2);
+      let textWidth;
+      do {
+        ctx.font = `${fontSize}px Orbitron`;
+        textWidth = ctx.measureText(item.text).width;
+        if (textWidth > (canvasRef.current?.width ?? 400 )- margin) {
+          fontSize -= 2;
+        } else {
+          break;
+        }
+      } while (fontSize > 10);
+      const opacity = item.lifetime / 200;
+      ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+      ctx.fillText(item.text, (canvasRef.current?.width ?? 400 )/ 2,(canvasRef.current?.height ?? 200) / 2);
       ctx.restore();
       item.lifetime -= 1;
     });
@@ -1189,65 +1203,65 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       // Spawn bottles if enabled
       if (levelTogglesRef.current.showBottles && waterBottleRef.current && canvasRef.current) {
         if (Math.random() < 0.75) {
-        gameStateRef.current.trashList.push({
-          x: canvasRef.current.width,
-          y: Math.random() * (canvas.height - 50),
-          width: 30,
-          height: 50,
-          type: 'trash',
-          speed: 1 + Math.random() * 2,
-          rotation: Math.random() * Math.PI * 2,
-          pickupImage: waterBottleRef.current
-        });
+          gameStateRef.current.trashList.push({
+            x: canvasRef.current.width,
+            y: Math.random() * (canvas.height - 50),
+            width: 30,
+            height: 50,
+            type: 'trash',
+            speed: 1 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: waterBottleRef.current
+          });
+          gameStateRef.current.trashStats.totalSpawned++;
         }
       }
       // Spawn bags if enabled
       if (levelTogglesRef.current.showBags && plasticBagRef.current && canvasRef.current) {
         if (Math.random() < 0.75) {
-        gameStateRef.current.trashList.push({
-          x: canvasRef.current.width,
-          y: Math.random() * (canvas.height - 50),
-          width: 30,
-          height: 50,
-          type: 'trash',
-          speed: 1 + Math.random() * 2,
-          rotation: Math.random() * Math.PI * 2,
-          pickupImage: plasticBagRef.current
-        });
-       }
+          gameStateRef.current.trashList.push({
+            x: canvasRef.current.width,
+            y: Math.random() * (canvas.height - 50),
+            width: 30,
+            height: 50,
+            type: 'trash',
+            speed: 1 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: plasticBagRef.current
+          });
+          gameStateRef.current.trashStats.totalSpawned++;
+        }
       }
       // Spawn obstacles if enabled
       if (levelTogglesRef.current.showObstacles && obstacleImageRef.current && canvasRef.current) {
         if (Math.random() < 0.75) {
-
-        gameStateRef.current.obstacles.push({
-          x: canvasRef.current.width,
-          y: Math.random() * (canvas.height - 50),
-          width: 50,
-          height: 50,
-          type: 'obstacle',
-          speed: 1 + Math.random() * 2,
-          rotation: Math.random() * Math.PI * 2,
-          pickupImage: obstacleImageRef.current
-        });
-       }
+          gameStateRef.current.obstacles.push({
+            x: canvasRef.current.width,
+            y: Math.random() * (canvas.height - 50),
+            width: 50,
+            height: 50,
+            type: 'obstacle',
+            speed: 1 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: obstacleImageRef.current
+          });
+        }
       }
       // Spawn fishhooks if enabled
       if (levelTogglesRef.current.showHooks && fishHookRef.current && canvasRef.current) {
         if (Math.random() < 0.5) {
-
-        // Place fishhooks between 10% and 50% of the canvas height
-        const fishhookY = canvasRef.current.height * (0.1 + Math.random() * 0.4);
-        gameStateRef.current.obstacles.push({
-          x: canvasRef.current.width,
-          y: fishhookY,
-          width: 50,
-          height: 150,
-          type: 'fishhook',
-          speed: 1 + Math.random() * 2,
-          pickupImage: fishHookRef.current
-        });
-       }
+          // Place fishhooks between 10% and 50% of the canvas height
+          const fishhookY = canvasRef.current.height * (0.1 + Math.random() * 0.4);
+          gameStateRef.current.obstacles.push({
+            x: canvasRef.current.width,
+            y: fishhookY,
+            width: 50,
+            height: 150,
+            type: 'fishhook',
+            speed: 1 + Math.random() * 2,
+            pickupImage: fishHookRef.current
+          });
+        }
       }
     }
 
@@ -1335,8 +1349,13 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
             lifetime: 120
           });
         }
-        createParticles(gameStateRef.current.particles, item.x, item.y, getParticleColorFromStreak(streak), 20);
-      //  pickupSoundRef.current?.play().catch(console.error);
+        // NEW: For plastic bag or bottle collisions, create two bursts:
+        if (item.pickupImage === waterBottleRef.current || item.pickupImage === plasticBagRef.current) {
+          createParticles(gameStateRef.current.particles, item.x, item.y, '#ED1D24', 20);
+          createParticles(gameStateRef.current.particles, item.x, item.y, '#1489CF', 20);
+        } else {
+          createParticles(gameStateRef.current.particles, item.x, item.y, getParticleColorFromStreak(streak), 20);
+        }
         gameStateRef.current.trashList.splice(i, 1);
         streakDisplayRef.current.scale = 1.3;
       } else {
@@ -1370,11 +1389,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         gameStateRef.current.scorePopups.push({ x: popupX, y: popupY, text: "-20", opacity: 1, lifetime: 100 });
         createParticles(gameStateRef.current.particles, item.x, item.y, '#FF0000', 20);
         hitSoundRef.current?.play().catch(console.error);
-        // For fishhooks, spin without tint; for obstacles (oil splats), tint the fish.
+        // Set spin and now set hitTime and hitType for both fishhook and obstacle collisions.
         gameStateRef.current.player.spinRotation = item.type === 'fishhook' ? Math.PI * 4 : -Math.PI * 4;
-        if (item.type === 'obstacle') {
-          gameStateRef.current.player.hitTime = Date.now();
-        }
+        gameStateRef.current.player.hitTime = Date.now();
+        gameStateRef.current.player.hitType = item.type;
         gameStateRef.current.obstacles.splice(i, 1);
         streakDisplayRef.current.scale = 0.8;
         continue;
@@ -1527,10 +1545,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
               // Play hit sound
               hitSoundRef.current?.play().catch(console.error);
               
-              // Add spin effect
+              // Add spin effect and set hit time/type
               player.spinRotation = Math.PI * 2;
-              // NEW: set the hitTime so the fish turns black briefly
               player.hitTime = Date.now();
+              player.hitType = 'obstacle';
     
               return true;
             }
@@ -1578,8 +1596,9 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         
         hitSoundRef.current?.play().catch(console.error);
         player.spinRotation = Math.PI * 2;
-        // NEW: set the hitTime here as well for cave collisions
-        gameStateRef.current.player.hitTime = Date.now();
+        player.hitTime = Date.now();
+        // For cave collisions, set hitType to obstacle
+        player.hitType = 'obstacle';
         
         // Visual feedback
         ctx2.save();
@@ -1604,6 +1623,16 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           setAudioProgress((curTime / dur) * 100);
           setCurrentTime(curTime);
           setDuration(dur);
+          
+          // Check if we're near the end of the song
+          if (dur - curTime < 0.1) {
+            setLevelEnded(true);
+            gameLoopRef.current = false;
+            if (animationFrameIdRef.current) {
+              cancelAnimationFrame(animationFrameIdRef.current);
+              animationFrameIdRef.current = null;
+            }
+          }
         }
       }
     };
@@ -1690,7 +1719,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         rotation: 0,
         spinRotation: 0,
         vy: 0,
-        hitTime: undefined
+        hitTime: undefined,
+        hitType: undefined
       },
       trashList: [],
       obstacles: [],
@@ -1768,6 +1798,11 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
             : level
         );
         localStorage.setItem('gameLevels', JSON.stringify(newLevels));
+        // Also update the current level with the new high score so it shows correctly
+        const updatedCurrent = newLevels.find(l => l.id === currentLevel.id);
+        if (updatedCurrent) {
+          setCurrentLevel(updatedCurrent);
+        }
         return newLevels;
       });
     }
@@ -2204,7 +2239,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                     setLevelEnded(false);
                     setGameStarted(true);
                     if (audioRef.current) {
-                      audioRef.current.play().catch(console.error);
+                      audioRef.current.play().then(() => {
+                        gameLoopRef.current = true;
+                        requestAnimationFrame(gameLoop);
+                      }).catch(console.error);
                     }
                   }
                 }}
