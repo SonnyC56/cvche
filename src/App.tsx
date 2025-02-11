@@ -199,7 +199,7 @@ const App: React.FC = () => {
           }}>
             CVCHE
           </h1>
-          <div style={{ fontSize: '1.2rem' }}>
+          <div style={{ fontSize: '1.2rem', color: '#ED1D24' }}>
             Please rotate your device to <strong>landscape</strong> to play this game.
           </div>
           <nav style={{ 
@@ -224,9 +224,9 @@ const App: React.FC = () => {
               Play Fluffy Jump
             </button> */}
             <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
-              <a href="#music" style={{ color: '#FDEE03' }}>Music</a>
+              <a href="https://open.spotify.com/track/2ULRa0RBkooom6zZ9H5K8L?si=6579bbdd09334fc7&nd=1&dlsi=6cfb9e2f8b3849fd" style={{ color: '#FDEE03' }}>Music</a>
               <a href="#socials" style={{ color: '#FDEE03' }}>Socials</a>
-              <a href="#merch" style={{ color: '#FDEE03' }}>Merch</a>
+              <a href="https://www.spirituallyhorny.com/" style={{ color: '#FDEE03' }}>Merch</a>
             </div>
           </nav>
         </div>
