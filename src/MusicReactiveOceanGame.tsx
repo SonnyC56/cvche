@@ -7,6 +7,7 @@ declare global {
   }
 }
 
+// ─── UPDATED: Added optional "shape" property to Particle ─────────────────────────────
 interface Particle {
   x: number;
   y: number;
@@ -16,6 +17,7 @@ interface Particle {
   color: string;
   size: number;
   opacity: number;
+  shape?: 'circle' | 'heart';
 }
 
 interface GameItem {
@@ -268,8 +270,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
 
   // Add this near other refs
   const lastCollisionTimeRef = useRef<number>(0);
- // const COLLISION_COOLDOWN = 1000; // 1 second between collisions
- const lastProximityScoreTimeRef = useRef<number>(0);
+// const COLLISION_COOLDOWN = 1000; // 1 second between collisions
+  const lastProximityScoreTimeRef = useRef<number>(0);
   const PROXIMITY_SCORE_COOLDOWN = 500; // 0.5 seconds between proximity scores
 
   // ─── NEW: Level Progression Toggles ─────────────────────────────
@@ -384,6 +386,45 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     }
   }, []);
 
+  // ─── Helper: Draw a heart shape ─────────────────────────────
+  const drawHeart = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string, opacity: number) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath();
+    const topCurveHeight = size * 0.3;
+    ctx.moveTo(0, topCurveHeight);
+    ctx.bezierCurveTo(0, 0, -size/2, 0, -size/2, topCurveHeight);
+    ctx.bezierCurveTo(-size/2, size/2, 0, size, 0, size);
+    ctx.bezierCurveTo(0, size, size/2, size/2, size/2, topCurveHeight);
+    ctx.bezierCurveTo(size/2, 0, 0, 0, 0, topCurveHeight);
+    ctx.closePath();
+    // Convert hex color to rgba with given opacity
+    let r = parseInt(color.slice(1, 3), 16);
+    let g = parseInt(color.slice(3, 5), 16);
+    let b = parseInt(color.slice(5, 7), 16);
+    ctx.fillStyle = `rgba(${r},${g},${b},${opacity})`;
+    ctx.fill();
+    ctx.restore();
+  };
+
+  // ─── Modified createParticles to accept an optional shape parameter ─────────────────────────────
+  const createParticles = (particles: Particle[], x: number, y: number, color: string, count: number, shape: 'circle' | 'heart' = 'circle') => {
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 8,
+        vy: (Math.random() - 0.5) * 8,
+        life: 1.0,
+        color,
+        size: 3 + Math.random() * 2,
+        opacity: 0.7,
+        shape,
+      });
+    }
+  };
+
+  // ─── Updated updateAndDrawParticles to draw hearts if needed ─────────────────────────────
+ 
   // Persistent game state
   // NOTE: The player object now includes an extra property "hitType"
   const gameStateRef = useRef({
@@ -779,25 +820,15 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       p.life -= 0.02;
       p.opacity *= 0.97;
       if (p.life <= 0) { particles.splice(i, 1); continue; }
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-      const opacityHex = Math.floor(p.opacity * 255).toString(16).padStart(2, '0');
-      ctx.fillStyle = `${p.color}${opacityHex}`;
-      ctx.fill();
-    }
-  };
-
-  const createParticles = (particles: Particle[], x: number, y: number, color: string, count: number) => {
-    for (let i = 0; i < count; i++) {
-      particles.push({
-        x, y,
-        vx: (Math.random() - 0.5) * 8,
-        vy: (Math.random() - 0.5) * 8,
-        life: 1.0,
-        color,
-        size: 3 + Math.random() * 2,
-        opacity: 0.7,
-      });
+      if (p.shape === 'heart') {
+        drawHeart(ctx, p.x, p.y, p.size * p.life * 5, p.color, p.opacity);
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        const opacityHex = Math.floor(p.opacity * 255).toString(16).padStart(2, '0');
+        ctx.fillStyle = `${p.color}${opacityHex}`;
+        ctx.fill();
+      }
     }
   };
 
@@ -831,6 +862,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         color: getParticleColorFromStreak(streak),
         size: 4 + Math.random() * 3 + (streak * 0.1),
         opacity: 0.8,
+        shape: 'circle',
       });
     }
   };
@@ -1349,10 +1381,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
             lifetime: 120
           });
         }
-        // NEW: For plastic bag or bottle collisions, create two bursts:
+        // ─── UPDATED: Trash pickup particles are now heart shaped and use pink instead of red ─
         if (item.pickupImage === waterBottleRef.current || item.pickupImage === plasticBagRef.current) {
-          createParticles(gameStateRef.current.particles, item.x, item.y, '#ED1D24', 20);
-          createParticles(gameStateRef.current.particles, item.x, item.y, '#1489CF', 20);
+          createParticles(gameStateRef.current.particles, item.x, item.y, '#FFC0CB', 20, 'heart');
+          createParticles(gameStateRef.current.particles, item.x, item.y, '#1489CF', 20, 'heart');
         } else {
           createParticles(gameStateRef.current.particles, item.x, item.y, getParticleColorFromStreak(streak), 20);
         }
@@ -1387,9 +1419,11 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         const popupX = item.x + item.width / 2;
         const popupY = item.y + item.height / 2;
         gameStateRef.current.scorePopups.push({ x: popupX, y: popupY, text: "-20", opacity: 1, lifetime: 100 });
-        createParticles(gameStateRef.current.particles, item.x, item.y, '#FF0000', 20);
+        // ─── UPDATED: Use black particles for oil collisions, red for fishhooks ─
+        const particleColor = item.type === 'obstacle' ? '#000000' : '#FF0000';
+        createParticles(gameStateRef.current.particles, item.x, item.y, particleColor, 20);
         hitSoundRef.current?.play().catch(console.error);
-        // Set spin and now set hitTime and hitType for both fishhook and obstacle collisions.
+        // For fishhooks, spin without tint; for obstacles (oil splats), tint the fish.
         gameStateRef.current.player.spinRotation = item.type === 'fishhook' ? Math.PI * 4 : -Math.PI * 4;
         gameStateRef.current.player.hitTime = Date.now();
         gameStateRef.current.player.hitType = item.type;
@@ -1510,12 +1544,12 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
               const collisionX = playerBox.top <= upperY ? player.x : player.x;
               const collisionY = playerBox.top <= upperY ? upperY : lowerY;
               
-              // Create more dramatic particle effects
+              // Create more dramatic particle effects ─ for cave collisions, use black (oil)
               createParticles(
                 gameStateRef.current.particles,
                 collisionX,
                 collisionY,
-                '#FF0000',
+                '#000000',
                 30  // More particles
               );
     
@@ -1567,7 +1601,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           gameStateRef.current.particles,
           player.x,
           player.y,
-          '#FF0000',
+          '#000000',
           30
         );
         
