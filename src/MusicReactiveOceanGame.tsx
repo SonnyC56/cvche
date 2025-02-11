@@ -268,7 +268,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
 
   // Add this near other refs
   const lastCollisionTimeRef = useRef<number>(0);
-  const COLLISION_COOLDOWN = 1000; // 1 second between collisions
+ // const COLLISION_COOLDOWN = 1000; // 1 second between collisions
   const lastProximityScoreTimeRef = useRef<number>(0);
   const PROXIMITY_SCORE_COOLDOWN = 500; // 0.5 seconds between proximity scores
 
