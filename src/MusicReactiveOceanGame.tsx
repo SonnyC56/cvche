@@ -25,7 +25,8 @@ interface GameItem {
   y: number;
   width: number;
   height: number;
-  type: 'trash' | 'obstacle' | 'fishhook';
+  // Extended union to include new trash types
+  type: 'trash' | 'obstacle' | 'fishhook' | 'flipflop' | 'toothbrush' | 'hotdog' | 'rubberducky';
   speed: number;
   rotation?: number;
   pickupImage?: HTMLImageElement;
@@ -115,10 +116,7 @@ interface Level {
 /* ──────────────────────────────────────────────────────────────
    NEW: Level Progression Toggles
 
-   This interface defines which elements should be enabled
-   based on the current song time. You can adjust the time thresholds
-   to control when each element (e.g. flora, trash, obstacles, visualizer,
-   bubbles, hooks, background pattern) appears.
+   This interface now also includes toggles for the new trash types.
 ────────────────────────────────────────────────────────────── */
 interface LevelToggles {
   showFlora: boolean;
@@ -129,6 +127,10 @@ interface LevelToggles {
   showVisualizer: boolean;
   showBubbles: boolean;
   showBackgroundPattern: boolean;
+  showFlipFlops: boolean;
+  showToothbrushes: boolean;
+  showHotdogs: boolean;
+  showRubberDuckies: boolean;
 }
 
 interface Props {
@@ -148,18 +150,26 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [levelEnded, setLevelEnded] = useState(false);
-  // NEW: State for pending level selection from the pause menu
+  // State for pending level selection from the pause menu
   const [pendingLevel, setPendingLevel] = useState<Level | null>(null);
-  // NEW: Health state – fish starts with 100 hit points
+  // Health state – fish starts with 100 hit points
   const [health, setHealth] = useState(100);
   const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight);
+
+  // NEW: About modal state (for replacing merch link)
+  const [showAboutModal, setShowAboutModal] = useState(false);
+
+  // NEW: Email state for end-of-song updates
+  const [email, setEmail] = useState("");
+
+  // Determine if mobile (a simple check – adjust as needed)
+  const isMobile = window.innerWidth < 768;
 
   // Add new state for levels
   const [currentLevel, setCurrentLevel] = useState<Level>({
     id: 1,
     title: "WELCOME TO CVCHE",
-    songFile: "/sounds/welcomeToCVCHE.mp3",
-    // Updated to FDF200 Yellow per your timing data
+    songFile: "https://storage.googleapis.com/assets.urnowhere.com/publicmedia/cvche/welcomeToCVCHE.mp3",
     initialBackground: "#FDF200",
     initialWaveColor: "rgba(253,242,0,0.4)",
     unlocked: true,
@@ -174,34 +184,31 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
 
   // Add new state for high scores
   const [levels, setLevels] = useState<Level[]>(() => {
-    // Try to load high scores from localStorage
     const savedLevels = localStorage.getItem('gameLevels');
     const defaultLevels = [
       {
         id: 1,
         title: "WELCOME TO CVCHE",
-        songFile: "/sounds/welcomeToCVCHE.mp3",
-        // Updated to FDF200 Yellow per your timing data
+        songFile: "https://storage.googleapis.com/assets.urnowhere.com/publicmedia/cvche/welcomeToCVCHE.mp3",
         initialBackground: "#FDF200",
         initialWaveColor: "rgba(253,242,0,0.4)",
         unlocked: true,
         isCaveMechanic: false,
         highScore: 0,
         highestStreak: 0
-      },
-      /* {
-        id: 2,
-        title: "SOUL FOOD",
-        songFile: "/sounds/soulFood2.mp3",
-        initialBackground: "#8A2BE2",
-        initialWaveColor: "rgba(255,140,0,0.4)",
-        unlocked: true,
-        isCaveMechanic: true,
-        highScore: 0
-      } */
+      }
+      
+      /* You may add additional levels here */
     ];
-
-    return savedLevels ? JSON.parse(savedLevels) : defaultLevels;
+    if (savedLevels) {
+      const parsedLevels = JSON.parse(savedLevels);
+      const mergedLevels = defaultLevels.map(defaultLevel => {
+        const savedLevel = parsedLevels.find((level: Level) => level.id === defaultLevel.id);
+        return savedLevel ? { ...defaultLevel, ...savedLevel } : defaultLevel;
+      });
+      return mergedLevels;
+    }
+    return defaultLevels;
   });
 
   // Instead of state for colors, use refs so updates are immediate.
@@ -221,13 +228,13 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   // Control game loop
   const gameLoopRef = useRef<boolean>(false);
   const lastBeatTimeRef = useRef<number>(0);
-  const beatThreshold = 30; // Lower threshold for more frequent beat detection
-  const levelStartDelay = 0; // Delay (in ms) before the level starts moving
+  const beatThreshold = 30;
+  const levelStartDelay = 0;
 
   // Store the requestAnimationFrame ID so we can cancel it on pause
   const animationFrameIdRef = useRef<number | null>(null);
 
-  // NEW: Ref to hold the time of the last frame for deltaTime calculation
+  // Ref for deltaTime calculation
   const lastFrameTimeRef = useRef<number>(performance.now());
 
   // Audio analyser refs
@@ -240,27 +247,32 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   const plasticBagRef = useRef<HTMLImageElement | null>(null);
   const obstacleImageRef = useRef<HTMLImageElement | null>(null);
   const fishHookRef = useRef<HTMLImageElement | null>(null);
+  // New trash item images
+  const flipflopRef = useRef<HTMLImageElement | null>(null);
+  const toothbrushRef = useRef<HTMLImageElement | null>(null);
+  const hotdogRef = useRef<HTMLImageElement | null>(null);
+  const rubberDuckyRef = useRef<HTMLImageElement | null>(null);
 
   const activeTimedTextsRef = useRef<ActiveTimedText[]>([]);
 
   // Speed multiplier ref
   const speedMultiplier = useRef<number>(1);
 
-  // New ref to hold current amplitude (for potential reactivity)
+  // Ref to hold current amplitude
   const amplitudeRef = useRef<number>(0);
 
   // Bubbles ref
   const bubblesRef = useRef<Bubble[]>([]);
 
-  // Add flora refs
+  // Flora refs
   const floraImagesRef = useRef<HTMLImageElement[]>([]);
   const floraItemsRef = useRef<Flora[]>([]);
 
-  // Add new refs for sound effects
+  // Sound effects refs
   const pickupSoundRef = useRef<HTMLAudioElement | null>(null);
   const hitSoundRef = useRef<HTMLAudioElement | null>(null);
 
-  // Add new ref for streak display animation
+  // Streak display animation ref
   const streakDisplayRef = useRef<StreakDisplay>({
     x: 0,
     y: 0,
@@ -268,7 +280,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     opacity: 1
   });
 
-  // Add refs for cave mechanics
+  // Cave mechanics refs
   const caveRef = useRef<{
     upper: { points: { x: number; y: number }[]; amplitude: number };
     lower: { points: { x: number; y: number }[]; amplitude: number };
@@ -277,30 +289,31 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     lower: { points: [], amplitude: 0 }
   });
 
-  //canvas preview ref 
+  // Canvas preview ref for landscape mode (before game starts)
   const landscapePreviewCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-
-  // Add this near other refs
+  // Additional refs
   const lastCollisionTimeRef = useRef<number>(0);
-  // const COLLISION_COOLDOWN = 1000; // 1 second between collisions
   const lastProximityScoreTimeRef = useRef<number>(0);
-  const PROXIMITY_SCORE_COOLDOWN = 500; // 0.5 seconds between proximity scores
+  const PROXIMITY_SCORE_COOLDOWN = 500;
 
-  // ─── NEW: Level Progression Toggles ─────────────────────────────
-  // This ref holds booleans that enable or disable different visual/spawn elements
+  // ─── UPDATED: Level Progression Toggles (with new toggles for flipflops, toothbrushes, hotdogs) ─────────────────────────────
   const levelTogglesRef = useRef<LevelToggles>({
     showFlora: false,
-    showBags: false,         // replaced showTrash
-    showBottles: false,       // replaced showTrash
+    showBags: false,
+    showBottles: false,
     showObstacles: false,
     showHooks: false,
     showVisualizer: false,
     showBubbles: false,
     showBackgroundPattern: false,
+    showFlipFlops: false,
+    showToothbrushes: false,
+    showHotdogs: false,
+    showRubberDuckies: false
   });
 
-  // NEW: Refs for portrait fish animation
+  // New Refs for Portrait Fish Animation
   const portraitCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const portraitParticlesRef = useRef<Particle[]>([]);
   const portraitAnimationFrameRef = useRef<number | null>(null);
@@ -327,7 +340,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
   };
 
-  // ─── UPDATED: Timed Text Events per provided timeline ─────────────────────────────
+  // ─── UPDATED: Timed Text Events ─────────────────────────────
   useEffect(() => {
     const fishImg = new Image();
     fishImg.onload = () => { fishImageRef.current = fishImg; };
@@ -349,6 +362,23 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     hookImg.onload = () => { fishHookRef.current = hookImg; };
     hookImg.src = '/sprites/fishHook.webp';
 
+    // New trash item images
+    const flipflopImg = new Image();
+    flipflopImg.onload = () => { flipflopRef.current = flipflopImg; };
+    flipflopImg.src = '/sprites/flipflop.webp';
+
+    const toothbrushImg = new Image();
+    toothbrushImg.onload = () => { toothbrushRef.current = toothbrushImg; };
+    toothbrushImg.src = '/sprites/toothbrush.webp';
+
+    const hotdogImg = new Image();
+    hotdogImg.onload = () => { hotdogRef.current = hotdogImg; };
+    hotdogImg.src = '/sprites/hotdog.webp';
+
+    const rubberDuckyImg = new Image();
+    rubberDuckyImg.onload = () => { rubberDuckyRef.current = rubberDuckyImg; };
+    rubberDuckyImg.src = '/sprites/rubberDucky.webp';
+
     // Initialize sound effects
     const pickupSound = new Audio('/sounds/pickup.mp3');
     pickupSound.volume = 0.3;
@@ -363,7 +393,6 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     // Load flora images
     const floraFileNames = ['1 (1).webp', ...Array.from({ length: 20 }, (_, i) => `1 (${i + 16}).webp`)];
     let loadedCount = 0;
-
     floraFileNames.forEach(fileName => {
       const img = new Image();
       img.onload = () => {
@@ -380,11 +409,9 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
 
   const initializeFlora = useCallback(() => {
     if (!canvasRef.current) return;
-
     const canvas = canvasRef.current;
     const MAX_FLORA = 50;
     floraItemsRef.current = [];
-
     for (let i = 0; i < MAX_FLORA; i++) {
       const randomImage = floraImagesRef.current[Math.floor(Math.random() * floraImagesRef.current.length)];
       const height = 30 + Math.random() * 80;
@@ -423,11 +450,12 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     ctx.restore();
   };
 
-  // ─── Modified createParticles to accept an optional shape parameter ─────────────────────────────
+  // ─── Modified createParticles ─────────────────────────────
   const createParticles = (particles: Particle[], x: number, y: number, color: string, count: number, shape: 'circle' | 'heart' = 'circle') => {
     for (let i = 0; i < count; i++) {
       particles.push({
-        x, y,
+        x,
+        y,
         vx: (Math.random() - 0.5) * 8,
         vy: (Math.random() - 0.5) * 8,
         life: 1.0,
@@ -451,7 +479,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       spinRotation: 0,
       vy: 0,
       hitTime: undefined as number | undefined,
-      hitType: undefined as 'obstacle' | 'fishhook' | 'trash' | undefined
+      hitType: undefined as 'obstacle' | 'fishhook' | 'trash' | 'flipflop' | 'toothbrush' | 'hotdog' | 'rubberducky' | undefined
     },
     trashList: [] as GameItem[],
     obstacles: [] as GameItem[],
@@ -463,6 +491,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     multiplier: 1,
     highestStreak: 0,
   });
+
   const timedTextEventsRef = useRef<TimedTextEvent[]>([
     { timestamp: 9.35, text: "WELCOME TO CVCHE", triggered: false },
     { timestamp: 11, text: "Save the Reef. Collect The Plastic.", triggered: false },
@@ -480,7 +509,6 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     { timestamp: 431, text: "THE END", triggered: false },
   ]);
 
-  // ─── UPDATED: Color Events per provided timeline ─────────────────────────────
   const colorEventsRef = useRef<TimedColorEvent[]>([
     { timestamp: 0, backgroundColor: "#FDF200", waveColor: "rgba(253,242,0,0.4)", triggered: true, transitionDuration: 3 },
     { timestamp: 105, backgroundColor: "#FECB07", waveColor: "rgba(254,203,7,0.4)", triggered: false, transitionDuration: 3 },
@@ -518,7 +546,6 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     { timestamp: 431, backgroundColor: "#FDF200", waveColor: "rgba(253,242,0,0.4)", triggered: false, transitionDuration: 1 },
   ]);
 
-  // Initial active color transition state
   const activeColorTransitionRef = useRef<ActiveColor>({
     backgroundColor: "#1a1a2e",
     waveColor: "rgba(0,102,255,0.4)",
@@ -615,7 +642,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     };
   }, []);
 
-  //update audio progress ref 
+  // Update audio progress ref 
   useEffect(() => {
     audioProgressRef.current = audioProgress;
   }, [audioProgress]);
@@ -642,29 +669,26 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
 
   // ─── Modified drawBackgroundPattern ─────────────────────────────
   const bgPatternBubblesRef = useRef<Bubble[]>([]);
-
   const drawBackgroundPattern = (ctx: CanvasRenderingContext2D, amplitudeFactor: number) => {
     if (!canvasRef.current) return;
     ctx.save();
     const width = canvasRef.current.width;
     const height = canvasRef.current.height;
     const currentTime = Date.now();
-
     for (let x = 0; x <= width; x += 5) {
       const timeOffset = currentTime / 1000;
       const frequency = 4 + Math.sin(timeOffset) * 2 * (1 + amplitudeFactor * 0.5);
       const y = height + Math.sin((x / width * frequency * Math.PI) + timeOffset) * (50 + amplitudeFactor * 70);
       if (Math.random() < 0.1) {
         bgPatternBubblesRef.current.push({
-          x: x,
-          y: y,
+          x,
+          y,
           radius: 2 + Math.random() * 2,
           speed: 0.3 + Math.random() * 0.2,
           opacity: 1,
         });
       }
     }
-
     for (let i = bgPatternBubblesRef.current.length - 1; i >= 0; i--) {
       const bubble = bgPatternBubblesRef.current[i];
       bubble.y -= bubble.speed;
@@ -738,6 +762,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     }
   };
 
+  // Updated drawPlayer remains unchanged
   const drawPlayer = (ctx: CanvasRenderingContext2D, player: typeof gameStateRef.current.player, fishImg: HTMLImageElement | null) => {
     if (!fishImg || !fishImg.complete) return;
     const aspect = fishImg.naturalWidth / fishImg.naturalHeight;
@@ -773,9 +798,16 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     ctx.restore();
   };
 
+  // Updated drawItem to cover trash items plus new types
   const drawItem = (ctx: CanvasRenderingContext2D, item: GameItem, pulse: number) => {
     ctx.save();
-    if (item.type === 'trash' && item.pickupImage) {
+    if (
+      (item.type === 'trash' ||
+        item.type === 'flipflop' ||
+        item.type === 'toothbrush' ||
+        item.type === 'hotdog' ||
+        item.type === 'rubberducky') && item.pickupImage
+    ) {
       item.rotation = (item.rotation || 0) + 0.0125;
       const effectiveWidth = item.width * pulse;
       const effectiveHeight = item.height * pulse;
@@ -792,6 +824,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       ctx.rotate(item.rotation!);
       ctx.drawImage(item.pickupImage, -effectiveWidth / 2, -effectiveHeight / 2, effectiveWidth, effectiveHeight);
     } else if (item.type === 'fishhook' && item.pickupImage) {
+      // Always use getSpawnY for fishhooks so they don't spawn behind the hearts
       const effectiveWidth = item.width, effectiveHeight = item.height;
       const centerX = item.x + effectiveWidth / 2, centerY = item.y + effectiveHeight / 2;
       ctx.drawImage(item.pickupImage, centerX - effectiveWidth / 2, centerY - effectiveHeight / 2, effectiveWidth, effectiveHeight);
@@ -802,7 +835,13 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     ctx.restore();
   };
 
-  // ─── UPDATED: updateAndDrawParticles to draw hearts if needed ─────────────────────────────
+  // Use a constant top buffer to ensure nothing spawns behind the hearts or higher
+  const TOP_BUFFER = 80;
+  const getSpawnY = (itemHeight: number) => {
+    if (!canvasRef.current) return TOP_BUFFER;
+    return TOP_BUFFER + Math.random() * (canvasRef.current.height - TOP_BUFFER - itemHeight);
+  };
+
   const updateAndDrawParticles = (ctx: CanvasRenderingContext2D, particles: Particle[], factor: number) => {
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
@@ -900,6 +939,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     });
     activeTimedTextsRef.current = activeTimedTextsRef.current.filter(item => item.lifetime > 0);
   };
+
   // Landscape preview loop for when game hasn't started in landscape mode
   useEffect(() => {
     if (gameStarted || !isLandscape) return;
@@ -911,6 +951,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       const canvas = landscapePreviewCanvasRef.current;
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      // For preview, we just draw the player (fish) without background/particles.
       drawPlayer(ctx, gameStateRef.current.player, fishImageRef.current);
       updateAndDrawParticles(ctx, gameStateRef.current.particles, 1);
       createSwimParticles(gameStateRef.current.particles, gameStateRef.current.player);
@@ -947,74 +988,56 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     }
   };
 
+  // ─── Updated drawFlora ─────────────────────────────
   const drawFlora = useCallback((ctx: CanvasRenderingContext2D, amplitude: number, factor: number) => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
     const time = Date.now() / 1000;
-
     floraItemsRef.current.forEach((flora) => {
       flora.x -= flora.scrollSpeed * speedMultiplier.current * factor;
-
       if (flora.x + flora.width < 0) {
         flora.x = canvas.width + (Math.random() * canvas.width);
       }
-
       flora.y = canvas.height;
-
       ctx.save();
-
       const sway = Math.sin(time * flora.swaySpeed + flora.swayOffset) * (5 + amplitude / 10);
       const pivotX = flora.x + flora.width / 2;
       const pivotY = flora.y;
-
       ctx.translate(pivotX, pivotY);
       ctx.rotate(sway * 0.05);
-
-      // Draw with semi-transparency
       ctx.globalAlpha = 0.50;
-      ctx.drawImage(
-        flora.image,
-        -flora.width / 2,
-        -flora.height,
-        flora.width,
-        flora.height
-      );
-
+      ctx.drawImage(flora.image, -flora.width / 2, -flora.height, flora.width, flora.height);
       ctx.restore();
     });
   }, []);
 
-  // ─── UPDATED: Cave boundary update function ─────────────────────────────
+  // ─── UPDATED: Cave boundary update function (with max height clamping for desktop) ─────────────────────────────
   const updateCaveBoundaries = useCallback((amplitude: number) => {
     if (!canvasRef.current) return;
-
     const canvas = canvasRef.current;
     const time = Date.now() / 1000;
-
     caveRef.current.upper.points = [];
     caveRef.current.lower.points = [];
-
     const playerMinWidth = gameStateRef.current.player.width;
-    const minCaveHeight = playerMinWidth * 3; // Minimum space between cave walls
-    const maxAmplitude = (canvas.height - minCaveHeight) / 2; // Increased range
-    const beatAmplitude = Math.min(amplitude * 4, maxAmplitude); // More dramatic amplitude
+    const minCaveHeight = playerMinWidth * 3;
+    const maxAmplitude = (canvas.height - minCaveHeight) / 2;
+    const computedBeatAmplitude = amplitude * 4;
+    const effectiveBeatAmplitude = inputRef.current.isDesktop
+      ? Math.min(computedBeatAmplitude, 50)
+      : Math.min(computedBeatAmplitude, maxAmplitude);
     const centerY = canvas.height / 2;
-
-    // Generate more dramatic wave patterns
-    for (let x = 0; x <= canvas.width; x += 10) { // Reduced step size for smoother curves
-      const waveOffset = Math.sin(x / 150 + time * 3) * beatAmplitude + // Primary wave
-        Math.sin(x / 75 + time * 2) * (beatAmplitude * 0.5) + // Secondary wave
-        Math.sin(x / 37.5 + time * 4) * (beatAmplitude * 0.25); // Tertiary wave
+    for (let x = 0; x <= canvas.width; x += 10) {
+      const waveOffset = Math.sin(x / 150 + time * 3) * effectiveBeatAmplitude +
+        Math.sin(x / 75 + time * 2) * (effectiveBeatAmplitude * 0.5) +
+        Math.sin(x / 37.5 + time * 4) * (effectiveBeatAmplitude * 0.25);
       const curveY = centerY + waveOffset;
-
       caveRef.current.upper.points.push({
         x,
-        y: curveY - minCaveHeight - (beatAmplitude * 0.5)
+        y: curveY - minCaveHeight - (effectiveBeatAmplitude * 0.5)
       });
-
       caveRef.current.lower.points.push({
         x,
-        y: curveY + minCaveHeight + (beatAmplitude * 0.5)
+        y: curveY + minCaveHeight + (effectiveBeatAmplitude * 0.5)
       });
     }
   }, []);
@@ -1024,18 +1047,15 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     if (!gameLoopRef.current || !canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
-
     const nowTime = performance.now();
     const deltaTime = (nowTime - lastFrameTimeRef.current) / 1000;
     lastFrameTimeRef.current = nowTime;
-    const factor = deltaTime * 120; // Baseline factor for 60fps
-
+    const factor = deltaTime * 120;
     const canvas = canvasRef.current;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     const audioTime = audioRef.current?.currentTime || 0;
     const songDuration = audioRef.current?.duration || 1;
-
     if (audioTime < 10) {
       levelTogglesRef.current = {
         showFlora: false,
@@ -1046,6 +1066,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: false,
         showBubbles: false,
         showBackgroundPattern: false,
+        showFlipFlops: false,
+        showToothbrushes: false,
+        showHotdogs: false,
+        showRubberDuckies: false,
       };
     } else if (audioTime >= 10 && audioTime < 11) {
       levelTogglesRef.current = {
@@ -1057,6 +1081,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: false,
         showBubbles: false,
         showBackgroundPattern: false,
+        showFlipFlops: false,
+        showToothbrushes: false,
+        showHotdogs: false,
+        showRubberDuckies: false,
       };
     } else if (audioTime >= 11 && audioTime < 26) {
       levelTogglesRef.current = {
@@ -1068,6 +1096,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: false,
         showBubbles: false,
         showBackgroundPattern: false,
+        showFlipFlops: false,
+        showToothbrushes: false,
+        showHotdogs: false,
+        showRubberDuckies: false,
       };
     } else if (audioTime >= 26 && audioTime < 62) {
       levelTogglesRef.current = {
@@ -1079,6 +1111,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: false,
         showBubbles: false,
         showBackgroundPattern: false,
+        showFlipFlops: false,
+        showToothbrushes: false,
+        showHotdogs: false,
+        showRubberDuckies: false,
       };
     } else if (audioTime >= 62 && audioTime < 80) {
       levelTogglesRef.current = {
@@ -1090,6 +1126,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: false,
         showBubbles: false,
         showBackgroundPattern: false,
+        showFlipFlops: false,
+        showToothbrushes: false,
+        showHotdogs: false,
+        showRubberDuckies: false,
       };
     } else if (audioTime >= 80 && audioTime < 105) {
       levelTogglesRef.current = {
@@ -1101,6 +1141,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: true,
         showBubbles: false,
         showBackgroundPattern: true,
+        showFlipFlops: false,
+        showToothbrushes: false,
+        showHotdogs: false,
+        showRubberDuckies: false,
       };
     } else if (audioTime >= 105 && audioTime < 234) {
       levelTogglesRef.current = {
@@ -1112,6 +1156,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
+        showFlipFlops: true,
+        showToothbrushes: false,
+        showHotdogs: false,
+        showRubberDuckies: false,
       };
     } else if (audioTime >= 234 && audioTime < 265) {
       levelTogglesRef.current = {
@@ -1123,6 +1171,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
+        showFlipFlops: false,
+        showToothbrushes: true,
+        showHotdogs: false,
+        showRubberDuckies: false,
       };
     } else if (audioTime >= 265 && audioTime < 300) {
       levelTogglesRef.current = {
@@ -1134,6 +1186,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
+        showFlipFlops: false,
+        showToothbrushes: false,
+        showHotdogs: true,
+        showRubberDuckies: false,
       };
     } else if (audioTime >= 300) {
       levelTogglesRef.current = {
@@ -1145,6 +1201,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
+        showFlipFlops: true,
+        showToothbrushes: true,
+        showHotdogs: true,
+        showRubberDuckies: true,
       };
     }
     if (audioTime >= 330 && audioTime < 390) {
@@ -1157,6 +1217,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
+        showFlipFlops: true,
+        showToothbrushes: true,
+        showHotdogs: true,
+        showRubberDuckies: true,
       };
     } else if (audioTime >= 390 && audioTime < 410) {
       levelTogglesRef.current = {
@@ -1168,6 +1232,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
+        showFlipFlops: true,
+        showToothbrushes: true,
+        showHotdogs: true,
+        showRubberDuckies: true,
       };
     } else if (audioTime >= 410) {
       levelTogglesRef.current = {
@@ -1179,9 +1247,12 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
+        showFlipFlops: false,
+        showToothbrushes: false,
+        showHotdogs: false,
+        showRubberDuckies: false,
       };
     }
-
     colorEventsRef.current.forEach(event => {
       if (!event.triggered && audioTime >= event.timestamp) {
         event.triggered = true;
@@ -1206,21 +1277,18 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       waveColorRef.current = newWave;
       if (containerRef.current) containerRef.current.style.background = newBg;
     }
-
     const amplitude = getAverageAmplitude();
     amplitudeRef.current = amplitude;
     const pulse = 1 + amplitude / 100;
-
     const audioTimeMs = audioRef.current ? audioRef.current.currentTime * 1000 : 0;
     const effectiveTime = Math.max(0, audioTimeMs - levelStartDelay);
     speedMultiplier.current = 1 + ((effectiveTime / 1000) / 120) * 0.5;
-
     if (detectBeat(amplitude)) {
       if (levelTogglesRef.current.showBottles && waterBottleRef.current && canvasRef.current) {
         if (Math.random() < 0.075 + ((audioProgressRef.current / 200))) {
           gameStateRef.current.trashList.push({
             x: canvasRef.current.width,
-            y: Math.random() * (canvas.height - 50),
+            y: getSpawnY(50),
             width: 30,
             height: 50,
             type: 'trash',
@@ -1235,7 +1303,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         if (Math.random() < 0.075 + (audioProgressRef.current / 200)) {
           gameStateRef.current.trashList.push({
             x: canvasRef.current.width,
-            y: Math.random() * (canvas.height - 50),
+            y: getSpawnY(50),
             width: 30,
             height: 50,
             type: 'trash',
@@ -1250,7 +1318,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         if (Math.random() < 0.075 + (audioProgressRef.current / 200)) {
           gameStateRef.current.obstacles.push({
             x: canvasRef.current.width,
-            y: Math.random() * (canvas.height - 50),
+            y: getSpawnY(50),
             width: 50,
             height: 50,
             type: 'obstacle',
@@ -1274,8 +1342,68 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           });
         }
       }
+      // New trash item spawns with lower probability
+      if (levelTogglesRef.current.showFlipFlops && flipflopRef.current && canvasRef.current) {
+        if (Math.random() < 0.03) {
+          gameStateRef.current.trashList.push({
+            x: canvasRef.current.width,
+            y: getSpawnY(50),
+            width: 30,
+            height: 50,
+            type: 'flipflop',
+            speed: 1 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: flipflopRef.current
+          });
+          gameStateRef.current.trashStats.totalSpawned++;
+        }
+      }
+      if (levelTogglesRef.current.showToothbrushes && toothbrushRef.current && canvasRef.current) {
+        if (Math.random() < 0.03) {
+          gameStateRef.current.trashList.push({
+            x: canvasRef.current.width,
+            y: getSpawnY(50),
+            width: 10,
+            height: 40,
+            type: 'toothbrush',
+            speed: 1 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: toothbrushRef.current
+          });
+          gameStateRef.current.trashStats.totalSpawned++;
+        }
+      }
+      if (levelTogglesRef.current.showHotdogs && hotdogRef.current && canvasRef.current) {
+        if (Math.random() < 0.03) {
+          gameStateRef.current.trashList.push({
+            x: canvasRef.current.width,
+            y: getSpawnY(50),
+            width: 50,
+            height: 25,
+            type: 'hotdog',
+            speed: 1 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: hotdogRef.current
+          });
+          gameStateRef.current.trashStats.totalSpawned++;
+        }
+      }
+      if (levelTogglesRef.current.showRubberDuckies && rubberDuckyRef.current && canvasRef.current) {
+        if (Math.random() < 0.03) {
+          gameStateRef.current.trashList.push({
+            x: canvasRef.current.width,
+            y: getSpawnY(50),
+            width: 50,
+            height: 50,
+            type: 'rubberducky',
+            speed: 1 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: rubberDuckyRef.current
+          });
+          gameStateRef.current.trashStats.totalSpawned++;
+        }
+      }
     }
-
     drawBackground(ctx, amplitude / 100);
     if (levelTogglesRef.current.showVisualizer) {
       drawSpectrum(ctx);
@@ -1293,7 +1421,6 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       updateAndDrawBubbles(ctx, factor);
     }
     updateAndDrawTimedTexts(ctx, factor);
-
     if (inputRef.current.isDesktop || inputRef.current.isTouching) {
       const targetY = inputRef.current.touchY - (gameStateRef.current.player.height / 2);
       const currentY = gameStateRef.current.player.y;
@@ -1312,7 +1439,6 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         gameStateRef.current.player.spinRotation = 0;
       }
     }
-
     for (let i = gameStateRef.current.trashList.length - 1; i >= 0; i--) {
       const item = gameStateRef.current.trashList[i];
       item.x -= item.speed * speedMultiplier.current * factor;
@@ -1369,8 +1495,6 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         drawItem(ctx, item, pulse);
       }
     }
-
-    // ─── PROCESS OBSTACLES ─────────────────────────────────────────────
     for (let i = gameStateRef.current.obstacles.length - 1; i >= 0; i--) {
       const item = gameStateRef.current.obstacles[i];
       item.x -= item.speed * speedMultiplier.current * factor;
@@ -1383,10 +1507,9 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         continue;
       }
       if (item.type === 'fishhook') {
-        // For fishhooks, define a collidable rectangle that is the bottom half of the fishhook.
         const hookLeft = item.x;
         const hookRight = item.x + item.width;
-        const hookTop = item.y + item.height / 2; // bottom half starts here
+        const hookTop = item.y + item.height / 2;
         const hookBottom = item.y + item.height;
         const player = gameStateRef.current.player;
         if (
@@ -1463,7 +1586,6 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         }
       }
     }
-
     createSwimParticles(gameStateRef.current.particles, gameStateRef.current.player);
     updateAndDrawParticles(ctx, gameStateRef.current.particles, factor);
     updateAndDrawScorePopups(ctx, factor);
@@ -1471,14 +1593,21 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       gameStateRef.current.player.rotation = 0;
     }
     drawPlayer(ctx, gameStateRef.current.player, fishImageRef.current);
-
     const caveActive = currentLevelRef.current.isCaveMechanic || (currentLevelRef.current.id === 1 && audioTime >= 330 && audioTime < 390);
     if (caveActive) {
+      const CAVE_WARNING_DURATION = 3;
+      let isWarningPeriod = false;
+      if (currentLevelRef.current.id === 1 && audioTime < 330 + CAVE_WARNING_DURATION) {
+        isWarningPeriod = true;
+      }
       updateCaveBoundaries(amplitude);
       const ctx2 = canvas.getContext('2d');
       if (!ctx2) return;
       ctx2.save();
-      ctx2.fillStyle = `rgba(26, 26, 26, 0.75)`;
+      const caveFillOpacity = isWarningPeriod
+        ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 100))
+        : 0.75;
+      ctx2.fillStyle = `rgba(26, 26, 26, ${caveFillOpacity})`;
       ctx2.beginPath();
       ctx2.moveTo(0, 0);
       caveRef.current.upper.points.forEach(point => {
@@ -1512,7 +1641,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       const proximity = 1 - Math.min(distance / maxDistance, 1);
       ctx2.beginPath();
       const hue = proximity * 120;
-      ctx2.strokeStyle = `hsla(${hue}, 100%, 50%, ${0.3 + (amplitude / 255) * 0.7})`;
+      const caveStrokeOpacity = isWarningPeriod
+        ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 100))
+        : 0.3 + (amplitude / 255) * 0.7;
+      ctx2.strokeStyle = `hsla(${hue}, 100%, 50%, ${caveStrokeOpacity})`;
       ctx2.lineWidth = 4 + (amplitude / 255) * 6;
       ctx2.shadowColor = `hsl(${hue}, 100%, 50%)`;
       ctx2.shadowBlur = amplitude / 10;
@@ -1542,8 +1674,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           });
         }
       }
-
       const checkCollision = () => {
+        if (isWarningPeriod) return false;
         const player = gameStateRef.current.player;
         const playerBox = {
           top: player.y,
@@ -1551,42 +1683,23 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           left: player.x,
           right: player.x + player.width
         };
-
         for (let i = 1; i < caveRef.current.upper.points.length; i++) {
           const upperP1 = caveRef.current.upper.points[i - 1];
           const upperP2 = caveRef.current.upper.points[i];
           const lowerP1 = caveRef.current.lower.points[i - 1];
           const lowerP2 = caveRef.current.lower.points[i];
-
           if (playerBox.right >= upperP1.x && playerBox.left <= upperP2.x) {
             const t = (playerBox.left - upperP1.x) / (upperP2.x - upperP1.x);
             const upperY = upperP1.y + t * (upperP2.y - upperP1.y);
             const lowerY = lowerP1.y + t * (lowerP2.y - lowerP1.y);
-
             if (playerBox.top <= upperY || playerBox.bottom >= lowerY) {
               const collisionX = playerBox.top <= upperY ? player.x : player.x;
               const collisionY = playerBox.top <= upperY ? upperY : lowerY;
-
-              createParticles(
-                gameStateRef.current.particles,
-                collisionX,
-                collisionY,
-                '#000000',
-                30
-              );
-
-              createParticles(
-                gameStateRef.current.particles,
-                collisionX,
-                collisionY,
-                '#FFFFFF',
-                15
-              );
-
+              createParticles(gameStateRef.current.particles, collisionX, collisionY, '#000000', 30);
+              createParticles(gameStateRef.current.particles, collisionX, collisionY, '#FFFFFF', 15);
               gameStateRef.current.score = Math.max(0, gameStateRef.current.score - 30);
               gameStateRef.current.streak = 0;
               gameStateRef.current.multiplier = 1;
-
               gameStateRef.current.scorePopups.push({
                 x: collisionX,
                 y: collisionY,
@@ -1594,13 +1707,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                 opacity: 1,
                 lifetime: 100
               });
-
               hitSoundRef.current?.play().catch(console.error);
-
               player.spinRotation = Math.PI * 2;
               player.hitTime = Date.now();
               player.hitType = 'obstacle';
-
               setHealth(prev => {
                 const newHealth = prev - 1;
                 if (newHealth <= 0) {
@@ -1613,64 +1723,44 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                 }
                 return newHealth;
               });
-
               return true;
             }
           }
         }
         return false;
       };
-
       const isColliding = checkCollision();
-
       if (isColliding && now - lastCollisionTimeRef.current > PROXIMITY_SCORE_COOLDOWN) {
         lastCollisionTimeRef.current = now;
-
-        createParticles(
-          gameStateRef.current.particles,
-          player.x,
-          player.y,
-          '#000000',
-          30
-        );
-
-        createParticles(
-          gameStateRef.current.particles,
-          player.x,
-          player.y,
-          '#FFFFFF',
-          15
-        );
-
+        createParticles(gameStateRef.current.particles, gameStateRef.current.player.x, gameStateRef.current.player.y, '#000000', 30);
+        createParticles(gameStateRef.current.particles, gameStateRef.current.player.x, gameStateRef.current.player.y, '#FFFFFF', 15);
         gameStateRef.current.score = Math.max(0, gameStateRef.current.score - 20);
         gameStateRef.current.streak = 0;
         gameStateRef.current.multiplier = 1;
-
         gameStateRef.current.scorePopups.push({
-          x: player.x,
-          y: player.y,
+          x: gameStateRef.current.player.x,
+          y: gameStateRef.current.player.y,
           text: "-20",
           opacity: 1,
           lifetime: 100
         });
-
         hitSoundRef.current?.play().catch(console.error);
-        player.spinRotation = Math.PI * 2;
-        player.hitTime = Date.now();
-        player.hitType = 'obstacle';
-
+        gameStateRef.current.player.spinRotation = Math.PI * 2;
+        gameStateRef.current.player.hitTime = Date.now();
+        gameStateRef.current.player.hitType = 'obstacle';
         ctx2.save();
         ctx2.fillStyle = 'rgba(255, 0, 0, 0.2)';
         ctx2.fillRect(0, 0, canvas.width, canvas.height);
         ctx2.restore();
       }
     }
-
     setScore(gameStateRef.current.score);
+    const streakScale = Math.min(3, 0.5 + (gameStateRef.current.streak / 50) + (amplitudeRef.current / 255) * 0.5);
+    streakDisplayRef.current.scale = streakScale;
     animationFrameIdRef.current = requestAnimationFrame(gameLoop);
   }, [updateCaveBoundaries]);
 
-  // NEW: Update high score continuously even if level isn't ended
+  // Update high score continuously even if level isn't ended
   useEffect(() => {
     setLevels(prev => {
       const newLevels = prev.map(level => {
@@ -1689,7 +1779,6 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       return newLevels;
     });
   }, [score, currentLevel.id]);
-
   // Separate loop to update song progress  
   useEffect(() => {
     if (!gameStarted) return;
@@ -1701,7 +1790,6 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           setAudioProgress((curTime / dur) * 100);
           setCurrentTime(curTime);
           setDuration(dur);
-
           if (dur - curTime < 0.1) {
             setLevelEnded(true);
             gameLoopRef.current = false;
@@ -1748,13 +1836,13 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   const startGame = useCallback(() => {
     if (gameStarted) return;
     setGameStarted(true);
-
     if (containerRef.current) {
       if (containerRef.current.requestFullscreen) {
         containerRef.current.requestFullscreen();
+      } else if ((containerRef.current as any).webkitRequestFullscreen) {
+        (containerRef.current as any).webkitRequestFullscreen();
       }
     }
-
     setHealth(100);
     onGameStart?.();
     backgroundColorRef.current = currentLevel.initialBackground;
@@ -1816,40 +1904,33 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       multiplier: 1,
       highestStreak: 0,
     };
-
     caveRef.current = {
       upper: { points: [], amplitude: 0 },
       lower: { points: [], amplitude: 0 }
     };
-
     timedTextEventsRef.current = timedTextEventsRef.current.map(event => ({
       ...event,
       triggered: false
     }));
-
     colorEventsRef.current = colorEventsRef.current.map(event => ({
       ...event,
       triggered: event.timestamp === 0
     }));
-
     setCurrentLevel(level);
-
     backgroundColorRef.current = level.initialBackground;
     waveColorRef.current = level.initialWaveColor;
     if (containerRef.current) {
       containerRef.current.style.background = level.initialBackground;
     }
-
     if (audioRef.current) {
       audioRef.current.src = level.songFile;
       audioRef.current.currentTime = 0;
     }
-
     setLevelEnded(false);
     setHealth(100);
-  }, [updateCaveBoundaries]);
+  }, []);
 
-  // ─── UPDATED: Save high score and highest streak continuously ─────────────────────────────
+  // ─── UPDATED: Save high score and highest streak continuously ─
   useEffect(() => {
     setLevels(prev => {
       const newLevels = prev.map(level => {
@@ -1869,42 +1950,29 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     });
   }, [score, currentLevel.id]);
 
-  // NEW: Helper to compute continuous health color (green at 100, red at 0)
-  const getHealthColor = (health: number) => {
+  const healthColor = (function (health: number) {
     const ratio = Math.max(0, Math.min(health / 100, 1));
     const r = Math.round(255 * (1 - ratio));
     const g = Math.round(255 * ratio);
     return `rgb(${r}, ${g}, 0)`;
-  };
+  })(health);
 
-  // ─── NEW: Portrait Fish Animation Functions ─────────────────────────────
+  // ─── Portrait Fish Animation Functions ─
   const drawFishPortrait = (ctx: CanvasRenderingContext2D) => {
     if (!fishImageRef.current || !portraitCanvasRef.current) return;
     const time = Date.now() / 1000;
     const canvas = portraitCanvasRef.current;
-    // Update fish position: horizontally centered; vertically oscillate
     portraitFishPositionRef.current.x = canvas.width * 0.5;
     portraitFishPositionRef.current.y = canvas.height * 0.25 + Math.sin(time * 2) * 20;
     portraitFishPositionRef.current.rotation = Math.sin(time * 2) * 0.1;
-
     ctx.save();
     ctx.translate(portraitFishPositionRef.current.x, portraitFishPositionRef.current.y);
     ctx.rotate(portraitFishPositionRef.current.rotation);
     const fishWidth = 100;
     const fishHeight = (fishWidth / fishImageRef.current.width) * fishImageRef.current.height;
-    ctx.drawImage(
-      fishImageRef.current,
-      -fishWidth / 2,
-      -fishHeight / 2,
-      fishWidth,
-      fishHeight
-    );
+    ctx.drawImage(fishImageRef.current, -fishWidth / 2, -fishHeight / 2, fishWidth, fishHeight);
     ctx.restore();
-
-    createPortraitParticles(
-      portraitFishPositionRef.current.x - fishWidth / 2,
-      portraitFishPositionRef.current.y
-    );
+    createPortraitParticles(portraitFishPositionRef.current.x - fishWidth / 2, portraitFishPositionRef.current.y);
   };
 
   const createPortraitParticles = (x: number, y: number) => {
@@ -1965,34 +2033,28 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     }
   }, [isLandscape]);
 
-  // ─── NEW: Orientation state and effect ─────────────────────────────
+  // Orientation state effect
   useEffect(() => {
     const handleOrientationChange = () => {
       setIsLandscape(window.innerWidth > window.innerHeight);
     };
     window.addEventListener('resize', handleOrientationChange);
-    return () => {
-      window.removeEventListener('resize', handleOrientationChange);
-    };
+    return () => window.removeEventListener('resize', handleOrientationChange);
   }, []);
 
   const [pausedByOrientation, setPausedByOrientation] = useState(false);
-
   useEffect(() => {
     if (!isLandscape && gameStarted && !isPaused) {
       togglePause();
       setPausedByOrientation(true);
     }
   }, [isLandscape, gameStarted, isPaused, togglePause]);
-
   useEffect(() => {
-    // Load Orbitron font
     const font = new FontFace('Orbitron', 'url(/fonts/Orbitron/Orbitron-VariableFont_wght.ttf)');
     font.load().then(() => {
       document.fonts.add(font);
     });
   }, []);
-
   useEffect(() => {
     if (isLandscape && pausedByOrientation && gameStarted && isPaused) {
       togglePause();
@@ -2000,68 +2062,29 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     }
   }, [isLandscape, pausedByOrientation, gameStarted, isPaused, togglePause]);
 
-  // ─── UPDATED RETURN ─────────────────────────────────────────────
-  // The Health Bar is now 10 continuously filled hearts and in portrait mode, we display the animated fish.
-  const healthColor = getHealthColor(health);
+  // ─── UPDATED RETURN ─
   return (
-    <div ref={containerRef} style={{
-      position: 'relative',
-      width: '100%',
-      minHeight: '100vh',
-      background: backgroundColorRef.current,
-      fontFamily: 'Orbitron, sans-serif'
-    }}>
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', minHeight: '100vh', background: backgroundColorRef.current, fontFamily: 'Orbitron, sans-serif' }}>
       <>
-        <canvas
-          ref={starsCanvasRef}
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '200px', pointerEvents: 'none', zIndex: 5 }}
-        />
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '50px',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 20px',
-          zIndex: 10,
-          color: '#fff',
-          justifyContent: 'space-between',
-          fontFamily: 'Orbitron, sans-serif',
-        }}>
+        <canvas ref={starsCanvasRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '200px', pointerEvents: 'none', zIndex: 5 }} />
+        <div style={{ position: 'fixed', left: 0, right: 0, height: '50px', display: 'flex', alignItems: 'center', padding: '0 20px', zIndex: 10, color: '#fff', justifyContent: 'space-between', fontFamily: 'Orbitron, sans-serif' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
             {gameStarted && (
-              <button
-                onClick={togglePause}
-                style={{
-                  background: '#0066FF',
-                  border: 'none',
-                  color: '#fff',
-                  padding: '5px 15px',
-                  cursor: 'pointer',
-                  borderRadius: '4px',
-                }}>
+              <button onClick={togglePause} style={{ background: '#0066FF', border: 'none', color: '#fff', padding: '5px 15px', cursor: 'pointer', borderRadius: '4px' }}>
                 {isPaused ? 'Play' : 'Pause'}
               </button>
             )}
-            <div>High Score: {currentLevel.highScore || 0}</div>
-            <div>Score: {score}</div>
+            <div style={{whiteSpace: 'nowrap'}}>High Score: {currentLevel.highScore || 0}</div>
+            <div style={{whiteSpace: 'nowrap'}}>Score: {score}</div>
+            {gameStarted && (
+              <a href="https://open.spotify.com/album/3nDX07NcGIyEeFtZIep9NB" target="_blank" rel="noopener noreferrer" style={{ background: '#1DB954', padding: '5px 10px', borderRadius: '4px', color: '#fff', textDecoration: 'none' }}>
+                Spotify
+              </a>
+            )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, maxWidth: '500px' }}>
-            <div style={{
-              flex: 1,
-              height: '4px',
-              background: 'rgba(255, 255, 255, 0.2)',
-              borderRadius: '2px',
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                width: `${audioProgress}%`,
-                height: '100%',
-                background: '#0066FF',
-                transition: 'width 0.1s linear',
-              }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, width: '100%', paddingLeft:'20px' }}>
+            <div style={{ flex: 1, height: '4px', background: 'rgba(255, 255, 255, 0.2)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{ width: `${audioProgress}%`, height: '100%', background: '#0066FF', transition: 'width 0.1s linear' }} />
             </div>
             <div style={{ fontSize: '14px' }}>
               {formatTime(currentTime)} / {formatTime(duration)}
@@ -2069,141 +2092,132 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           </div>
         </div>
         {gameStarted && (
-          <div style={{
-            position: 'fixed',
-            top: '50px',
-            left: "20px",
-            zIndex: 10,
-            display: 'flex',
-            gap: '4px'
-          }}>
-            {Array.from({ length: 10 }).map((_, i) => {
-              // Force each heart to be full if health is 100
-              const heartValue = health === 100 ? 10 : Math.max(0, Math.min(health - i * 10, 10));
-              const fillFraction = heartValue / 10;
-              return (
-                <div key={i} style={{
-                  position: 'relative',
-                  display: 'inline-block',
-                  width: '24px',
-                  height: '24px',
-                  fontSize: '24px',
-                  lineHeight: '24px'
-                }}>
-                  <span style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    color: 'rgba(255,255,255,0.3)'
-                  }}>
-                    ❤️
-                  </span>
-                  <span style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: `${fillFraction * 100}%`,
-                    height: '100%',
-                    overflow: 'hidden',
-                    whiteSpace: 'nowrap',
-                    color: healthColor
-                  }}>
-                    ❤️
-                  </span>
-                </div>
-              );
-            })}
+          <div style={{ position: 'fixed', top: '60px', left: '20px', zIndex: 10, width: '250px', height: '20px', background: 'rgba(255,255,255,0.2)', borderRadius: '10px' }}>
+            <div style={{ width: `${health}%`, height: '100%', background: healthColor, borderRadius: '10px' }}></div>
           </div>
         )}
-        <div style={{
-          position: 'fixed',
-          top: '60px',
-          right: '20px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: '5px',
-          zIndex: 10,
-          fontFamily: 'Orbitron, sans-serif',
-        }}>
-          <div style={{
-            background: `rgba(0, 0, 0, ${0.5 + (amplitudeRef.current / 255) * 0.3})`,
-            padding: '10px 20px',
-            borderRadius: '8px',
-            transform: `scale(${0.5 + (gameStateRef.current.streak / 50) + (amplitudeRef.current / 255) * 0.5})`,
-            transition: 'transform 0.1s ease-out',
-            fontFamily: 'Orbitron, sans-serif',
-          }}>
-            <div style={{
-              color: getParticleColorFromStreak(gameStateRef.current.streak),
-              fontSize: '24px',
-              fontWeight: 'bold',
-              textShadow: '0 0 10px rgba(255,255,255,0.3)',
-              transition: 'color 0.3s',
-              fontFamily: 'Orbitron, sans-serif',
-            }}>
+        <div style={{ position: 'fixed', top: '60px', right: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px', zIndex: 10, fontFamily: 'Orbitron, sans-serif' }}>
+          <div style={{ background: `rgba(0, 0, 0, ${0.5 + (amplitudeRef.current / 255) * 0.3})`, padding: '10px 20px', borderRadius: '8px', transform: `scale(${Math.min(3, 0.5 + (gameStateRef.current.streak / 50) + (amplitudeRef.current / 255) * 0.5)})`, transition: 'transform 0.1s ease-out', fontFamily: 'Orbitron, sans-serif' }}>
+            <div style={{ color: getParticleColorFromStreak(gameStateRef.current.streak), fontSize: '24px', fontWeight: 'bold', textShadow: '0 0 10px rgba(255,255,255,0.3)', transition: 'color 0.3s', fontFamily: 'Orbitron, sans-serif' }}>
               {gameStateRef.current.streak} STREAK
             </div>
-            <div style={{
-              color: '#fff',
-              fontSize: '18px',
-              opacity: 0.8,
-              fontFamily: 'Orbitron, sans-serif',
-            }}>
+            <div style={{ color: '#fff', fontSize: '18px', opacity: 0.8, fontFamily: 'Orbitron, sans-serif' }}>
               {gameStateRef.current.multiplier}x MULTIPLIER
             </div>
           </div>
         </div>
+        {/* Landscape & Portrait Pre-Game UI */}
         {!gameStarted && (
-          <div style={{
-            position: 'absolute',
-            top: '50dvh',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 20,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '2rem',
-            textAlign: 'center',
-            fontFamily: 'Orbitron, sans-serif',
-          }}>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '1rem'
-            }}>
-            </div>
-            {!floraLoaded ? (
-              <div style={{
-                padding: '20px 60px',
-                fontSize: '24px',
-                color: '#000'
-              }}>
-                Loading...
-              </div>
+          <>
+            {isLandscape ? (
+              <>
+                <canvas
+                  ref={landscapePreviewCanvasRef}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 2 }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50dvh',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 20,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '2rem',
+                    textAlign: 'center',
+                    fontFamily: 'Orbitron, sans-serif',
+                  }}
+                >
+                  {!floraLoaded ? (
+                    <div style={{ padding: '20px 60px', fontSize: '24px', color: '#000' }}>
+                      Loading...
+                    </div>
+                  ) : (
+                    <button
+                      onClick={startGame}
+                      style={{
+                        border: 'none',
+                        color: '#fff',
+                        padding: '20px 60px',
+                        fontSize: '24px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                        transition: 'transform 0.2s',
+                        background: '#0066FF',
+                      }}
+                    >
+                      Play
+                    </button>
+                  )}
+
+                  <nav
+                    style={{
+                      marginTop: '1rem',
+                      display: 'flex',
+                      gap: '2rem',
+                      fontSize: '1.2rem',
+                      color: '#000',
+                    }}
+                  >
+                    <a href="https://vyd.co/WelcomeToCvche" style={{ textDecoration: 'underline', color: '#000' }}>Music</a>
+                    <a href="https://www.instagram.com/cvche" style={{ textDecoration: 'underline', color: '#000' }}>Socials</a>
+                    <span onClick={() => setShowAboutModal(true)} style={{ textDecoration: 'underline', cursor: 'pointer', color: '#000' }}>About</span>
+                  </nav>
+                </div>
+              </>
             ) : (
-              <button
-                onClick={startGame}
-                style={{
-                  border: 'none',
-                  color: '#fff',
-                  padding: '20px 60px',
-                  fontSize: '24px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  transition: 'transform 0.2s'
-                }}>
-                Play
-              </button>
+              <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '100%', background: 'black', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
+                <canvas
+                  ref={portraitCanvasRef}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                />
+                <h1 style={{ fontSize: '3rem', margin: 0, fontWeight: 'bold', color: '#FDEE03', zIndex: 101 }}>CVCHE</h1>
+                <div style={{ fontSize: '1.2rem', color: '#ED1D24', zIndex: 101, padding: '20px', textAlign: 'center' }}>
+                  Please rotate your device to <strong>landscape</strong> to play this game.
+                </div>
+                <nav style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', fontSize: '1.2rem', zIndex: 101 }}>
+                  <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
+                    <a href="https://vyd.co/WelcomeToCvche" style={{ color: '#FDEE03' }}>Music</a>
+                    <a href="https://www.instagram.com/cvche" style={{ color: '#FDEE03' }}>Socials</a>
+                    <button onClick={() => setShowAboutModal(true)} style={{ background: 'none', border: 'none', color: '#FDEE03', fontSize: 'inherit', cursor: 'pointer', padding: '0' }}>About</button>
+                  </div>
+                </nav>
+              </div>
             )}
-          </div>
+          </>
         )}
-        {isPaused && (
+        <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+        <audio
+          id="audioControl"
+          ref={audioRef}
+          crossOrigin="anonymous"
+          src="https://storage.googleapis.com/assets.urnowhere.com/publicmedia/cvche/welcomeToCVCHE.mp3"
+          style={{ display: 'none' }}
+          onTimeUpdate={() => {
+            if (audioRef.current) {
+              const curTime = audioRef.current.currentTime;
+              const dur = audioRef.current.duration;
+              if (dur) {
+                setAudioProgress((curTime / dur) * 100);
+                setCurrentTime(curTime);
+                setDuration(dur);
+                if (dur - curTime < 0.1) {
+                  setLevelEnded(true);
+                  gameLoopRef.current = false;
+                  if (animationFrameIdRef.current) {
+                    cancelAnimationFrame(animationFrameIdRef.current);
+                    animationFrameIdRef.current = null;
+                  }
+                }
+              }
+            }
+          }}
+        />
+        {/* PAUSE SCREEN OVERLAY */}
+        {isPaused && !levelEnded && isLandscape && (
           <div style={{
             position: 'absolute',
             top: 0,
@@ -2211,7 +2225,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
             right: 0,
             bottom: 0,
             backgroundColor: 'rgba(0,0,0,0.7)',
-            zIndex: 30,
+            zIndex: 35,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -2238,7 +2252,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                     border: 'none',
                     borderRadius: '8px',
                     color: '#fff',
-                  }}>
+                  }}
+                >
                   Play
                 </button>
               ) : (
@@ -2252,12 +2267,22 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                     border: 'none',
                     borderRadius: '8px',
                     color: '#fff',
-                  }}>
+                  }}
+                >
                   Resume
                 </button>
               )}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'row',
+              gap: '1rem',
+              overflowX: 'auto',
+              padding: '0 10px',
+              width: '100%',
+              justifyContent: 'space-evenly',
+
+            }}>
               {levels.map((level) => {
                 const isSelected = pendingLevel ? pendingLevel.id === level.id : currentLevel.id === level.id;
                 return (
@@ -2266,8 +2291,9 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                     onClick={() => setPendingLevel(level)}
                     disabled={!level.unlocked}
                     style={{
+                      margin: '10px',
                       padding: '10px 20px',
-                      width: '180px',
+                      minWidth: '180px',
                       fontSize: '16px',
                       borderRadius: '8px',
                       border: isSelected ? '2px solid #fff' : 'none',
@@ -2295,58 +2321,30 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
             </div>
           </div>
         )}
-        <canvas
-          ref={canvasRef}
-          style={{ width: '100%', height: '100%', display: 'block' }}
-        />
-        <audio
-          id="audioControl"
-          ref={audioRef}
-          crossOrigin="anonymous"
-          src="/sounds/welcomeToCVCHE.mp3"
-          style={{ display: 'none' }}
-          onTimeUpdate={() => {
-            if (audioRef.current) {
-              const curTime = audioRef.current.currentTime;
-              const dur = audioRef.current.duration;
-              if (dur) {
-                setAudioProgress((curTime / dur) * 100);
-                setCurrentTime(curTime);
-                setDuration(dur);
-
-                if (dur - curTime < 0.1) {
-                  setLevelEnded(true);
-                  gameLoopRef.current = false;
-                  if (animationFrameIdRef.current) {
-                    cancelAnimationFrame(animationFrameIdRef.current);
-                    animationFrameIdRef.current = null;
-                  }
-                }
-              }
-            }
-          }}
-        />
+        {isPaused && !levelEnded && !isLandscape && (
+                 <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '100%', background: 'black', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
+                 <canvas
+                   ref={portraitCanvasRef}
+                   style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                 />
+                 <h1 style={{ fontSize: '3rem', margin: 0, fontWeight: 'bold', color: '#FDEE03', zIndex: 101 }}>CVCHE</h1>
+                 <div style={{ fontSize: '1.2rem', color: '#ED1D24', zIndex: 101, padding: '20px', textAlign: 'center' }}>
+                   Please rotate your device to <strong>landscape</strong> to resume this game.
+                 </div>
+                 <nav style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', fontSize: '1.2rem', zIndex: 101 }}>
+                   <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
+                     <a href="https://vyd.co/WelcomeToCvche" style={{ color: '#FDEE03' }}>Music</a>
+                     <a href="https://www.instagram.com/cvche" style={{ color: '#FDEE03' }}>Socials</a>
+                     <button onClick={() => setShowAboutModal(true)} style={{ background: 'none', border: 'none', color: '#FDEE03', fontSize: 'inherit', cursor: 'pointer', padding: '0' }}>About</button>
+                   </div>
+                 </nav>
+               </div>
+        )}
         {levelEnded && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            color: '#fff',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 30,
-            fontFamily: 'Orbitron, sans-serif',
-          }}>
-            <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>{health <= 0 ? 'Game Over!' : 'Level Complete!'}</h1>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.8)', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 30, fontFamily: 'Orbitron, sans-serif' }}>
+            <h1 style={{ marginTop: 0, fontSize: '48px', marginBottom: '20px' }}>{health <= 0 ? 'Game Over!' : 'Level Complete!'}</h1>
             <div style={{ fontSize: '24px', marginBottom: '10px' }}>Final Score: {score}</div>
-            <div style={{ fontSize: '24px', marginBottom: '10px' }}>
-              Highest Streak: {gameStateRef.current.highestStreak}
-            </div>
+            <div style={{ fontSize: '24px', marginBottom: '10px' }}>Highest Streak: {gameStateRef.current.highestStreak}</div>
             <div style={{ fontSize: '24px', marginBottom: '20px' }}>
               Trash Collected: {gameStateRef.current.trashStats.collected} / {gameStateRef.current.trashStats.totalSpawned} (
               {gameStateRef.current.trashStats.totalSpawned > 0
@@ -2354,126 +2352,63 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                 : 0}%
               )
             </div>
-            <div style={{
-              display: 'flex',
-              gap: '20px',
-              marginTop: '20px'
-            }}>
+            <div style={{ marginBottom: '20px' }}>
               <button
-                onClick={() => window.location.reload()}
-                style={{
-                  padding: '15px 30px',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  backgroundColor: '#444',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#fff',
-                }}
+                onClick={() => window.open('https://docs.google.com/forms/d/e/YOUR_GOOGLE_FORM_ID/viewform', '_blank')}
+                style={{ padding: '10px 20px', fontSize: '16px', cursor: 'pointer', backgroundColor: '#0066FF', border: 'none', borderRadius: '4px', color: '#fff' }}
               >
+                Sign Up for Updates
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: '20px'}}>
+              <button onClick={() => window.location.reload()} style={{ padding: '15px 30px', fontSize: '20px', cursor: 'pointer', backgroundColor: '#444', border: 'none', borderRadius: '8px', color: '#fff' }}>
                 Play Again
               </button>
               {levels.find(l => l.id === currentLevel.id + 1) && (
-                <button
-                  onClick={() => {
-                    const nextLevel = levels.find(l => l.id === currentLevel.id + 1);
-                    if (nextLevel && nextLevel.unlocked) {
-                      selectLevel(nextLevel);
-                      setLevelEnded(false);
-                      setGameStarted(true);
-                      if (audioRef.current) {
-                        audioRef.current.play().then(() => {
-                          gameLoopRef.current = true;
-                          requestAnimationFrame(gameLoop);
-                        }).catch(console.error);
-                      }
+                <button onClick={() => {
+                  const nextLevel = levels.find(l => l.id === currentLevel.id + 1);
+                  if (nextLevel && nextLevel.unlocked) {
+                    selectLevel(nextLevel);
+                    setLevelEnded(false);
+                    setGameStarted(true);
+                    if (audioRef.current) {
+                      audioRef.current.play().then(() => {
+                        gameLoopRef.current = true;
+                        requestAnimationFrame(gameLoop);
+                      }).catch(console.error);
                     }
-                  }}
-                  style={{
-                    padding: '15px 30px',
-                    fontSize: '20px',
-                    cursor: 'pointer',
-                    backgroundColor: '#0066FF',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff',
-                  }}
-                >
+                  }
+                }} style={{ padding: '15px 30px', fontSize: '20px', cursor: 'pointer', backgroundColor: '#0066FF', border: 'none', borderRadius: '8px', color: '#fff' }}>
                   Next Level
                 </button>
               )}
             </div>
           </div>
         )}
-      </>
-      {/* Landscape Preview Canvas (only before game starts in landscape) */}
-      {!gameStarted && isLandscape && (
-        <canvas
-          ref={landscapePreviewCanvasRef}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            zIndex: 2,
-          }}
-        />
-      )}
-
-      {/* Portrait Mode Overlay with Fish Animation */}
-      {!isLandscape && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          height: '100%',
-          width: '100%',
-          background: 'black',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 100,
-        }}>
-          <canvas
-            ref={portraitCanvasRef}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%'
-            }}
-          />
-          <h1 style={{
-            fontSize: '3rem',
-            margin: 0,
-            fontWeight: 'bold',
-            color: '#FDEE03',
-            zIndex: 101
-          }}>
-            CVCHE
-          </h1>
-          <div style={{ fontSize: '1.2rem', color: '#ED1D24', zIndex: 101 }}>
-            Please rotate your device to <strong>landscape</strong> to play this game.
-          </div>
-          <nav style={{
-            marginTop: '2rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2rem',
-            fontSize: '1.2rem',
-            zIndex: 101
-          }}>
-            <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
-              <a href="https://vyd.co/WelcomeToCvche" style={{ color: '#FDEE03' }}>Music</a>
-              <a href="https://www.instagram.com/cvche" style={{ color: '#FDEE03' }}>Socials</a>
-              <a href="https://www.spirituallyhorny.com/" style={{ color: '#FDEE03' }}>Merch</a>
+        {/* About Modal */}
+        {showAboutModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <div style={{ background: '#000', padding: '20px', borderRadius: '8px', maxWidth: '90%', maxHeight: '90%', overflowY: 'auto', fontFamily: 'Orbitron, sans-serif', textAlign: 'center', color: '#fff', margin: '20px' }}>
+              <h2>CVCHE - MEET THE TRAILBLAZERS OF RURAL CANADIAN TECHNO</h2>
+              <p>Amirite?!</p>
+              <p>
+                We are very excited to begin to share with you the vast catalog of our upcoming LP, 'Get Fluffy'. Over the next few months we'll be releasing more and more songs to please your ears until the album comes out in full. So put on ur socks, find a waxed floor to dance on and enjoy! Rural Canadian Techno 4evur!
+              </p>
+              <p>
+                We live in a Tiny Sovereign Nation, on an island between two forks of a river.
+                <br />
+                Tiny Sovereign Nation, Rural Canada
+              </p>
+              <button
+                onClick={() => setShowAboutModal(false)}
+                style={{ marginTop: '20px', padding: '10px 20px', background: '#0066FF', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontFamily: 'Orbitron, sans-serif' }}
+              >
+                Close
+              </button>
             </div>
-          </nav>
-        </div>
-      )}
+          </div>
+        )}
+      </>
     </div>
   );
 };
