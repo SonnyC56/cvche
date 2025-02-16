@@ -159,12 +159,6 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   // NEW: About modal state (for replacing merch link)
   const [showAboutModal, setShowAboutModal] = useState(false);
 
-  // NEW: Email state for end-of-song updates
-  const [email, setEmail] = useState("");
-
-  // Determine if mobile (a simple check – adjust as needed)
-  const isMobile = window.innerWidth < 768;
-
   // Add new state for levels
   const [currentLevel, setCurrentLevel] = useState<Level>({
     id: 1,
