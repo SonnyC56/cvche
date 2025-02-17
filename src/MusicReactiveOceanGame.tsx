@@ -191,7 +191,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         highScore: 0,
         highestStreak: 0
       }
-      
+
       /* You may add additional levels here */
     ];
     if (savedLevels) {
@@ -1421,7 +1421,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       const dy = targetY - currentY;
       gameStateRef.current.player.vy = gameStateRef.current.player.vy * 0.9 + dy * 0.1 * factor;
       gameStateRef.current.player.y += gameStateRef.current.player.vy * 0.1 * factor;
-      const targetRotation = Math.atan2(gameStateRef.current.player.vy * 0.1 * factor, 2) * 0.5;
+      // Reduce rotation interpolation by 50%
+      const targetRotation = Math.atan2(gameStateRef.current.player.vy * 0.1 * factor, 2) * 0.25;
       gameStateRef.current.player.rotation = targetRotation;
     } else {
       gameStateRef.current.player.vy *= 0.95;
@@ -2068,15 +2069,15 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                 {isPaused ? 'Play' : 'Pause'}
               </button>
             )}
-            <div style={{whiteSpace: 'nowrap'}}>High Score: {currentLevel.highScore || 0}</div>
-            <div style={{whiteSpace: 'nowrap'}}>Score: {score}</div>
+            <div style={{ whiteSpace: 'nowrap' }}>High Score: {currentLevel.highScore || 0}</div>
+            <div style={{ whiteSpace: 'nowrap' }}>Score: {score}</div>
             {gameStarted && (
               <a href="https://open.spotify.com/album/3nDX07NcGIyEeFtZIep9NB" target="_blank" rel="noopener noreferrer" style={{ background: '#1DB954', padding: '5px 10px', borderRadius: '4px', color: '#fff', textDecoration: 'none' }}>
                 Spotify
               </a>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, width: '100%', paddingLeft:'20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, width: '100%', paddingLeft: '20px' }}>
             <div style={{ flex: 1, height: '4px', background: 'rgba(255, 255, 255, 0.2)', borderRadius: '2px', overflow: 'hidden' }}>
               <div style={{ width: `${audioProgress}%`, height: '100%', background: '#0066FF', transition: 'width 0.1s linear' }} />
             </div>
@@ -2085,11 +2086,6 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
             </div>
           </div>
         </div>
-        {gameStarted && (
-          <div style={{ position: 'fixed', top: '60px', left: '20px', zIndex: 10, width: '250px', height: '20px', background: 'rgba(255,255,255,0.2)', borderRadius: '10px' }}>
-            <div style={{ width: `${health}%`, height: '100%', background: healthColor, borderRadius: '10px' }}></div>
-          </div>
-        )}
         <div style={{ position: 'fixed', top: '60px', right: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px', zIndex: 10, fontFamily: 'Orbitron, sans-serif' }}>
           <div style={{ background: `rgba(0, 0, 0, ${0.5 + (amplitudeRef.current / 255) * 0.3})`, padding: '10px 20px', borderRadius: '8px', transform: `scale(${Math.min(3, 0.5 + (gameStateRef.current.streak / 50) + (amplitudeRef.current / 255) * 0.5)})`, transition: 'transform 0.1s ease-out', fontFamily: 'Orbitron, sans-serif' }}>
             <div style={{ color: getParticleColorFromStreak(gameStateRef.current.streak), fontSize: '24px', fontWeight: 'bold', textShadow: '0 0 10px rgba(255,255,255,0.3)', transition: 'color 0.3s', fontFamily: 'Orbitron, sans-serif' }}>
@@ -2112,7 +2108,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                 <div
                   style={{
                     position: 'absolute',
-                    top: '50dvh',
+                    top: '60dvh',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
                     zIndex: 20,
@@ -2124,6 +2120,19 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                     fontFamily: 'Orbitron, sans-serif',
                   }}
                 >
+                        <h1 style={{ fontSize: '3rem', margin: 0, fontWeight: 'bold', color: '#000' }}>CVCHE</h1>
+                  <nav
+                    style={{
+                      display: 'flex',
+                      gap: '2rem',
+                      fontSize: '1.2rem',
+                      color: '#000',
+                    }}
+                  >
+                    <a href="https://vyd.co/WelcomeToCvche" style={{ textDecoration: 'underline', color: '#000' }}>Music</a>
+                    <a href="https://www.instagram.com/cvche" style={{ textDecoration: 'underline', color: '#000' }}>Socials</a>
+                    <span onClick={() => setShowAboutModal(true)} style={{ textDecoration: 'underline', cursor: 'pointer', color: '#000' }}>About</span>
+                  </nav>
                   {!floraLoaded ? (
                     <div style={{ padding: '20px 60px', fontSize: '24px', color: '#000' }}>
                       Loading...
@@ -2146,20 +2155,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                       Play
                     </button>
                   )}
-
-                  <nav
-                    style={{
-                      marginTop: '1rem',
-                      display: 'flex',
-                      gap: '2rem',
-                      fontSize: '1.2rem',
-                      color: '#000',
-                    }}
-                  >
-                    <a href="https://vyd.co/WelcomeToCvche" style={{ textDecoration: 'underline', color: '#000' }}>Music</a>
-                    <a href="https://www.instagram.com/cvche" style={{ textDecoration: 'underline', color: '#000' }}>Socials</a>
-                    <span onClick={() => setShowAboutModal(true)} style={{ textDecoration: 'underline', cursor: 'pointer', color: '#000' }}>About</span>
-                  </nav>
+          
                 </div>
               </>
             ) : (
@@ -2316,23 +2312,23 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           </div>
         )}
         {isPaused && !levelEnded && !isLandscape && (
-                 <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '100%', background: 'black', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
-                 <canvas
-                   ref={portraitCanvasRef}
-                   style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-                 />
-                 <h1 style={{ fontSize: '3rem', margin: 0, fontWeight: 'bold', color: '#FDEE03', zIndex: 101 }}>CVCHE</h1>
-                 <div style={{ fontSize: '1.2rem', color: '#ED1D24', zIndex: 101, padding: '20px', textAlign: 'center' }}>
-                   Please rotate your device to <strong>landscape</strong> to resume this game.
-                 </div>
-                 <nav style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', fontSize: '1.2rem', zIndex: 101 }}>
-                   <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
-                     <a href="https://vyd.co/WelcomeToCvche" style={{ color: '#FDEE03' }}>Music</a>
-                     <a href="https://www.instagram.com/cvche" style={{ color: '#FDEE03' }}>Socials</a>
-                     <button onClick={() => setShowAboutModal(true)} style={{ background: 'none', border: 'none', color: '#FDEE03', fontSize: 'inherit', cursor: 'pointer', padding: '0' }}>About</button>
-                   </div>
-                 </nav>
-               </div>
+          <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '100%', background: 'black', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
+            <canvas
+              ref={portraitCanvasRef}
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+            />
+            <h1 style={{ fontSize: '3rem', margin: 0, fontWeight: 'bold', color: '#FDEE03', zIndex: 101 }}>CVCHE</h1>
+            <div style={{ fontSize: '1.2rem', color: '#ED1D24', zIndex: 101, padding: '20px', textAlign: 'center' }}>
+              Please rotate your device to <strong>landscape</strong> to resume this game.
+            </div>
+            <nav style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', fontSize: '1.2rem', zIndex: 101 }}>
+              <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
+                <a href="https://vyd.co/WelcomeToCvche" style={{ color: '#FDEE03' }}>Music</a>
+                <a href="https://www.instagram.com/cvche" style={{ color: '#FDEE03' }}>Socials</a>
+                <button onClick={() => setShowAboutModal(true)} style={{ background: 'none', border: 'none', color: '#FDEE03', fontSize: 'inherit', cursor: 'pointer', padding: '0' }}>About</button>
+              </div>
+            </nav>
+          </div>
         )}
         {levelEnded && (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.8)', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 30, fontFamily: 'Orbitron, sans-serif' }}>
@@ -2354,7 +2350,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                 Sign Up for Updates
               </button>
             </div>
-            <div style={{ display: 'flex', gap: '20px'}}>
+            <div style={{ display: 'flex', gap: '20px' }}>
               <button onClick={() => window.location.reload()} style={{ padding: '15px 30px', fontSize: '20px', cursor: 'pointer', backgroundColor: '#444', border: 'none', borderRadius: '8px', color: '#fff' }}>
                 Play Again
               </button>
@@ -2381,27 +2377,102 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         )}
         {/* About Modal */}
         {showAboutModal && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <div style={{ background: '#000', padding: '20px', borderRadius: '8px', maxWidth: '90%', maxHeight: '90%', overflowY: 'auto', fontFamily: 'Orbitron, sans-serif', textAlign: 'center', color: '#fff', margin: '20px' }}>
-              <h2>CVCHE - MEET THE TRAILBLAZERS OF RURAL CANADIAN TECHNO</h2>
-              <p>Amirite?!</p>
-              <p>
-                We are very excited to begin to share with you the vast catalog of our upcoming LP, 'Get Fluffy'. Over the next few months we'll be releasing more and more songs to please your ears until the album comes out in full. So put on ur socks, find a waxed floor to dance on and enjoy! Rural Canadian Techno 4evur!
-              </p>
-              <p>
-                We live in a Tiny Sovereign Nation, on an island between two forks of a river.
-                <br />
-                Tiny Sovereign Nation, Rural Canada
-              </p>
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            padding: '2rem',
+            borderRadius: '1rem',
+            boxShadow: '0 0 20px rgba(0, 0, 0, 0.5)',
+            zIndex: 1000,
+            color: 'white',
+            width: '80%',
+            maxWidth: '500px',
+            textAlign: 'center',
+            maxHeight: '80%',
+            overflowY: 'auto',
+          }}>
+            <h1 style={{ fontSize: '2rem', marginBottom: '1.5rem', color: '#FDF200' }}>CVCHE - MEET THE TRAILBLAZERS OF RURAL CANADIAN TECHNO</h1>
+            <p style={{ fontSize: '1.2rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+              We are very excited to begin to share with you the vast catalog of our upcoming LP, 'Get Fluffy'. </p>
+            <p style={{ fontSize: '1.2rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+              Over the next few months we'll be releasing more and more songs to please your ears until the album comes out in full. So put on ur socks, find a waxed floor to dance on and enjoy! Rural Canadian Techno 4evur!
+            </p>
+
+            <p style={{ fontSize: '1.2rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+              We live in a Tiny Sovereign Nation, on an island between two forks of a river.
+            </p>
+            <div style={{ marginBottom: '2rem' }}>
               <button
-                onClick={() => setShowAboutModal(false)}
-                style={{ marginTop: '20px', padding: '10px 20px', background: '#0066FF', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontFamily: 'Orbitron, sans-serif' }}
+                onClick={() => window.open('https://forms.gle/YourGoogleFormURL', '_blank')}
+                style={{
+                  padding: '1rem 2rem',
+                  fontSize: '1.1rem',
+                  backgroundColor: '#FDF200',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer',
+                  color: 'black',
+                  fontFamily: 'Orbitron, sans-serif',
+                  marginBottom: '1rem'
+                }}
               >
-                Close
+                Sign Up for Updates
               </button>
             </div>
+            <button
+              onClick={() => setShowAboutModal(false)}
+              style={{
+                padding: '0.5rem 1rem',
+                fontSize: '1rem',
+                backgroundColor: 'transparent',
+                border: '2px solid white',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                color: 'white',
+                fontFamily: 'Orbitron, sans-serif'
+              }}
+            >
+              Close
+            </button>
           </div>
         )}
+
+        {/* Health Bar with Label */}
+        <div style={{
+          position: 'absolute',
+          top: '60px',
+          left: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          zIndex: 10
+        }}>
+          <div style={{
+            width: '200px',
+            height: '20px',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            borderRadius: '10px',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              width: `${health}%`,
+              height: '100%',
+              backgroundColor: healthColor,
+              transition: 'width 0.3s ease-out'
+            }} />
+          </div>
+          <span style={{
+            color: 'white',
+            fontSize: '16px',
+            fontFamily: 'Orbitron, sans-serif',
+            textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
+          }}>
+            Health
+          </span>
+        </div>
       </>
     </div>
   );
