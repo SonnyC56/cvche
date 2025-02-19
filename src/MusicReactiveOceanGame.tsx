@@ -122,6 +122,8 @@ interface LevelToggles {
   showToothbrushes: boolean;
   showHotdogs: boolean;
   showRubberDuckies: boolean;
+  useShaderBackground: boolean; // Add new toggle
+  activeShader: 'default' | 'audioReactive'; // Add new shader toggle
 }
 
 interface Props {
@@ -295,7 +297,9 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     showFlipFlops: false,
     showToothbrushes: false,
     showHotdogs: false,
-    showRubberDuckies: false
+    showRubberDuckies: false,
+    useShaderBackground: false, // Add new toggle
+    activeShader: 'default' // Add new shader toggle
   });
 
   // New Refs for Portrait Fish Animation
@@ -303,6 +307,14 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   const portraitParticlesRef = useRef<Particle[]>([]);
   const portraitAnimationFrameRef = useRef<number | null>(null);
   const portraitFishPositionRef = useRef({ x: 0, y: 0, rotation: 0 });
+
+  // Add shader related refs
+  const shaderCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const shaderProgramRef = useRef<{ [key: string]: WebGLProgram | null }>({
+    default: null,
+    audioReactive: null
+  });
+  const shaderTimeRef = useRef<number>(0);
 
   // Helper: Interpolate between two colors
   const interpolateColor = (color1: string, color2: string, factor: number) => {
@@ -694,23 +706,69 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
 
   const drawBackground = (ctx: CanvasRenderingContext2D, amplitudeFactor: number) => {
     if (!canvasRef.current) return;
-    const width = canvasRef.current.width, height = canvasRef.current.height;
-    ctx.fillStyle = backgroundColorRef.current;
-    ctx.fillRect(0, 0, width, height);
-    const gradientSize = Math.max(width, height) * (0.8 + amplitudeFactor * 0.4);
-    const gradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, gradientSize);
-    const alpha = 0.15 + amplitudeFactor * 0.2;
-    gradient.addColorStop(0, `rgba(255,255,255,${alpha})`);
-    gradient.addColorStop(0.5, `rgba(255,255,255,${alpha * 0.5})`);
-    gradient.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
-    const vignetteGradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.7);
-    vignetteGradient.addColorStop(0, 'rgba(0,0,0,0)');
-    vignetteGradient.addColorStop(0.7, `rgba(0,0,0,${0.2 + amplitudeFactor * 0.1})`);
-    vignetteGradient.addColorStop(1, `rgba(0,0,0,${0.3 + amplitudeFactor * 0.15})`);
-    ctx.fillStyle = vignetteGradient;
-    ctx.fillRect(0, 0, width, height);
+    
+    if (levelTogglesRef.current.useShaderBackground) {
+      const gl = shaderCanvasRef.current?.getContext('webgl2');
+      const program = shaderProgramRef.current[levelTogglesRef.current.activeShader];
+      
+      if (gl && program) {
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        gl.useProgram(program);
+        
+        // Update uniforms
+        const timeLoc = gl.getUniformLocation(program, 'time');
+        const amplitudeLoc = gl.getUniformLocation(program, 'amplitude');
+        const resolutionLoc = gl.getUniformLocation(program, 'resolution');
+        const soundLoc = gl.getUniformLocation(program, 'sound');
+        const soundResLoc = gl.getUniformLocation(program, 'soundRes');
+        
+        shaderTimeRef.current += 0.016;
+        gl.uniform1f(timeLoc, shaderTimeRef.current);
+        gl.uniform1f(amplitudeLoc, amplitudeFactor);
+        gl.uniform2f(resolutionLoc, gl.canvas.width, gl.canvas.height);
+        
+        // Set up sound texture if available
+        if (analyserRef.current && dataArrayRef.current) {
+          const soundTexture = gl.createTexture();
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, soundTexture);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.ALPHA, dataArrayRef.current.length, 1, 0, gl.ALPHA, gl.UNSIGNED_BYTE, dataArrayRef.current);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          gl.uniform1i(soundLoc, 0);
+          gl.uniform2f(soundResLoc, dataArrayRef.current.length, 1);
+        }
+        
+        // Draw
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        
+        // Copy shader output to main canvas
+        if(shaderCanvasRef.current) {
+          ctx.drawImage(shaderCanvasRef.current, 0, 0);
+        }
+      }
+    } else {
+      // Original background drawing code
+      const width = canvasRef.current.width, height = canvasRef.current.height;
+      ctx.fillStyle = backgroundColorRef.current;
+      ctx.fillRect(0, 0, width, height);
+      const gradientSize = Math.max(width, height) * (0.8 + amplitudeFactor * 0.4);
+      const gradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, gradientSize);
+      const alpha = 0.15 + amplitudeFactor * 0.2;
+      gradient.addColorStop(0, `rgba(255,255,255,${alpha})`);
+      gradient.addColorStop(0.5, `rgba(255,255,255,${alpha * 0.5})`);
+      gradient.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      const vignetteGradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.7);
+      vignetteGradient.addColorStop(0, 'rgba(0,0,0,0)');
+      vignetteGradient.addColorStop(0.7, `rgba(0,0,0,${0.2 + amplitudeFactor * 0.1})`);
+      vignetteGradient.addColorStop(1, `rgba(0,0,0,${0.3 + amplitudeFactor * 0.15})`);
+      ctx.fillStyle = vignetteGradient;
+      ctx.fillRect(0, 0, width, height);
+    }
+    
     if (levelTogglesRef.current.showBackgroundPattern) {
       drawBackgroundPattern(ctx, amplitudeFactor);
     }
@@ -1057,6 +1115,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: false,
         showHotdogs: false,
         showRubberDuckies: false,
+        useShaderBackground: true,
+        activeShader: 'default'
       };
     } else if (audioTime >= 10 && audioTime < 11) {
       levelTogglesRef.current = {
@@ -1072,6 +1132,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: false,
         showHotdogs: false,
         showRubberDuckies: false,
+        useShaderBackground: true,
+        activeShader: 'default'
       };
     } else if (audioTime >= 11 && audioTime < 26) {
       levelTogglesRef.current = {
@@ -1087,6 +1149,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: false,
         showHotdogs: false,
         showRubberDuckies: false,
+        useShaderBackground: true,
+        activeShader: 'default'
       };
     } else if (audioTime >= 26 && audioTime < 62) {
       levelTogglesRef.current = {
@@ -1102,6 +1166,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: false,
         showHotdogs: false,
         showRubberDuckies: false,
+        useShaderBackground: false,
+        activeShader: 'default'
       };
     } else if (audioTime >= 62 && audioTime < 80) {
       levelTogglesRef.current = {
@@ -1117,6 +1183,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: false,
         showHotdogs: false,
         showRubberDuckies: false,
+        useShaderBackground: false,
+        activeShader: 'default'
       };
     } else if (audioTime >= 80 && audioTime < 105) {
       levelTogglesRef.current = {
@@ -1132,6 +1200,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: false,
         showHotdogs: false,
         showRubberDuckies: false,
+        useShaderBackground: false,
+        activeShader: 'default'
       };
     } else if (audioTime >= 105 && audioTime < 234) {
       levelTogglesRef.current = {
@@ -1147,6 +1217,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: false,
         showHotdogs: false,
         showRubberDuckies: false,
+        useShaderBackground: false,
+        activeShader: 'default'
       };
     } else if (audioTime >= 234 && audioTime < 265) {
       levelTogglesRef.current = {
@@ -1162,6 +1234,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: true,
         showHotdogs: false,
         showRubberDuckies: false,
+        useShaderBackground: true,
+        activeShader: 'audioReactive'
       };
     } else if (audioTime >= 265 && audioTime < 300) {
       levelTogglesRef.current = {
@@ -1177,6 +1251,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: false,
         showHotdogs: true,
         showRubberDuckies: false,
+        useShaderBackground: true,
+        activeShader: 'audioReactive'
       };
     } else if (audioTime >= 300) {
       levelTogglesRef.current = {
@@ -1192,6 +1268,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: true,
         showHotdogs: true,
         showRubberDuckies: true,
+        useShaderBackground: true,
+        activeShader: 'audioReactive'
       };
     }
     if (audioTime >= 330 && audioTime < 390) {
@@ -1208,6 +1286,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: true,
         showHotdogs: true,
         showRubberDuckies: true,
+        useShaderBackground: true,
+        activeShader: 'audioReactive'
       };
     } else if (audioTime >= 390 && audioTime < 410) {
       levelTogglesRef.current = {
@@ -1223,6 +1303,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: true,
         showHotdogs: true,
         showRubberDuckies: true,
+        useShaderBackground: true,
+        activeShader: 'audioReactive'
       };
     } else if (audioTime >= 410) {
       levelTogglesRef.current = {
@@ -1238,6 +1320,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         showToothbrushes: false,
         showHotdogs: false,
         showRubberDuckies: false,
+        useShaderBackground: true,
+        activeShader: 'audioReactive'
       };
     }
     colorEventsRef.current.forEach(event => {
@@ -2067,10 +2151,152 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     }
   }, [isLandscape, pausedByOrientation, gameStarted, isPaused, togglePause]);
 
+  // Initialize shader
+  useEffect(() => {
+    const initShader = async () => {
+      const canvas = shaderCanvasRef.current;
+      if (!canvas) return;
+      
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      
+      // Initialize WebGL context with alpha
+      const gl = canvas.getContext('webgl2', { alpha: true });
+      if (!gl) {
+        console.error('WebGL2 not supported');
+        return;
+      }
+
+      // Enable blending
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+      // Clear with transparency
+      gl.clearColor(0, 0, 0, 0);
+
+      // Load both shader sources
+      const defaultShaderResponse = await fetch('/src/shaders/backgroundShader.glsl');
+      const audioReactiveShaderResponse = await fetch('/src/shaders/audioReactiveShader.glsl');
+      const defaultShaderSource = await defaultShaderResponse.text();
+      const audioReactiveShaderSource = await audioReactiveShaderResponse.text();
+
+      // Helper function to create shader program
+      const createShaderProgram = (fragmentShaderSource: string) => {
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        if (!vertexShader) return null;
+        
+        gl.shaderSource(vertexShader, `#version 300 es
+          in vec4 position;
+          out float v_vertexId;
+          void main() {
+            v_vertexId = float(gl_VertexID);
+            gl_Position = position;
+          }
+        `);
+        gl.compileShader(vertexShader);
+
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        if (!fragmentShader) return null;
+
+        gl.shaderSource(fragmentShader, `#version 300 es
+          precision highp float;
+          uniform float time;
+          uniform float amplitude;
+          uniform vec2 resolution;
+          uniform sampler2D sound;
+          uniform vec2 soundRes;
+          in float v_vertexId;
+          out vec4 fragColor;
+          float vertexId;
+          
+          void main() {
+            vertexId = v_vertexId;
+            mainImage(fragColor, gl_FragCoord.xy);
+          }
+          ${fragmentShaderSource}
+        `);
+        gl.compileShader(fragmentShader);
+
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+          console.error('Fragment shader compilation failed:', gl.getShaderInfoLog(fragmentShader));
+          return null;
+        }
+
+        const program = gl.createProgram();
+        if (!program) return null;
+
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          console.error('Program linking failed:', gl.getProgramInfoLog(program));
+          return null;
+        }
+
+        return program;
+      };
+
+      // Create both shader programs
+      shaderProgramRef.current = {
+        default: createShaderProgram(defaultShaderSource),
+        audioReactive: createShaderProgram(audioReactiveShaderSource)
+      };
+
+      // Create and set up vertex buffer
+      const positions = new Float32Array([
+        -1, -1,
+         1, -1,
+        -1,  1,
+         1,  1,
+      ]);
+      const positionBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+      
+      // Set up attributes for both programs
+      Object.values(shaderProgramRef.current).forEach(program => {
+        if (program) {
+          gl.useProgram(program);
+          const positionLoc = gl.getAttribLocation(program, 'position');
+          gl.enableVertexAttribArray(positionLoc);
+          gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
+        }
+      });
+    };
+
+    initShader();
+  }, []);
+
+  // Update canvas dimensions on resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (shaderCanvasRef.current) {
+        shaderCanvasRef.current.width = window.innerWidth;
+        shaderCanvasRef.current.height = window.innerHeight;
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // ─── UPDATED RETURN ─
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%', minHeight: '100vh', background: backgroundColorRef.current, fontFamily: 'Orbitron, sans-serif' }}>
       <>
+        <canvas 
+          ref={shaderCanvasRef} 
+          style={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0, 
+            width: '100%', 
+            height: '100%',
+            display: 'block',
+            zIndex: 0
+          }} 
+        />
         <canvas ref={starsCanvasRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '200px', pointerEvents: 'none', zIndex: 5 }} />
         <div style={{ position: 'fixed', left: 0, right: 0, height: '50px', display: 'flex', alignItems: 'center', padding: '0 20px', zIndex: 10, color: '#fff', justifyContent: 'space-between', fontFamily: 'Orbitron, sans-serif' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
@@ -2188,7 +2414,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
             )}
           </>
         )}
-        <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+        <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block', zIndex: 1 }} />
+
         <audio
           id="audioControl"
           ref={audioRef}
