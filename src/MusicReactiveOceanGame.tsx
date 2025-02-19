@@ -1,13 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
-// Global declaration for Safari
-declare global {
-  interface Window {
-    webkitAudioContext: typeof AudioContext;
-  }
-}
-
-// ─── UPDATED: Added optional "shape" property to Particle ─────────────────────────────
 interface Particle {
   x: number;
   y: number;
@@ -25,7 +17,6 @@ interface GameItem {
   y: number;
   width: number;
   height: number;
-  // Extended union to include new trash types
   type: 'trash' | 'obstacle' | 'fishhook' | 'flipflop' | 'toothbrush' | 'hotdog' | 'rubberducky';
   speed: number;
   rotation?: number;
@@ -500,6 +491,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     { timestamp: 355, text: "ALMOST THERE!", triggered: false },
     { timestamp: 387, text: "YOU ARE AMAZING!", triggered: false },
     { timestamp: 405, text: "FLUFFY LOVES YOU", triggered: false },
+    { timestamp: 420, text: "AMAZING JOB FLUFFY! STAY TUNED FOR MORE ADVENTURES! ", triggered: false },
     { timestamp: 431, text: "THE END", triggered: false },
   ]);
 
@@ -635,6 +627,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       }
     };
   }, []);
+
 
   // Update audio progress ref 
   useEffect(() => {
@@ -982,7 +975,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     }
   };
 
-  // ─── Updated drawFlora ─────────────────────────────
+  // ─── UPDATED: drawFlora ─────────────────────────────
   const drawFlora = useCallback((ctx: CanvasRenderingContext2D, amplitude: number, factor: number) => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -1828,14 +1821,37 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     });
   }, [gameLoop]);
 
+  // Pause game when tab is unfocused
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && !isPaused && gameStarted) {
+        togglePause();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isPaused, gameStarted, togglePause]);
+
   const startGame = useCallback(() => {
     if (gameStarted) return;
     setGameStarted(true);
     if (containerRef.current) {
-      if (containerRef.current.requestFullscreen) {
-        containerRef.current.requestFullscreen();
-      } else if ((containerRef.current as any).webkitRequestFullscreen) {
-        (containerRef.current as any).webkitRequestFullscreen();
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (!isIOS) {
+        if (containerRef.current.requestFullscreen) {
+          containerRef.current.requestFullscreen();
+        } else if ((containerRef.current as any).webkitRequestFullscreen) {
+          (containerRef.current as any).webkitRequestFullscreen();
+        }
+      } else {
+        containerRef.current.style.position = 'fixed';
+        containerRef.current.style.top = '0';
+        containerRef.current.style.left = '0';
+        containerRef.current.style.width = '100vw';
+        containerRef.current.style.height = '100vh';
+        containerRef.current.style.zIndex = '9999';
       }
     }
     setHealth(100);
@@ -2017,21 +2033,15 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     portraitAnimationFrameRef.current = requestAnimationFrame(animatePortrait);
   };
 
-  useEffect(() => {
-    if (!isLandscape && portraitCanvasRef.current) {
-      animatePortrait();
-      return () => {
-        if (portraitAnimationFrameRef.current) {
-          cancelAnimationFrame(portraitAnimationFrameRef.current);
-        }
-      };
-    }
-  }, [isLandscape]);
-
-  // Orientation state effect
+  // Orientation state effect with player position update
   useEffect(() => {
     const handleOrientationChange = () => {
-      setIsLandscape(window.innerWidth > window.innerHeight);
+      const landscape = window.innerWidth > window.innerHeight;
+      setIsLandscape(landscape);
+      // When switching to landscape, update the player's Y position to center vertically.
+      if (landscape) {
+        gameStateRef.current.player.y = window.innerHeight / 2;
+      }
     };
     window.addEventListener('resize', handleOrientationChange);
     return () => window.removeEventListener('resize', handleOrientationChange);
@@ -2087,7 +2097,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           </div>
         </div>
         <div style={{ position: 'fixed', top: '60px', right: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px', zIndex: 10, fontFamily: 'Orbitron, sans-serif' }}>
-          <div style={{ background: `rgba(0, 0, 0, ${0.5 + (amplitudeRef.current / 255) * 0.3})`, padding: '10px 20px', borderRadius: '8px', transform: `scale(${Math.min(3, 0.5 + (gameStateRef.current.streak / 50) + (amplitudeRef.current / 255) * 0.5)})`, transition: 'transform 0.1s ease-out', fontFamily: 'Orbitron, sans-serif' }}>
+          <div style={{ background: 'rgba(0, 0, 0, 0.5)', padding: '10px 20px', borderRadius: '8px', transform: `scale(${Math.min(3, 0.5 + (gameStateRef.current.streak / 50))})`, transition: 'transform 0.1s ease-out', fontFamily: 'Orbitron, sans-serif' }}>
             <div style={{ color: getParticleColorFromStreak(gameStateRef.current.streak), fontSize: '24px', fontWeight: 'bold', textShadow: '0 0 10px rgba(255,255,255,0.3)', transition: 'color 0.3s', fontFamily: 'Orbitron, sans-serif' }}>
               {gameStateRef.current.streak} STREAK
             </div>
@@ -2120,7 +2130,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                     fontFamily: 'Orbitron, sans-serif',
                   }}
                 >
-                        <h1 style={{ fontSize: '3rem', margin: 0, fontWeight: 'bold', color: '#000' }}>CVCHE</h1>
+                  <h1 style={{ fontSize: '3rem', margin: 0, fontWeight: 'bold', color: '#000' }}>CVCHE</h1>
                   <nav
                     style={{
                       display: 'flex',
@@ -2129,7 +2139,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                       color: '#000',
                     }}
                   >
-                    <a href="https://vyd.co/WelcomeToCvche" style={{ textDecoration: 'underline', color: '#000' }}>Music</a>
+                    <a href="https://vyd.co/WelcomeToCvche" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', color: '#000' }}>Music</a>
                     <a href="https://www.instagram.com/cvche" style={{ textDecoration: 'underline', color: '#000' }}>Socials</a>
                     <span onClick={() => setShowAboutModal(true)} style={{ textDecoration: 'underline', cursor: 'pointer', color: '#000' }}>About</span>
                   </nav>
@@ -2152,10 +2162,9 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                         background: '#0066FF',
                       }}
                     >
-                      Play
+                      Play Music
                     </button>
                   )}
-          
                 </div>
               </>
             ) : (
@@ -2170,7 +2179,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                 </div>
                 <nav style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', fontSize: '1.2rem', zIndex: 101 }}>
                   <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
-                    <a href="https://vyd.co/WelcomeToCvche" style={{ color: '#FDEE03' }}>Music</a>
+                    <a href="https://vyd.co/WelcomeToCvche" target="_blank" rel="noopener noreferrer" style={{ color: '#FDEE03' }}>Music</a>
                     <a href="https://www.instagram.com/cvche" style={{ color: '#FDEE03' }}>Socials</a>
                     <button onClick={() => setShowAboutModal(true)} style={{ background: 'none', border: 'none', color: '#FDEE03', fontSize: 'inherit', cursor: 'pointer', padding: '0' }}>About</button>
                   </div>
@@ -2323,7 +2332,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
             </div>
             <nav style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', fontSize: '1.2rem', zIndex: 101 }}>
               <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
-                <a href="https://vyd.co/WelcomeToCvche" style={{ color: '#FDEE03' }}>Music</a>
+                <a href="https://vyd.co/WelcomeToCvche" target="_blank" rel="noopener noreferrer" style={{ color: '#FDEE03' }}>Music</a>
                 <a href="https://www.instagram.com/cvche" style={{ color: '#FDEE03' }}>Socials</a>
                 <button onClick={() => setShowAboutModal(true)} style={{ background: 'none', border: 'none', color: '#FDEE03', fontSize: 'inherit', cursor: 'pointer', padding: '0' }}>About</button>
               </div>
@@ -2393,6 +2402,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
             textAlign: 'center',
             maxHeight: '80%',
             overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch'
           }}>
             <h1 style={{ fontSize: '2rem', marginBottom: '1.5rem', color: '#FDF200' }}>CVCHE - MEET THE TRAILBLAZERS OF RURAL CANADIAN TECHNO</h1>
             <p style={{ fontSize: '1.2rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
