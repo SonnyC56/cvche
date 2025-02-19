@@ -2353,7 +2353,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
             </div>
             <div style={{ marginBottom: '20px' }}>
               <button
-                onClick={() => window.open('https://docs.google.com/forms/d/e/YOUR_GOOGLE_FORM_ID/viewform', '_blank')}
+                onClick={() => window.open('https://urnowhere.notion.site/19f92b5e7a6e80389c83fbc8d454c548', '_blank')}
                 style={{ padding: '10px 20px', fontSize: '16px', cursor: 'pointer', backgroundColor: '#0066FF', border: 'none', borderRadius: '4px', color: '#fff' }}
               >
                 Sign Up for Updates
@@ -2416,7 +2416,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
             </p>
             <div style={{ marginBottom: '2rem' }}>
               <button
-                onClick={() => window.open('https://forms.gle/YourGoogleFormURL', '_blank')}
+                onClick={() => window.open('https://urnowhere.notion.site/19f92b5e7a6e80389c83fbc8d454c548', '_blank')}
                 style={{
                   padding: '1rem 2rem',
                   fontSize: '1.1rem',
