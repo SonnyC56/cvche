@@ -2126,7 +2126,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
               <>
                 <canvas
                   ref={landscapePreviewCanvasRef}
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 2 }}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', zIndex: 2, display: 'block' }}
                 />
                 <div
                   style={{
