@@ -627,8 +627,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       }
     };
   }, []);
-
-
+  
+  
   // Update audio progress ref 
   useEffect(() => {
     audioProgressRef.current = audioProgress;
@@ -946,6 +946,19 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     };
     previewLandscape();
     return () => cancelAnimationFrame(previewLandscapeAnimationFrameId);
+  }, [gameStarted, isLandscape]);
+
+  // New useEffect to start portrait animation when in portrait mode and game hasn't started
+  useEffect(() => {
+    if (!gameStarted && !isLandscape) {
+      portraitAnimationFrameRef.current = requestAnimationFrame(animatePortrait);
+    }
+    return () => {
+      if (portraitAnimationFrameRef.current) {
+        cancelAnimationFrame(portraitAnimationFrameRef.current);
+        portraitAnimationFrameRef.current = null;
+      }
+    };
   }, [gameStarted, isLandscape]);
 
   const updateAndDrawBubbles = (ctx: CanvasRenderingContext2D, factor: number) => {
