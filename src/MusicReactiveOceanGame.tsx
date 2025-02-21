@@ -578,8 +578,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       if (audioCtx.state !== 'running') audioCtx.resume();
     };
     document.body.addEventListener('touchstart', resumeAudioCtx, { once: true });
+    document.body.addEventListener('click', resumeAudioCtx, { once: true });
     return () => {
       document.body.removeEventListener('touchstart', resumeAudioCtx);
+      document.body.removeEventListener('click', resumeAudioCtx);
     };
   }, [gameStarted]);
 
