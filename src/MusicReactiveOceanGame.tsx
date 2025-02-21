@@ -2133,7 +2133,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
                 <div
                   style={{
                     position: 'absolute',
-                    top: '60dvh',
+                    top: '50dvh',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
                     zIndex: 20,
