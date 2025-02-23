@@ -1854,19 +1854,15 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     setGameStarted(true);
     if (containerRef.current) {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (!isIOS) {
+
+      //check if androud 
+      const isAndroid = /android/i.test(navigator.userAgent);
+      //check if the browser is chrome
+      const isChrome = /chrome/i.test(navigator.userAgent);
+      if ((isAndroid || isChrome) && !isIOS) {
         if (containerRef.current.requestFullscreen) {
           containerRef.current.requestFullscreen();
-        } else if ((containerRef.current as any).webkitRequestFullscreen) {
-          (containerRef.current as any).webkitRequestFullscreen();
-        }
-      } else {
-        containerRef.current.style.position = 'fixed';
-        containerRef.current.style.top = '0';
-        containerRef.current.style.left = '0';
-        containerRef.current.style.width = '100vw';
-        containerRef.current.style.height = '100vh';
-        containerRef.current.style.zIndex = '9999';
+        } 
       }
     }
     setHealth(100);
