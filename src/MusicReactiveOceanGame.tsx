@@ -181,8 +181,18 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         isCaveMechanic: false,
         highScore: 0,
         highestStreak: 0
+      },
+      {
+        id: 2,
+        title: "Eyes of Darkness",
+        songFile: "https://storage.googleapis.com/assets.urnowhere.com/publicmedia/cvche/Eyes_of_Darkness.mp3",
+        initialBackground: "#000000",
+        initialWaveColor: "rgba(0,0,0,0.4)",
+        unlocked: true,
+        isCaveMechanic: false,
+        highScore: 0,
+        highestStreak: 0
       }
-
       /* You may add additional levels here */
     ];
     if (savedLevels) {
@@ -238,6 +248,11 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   const hotdogRef = useRef<HTMLImageElement | null>(null);
   const rubberDuckyRef = useRef<HTMLImageElement | null>(null);
 
+  // NEW: Refs for level 2 assets
+  const level2ObstacleImagesRef = useRef<HTMLImageElement[]>([]);
+  const level2PickupImagesRef = useRef<HTMLImageElement[]>([]);
+
+  // Active timed texts and popups
   const activeTimedTextsRef = useRef<ActiveTimedText[]>([]);
 
   // Speed multiplier ref
@@ -629,8 +644,8 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       }
     };
   }, []);
-  
-  
+
+
   // Update audio progress ref 
   useEffect(() => {
     audioProgressRef.current = audioProgress;
@@ -694,27 +709,32 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     ctx.restore();
   };
 
+  // Updated drawBackground to skip drawing for level 2 (video background)
   const drawBackground = (ctx: CanvasRenderingContext2D, amplitudeFactor: number) => {
     if (!canvasRef.current) return;
     const width = canvasRef.current.width, height = canvasRef.current.height;
-    ctx.fillStyle = backgroundColorRef.current;
-    ctx.fillRect(0, 0, width, height);
-    const gradientSize = Math.max(width, height) * (0.8 + amplitudeFactor * 0.4);
-    const gradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, gradientSize);
-    const alpha = 0.15 + amplitudeFactor * 0.2;
-    gradient.addColorStop(0, `rgba(255,255,255,${alpha})`);
-    gradient.addColorStop(0.5, `rgba(255,255,255,${alpha * 0.5})`);
-    gradient.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
-    const vignetteGradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.7);
-    vignetteGradient.addColorStop(0, 'rgba(0,0,0,0)');
-    vignetteGradient.addColorStop(0.7, `rgba(0,0,0,${0.2 + amplitudeFactor * 0.1})`);
-    vignetteGradient.addColorStop(1, `rgba(0,0,0,${0.3 + amplitudeFactor * 0.15})`);
-    ctx.fillStyle = vignetteGradient;
-    ctx.fillRect(0, 0, width, height);
-    if (levelTogglesRef.current.showBackgroundPattern) {
-      drawBackgroundPattern(ctx, amplitudeFactor);
+    if (currentLevelRef.current.id === 2) {
+      ctx.clearRect(0, 0, width, height);
+    } else {
+      ctx.fillStyle = backgroundColorRef.current;
+      ctx.fillRect(0, 0, width, height);
+      const gradientSize = Math.max(width, height) * (0.8 + amplitudeFactor * 0.4);
+      const gradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, gradientSize);
+      const alpha = 0.15 + amplitudeFactor * 0.2;
+      gradient.addColorStop(0, `rgba(255,255,255,${alpha})`);
+      gradient.addColorStop(0.5, `rgba(255,255,255,${alpha * 0.5})`);
+      gradient.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      const vignetteGradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.7);
+      vignetteGradient.addColorStop(0, 'rgba(0,0,0,0)');
+      vignetteGradient.addColorStop(0.7, `rgba(0,0,0,${0.2 + amplitudeFactor * 0.1})`);
+      vignetteGradient.addColorStop(1, `rgba(0,0,0,${0.3 + amplitudeFactor * 0.15})`);
+      ctx.fillStyle = vignetteGradient;
+      ctx.fillRect(0, 0, width, height);
+      if (levelTogglesRef.current.showBackgroundPattern) {
+        drawBackgroundPattern(ctx, amplitudeFactor);
+      }
     }
   };
 
@@ -798,8 +818,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
         item.type === 'rubberducky') && item.pickupImage
     ) {
       item.rotation = (item.rotation || 0) + 0.0125;
+      const aspect = item.pickupImage!.naturalWidth / item.pickupImage!.naturalHeight;
       const effectiveWidth = item.width * pulse;
-      const effectiveHeight = item.height * pulse;
+      // Use the provided width as the base and derive the height so that the image isn’t squished.
+      const effectiveHeight = effectiveWidth / aspect;
       const centerX = item.x + effectiveWidth / 2;
       const centerY = item.y + effectiveHeight / 2;
       ctx.translate(centerX, centerY);
@@ -993,6 +1015,7 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   // ─── UPDATED: drawFlora ─────────────────────────────
   const drawFlora = useCallback((ctx: CanvasRenderingContext2D, amplitude: number, factor: number) => {
     if (!canvasRef.current) return;
+    if (currentLevelRef.current.id === 2) return; // Don't draw flora in level 2
     const canvas = canvasRef.current;
     const time = Date.now() / 1000;
     floraItemsRef.current.forEach((flora) => {
@@ -1286,48 +1309,107 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     const effectiveTime = Math.max(0, audioTimeMs - levelStartDelay);
     speedMultiplier.current = 1 + ((effectiveTime / 1000) / 120) * 0.5;
     if (detectBeat(amplitude)) {
-      if (levelTogglesRef.current.showBottles && waterBottleRef.current && canvasRef.current) {
-        if (Math.random() < 0.075 + ((audioProgressRef.current / 200))) {
-          gameStateRef.current.trashList.push({
-            x: canvasRef.current.width,
-            y: getSpawnY(50),
-            width: 30,
-            height: 50,
-            type: 'trash',
-            speed: 1 + Math.random() * 2,
-            rotation: Math.random() * Math.PI * 2,
-            pickupImage: waterBottleRef.current
-          });
-          gameStateRef.current.trashStats.totalSpawned++;
+      // Show Bottles / Pickups
+      if (levelTogglesRef.current.showBottles && canvasRef.current) {
+        if (currentLevelRef.current.id === 2) {
+          if (level2PickupImagesRef.current.length > 0) {
+            if (Math.random() < 0.075 + ((audioProgressRef.current / 200))) {
+              const randomPickup = level2PickupImagesRef.current[Math.floor(Math.random() * level2PickupImagesRef.current.length)];
+              gameStateRef.current.trashList.push({
+                x: canvasRef.current.width,
+                y: getSpawnY(50),
+                width: 30,
+                height: 50,
+                type: 'trash',
+                speed: 1 + Math.random() * 2,
+                rotation: Math.random() * Math.PI * 2,
+                pickupImage: randomPickup
+              });
+              gameStateRef.current.trashStats.totalSpawned++;
+            }
+          }
+        } else if (waterBottleRef.current) {
+          if (Math.random() < 0.075 + ((audioProgressRef.current / 200))) {
+            gameStateRef.current.trashList.push({
+              x: canvasRef.current.width,
+              y: getSpawnY(50),
+              width: 30,
+              height: 50,
+              type: 'trash',
+              speed: 1 + Math.random() * 2,
+              rotation: Math.random() * Math.PI * 2,
+              pickupImage: waterBottleRef.current
+            });
+            gameStateRef.current.trashStats.totalSpawned++;
+          }
         }
       }
-      if (levelTogglesRef.current.showBags && plasticBagRef.current && canvasRef.current) {
-        if (Math.random() < 0.075 + (audioProgressRef.current / 200)) {
-          gameStateRef.current.trashList.push({
-            x: canvasRef.current.width,
-            y: getSpawnY(50),
-            width: 30,
-            height: 50,
-            type: 'trash',
-            speed: 1 + Math.random() * 2,
-            rotation: Math.random() * Math.PI * 2,
-            pickupImage: plasticBagRef.current
-          });
-          gameStateRef.current.trashStats.totalSpawned++;
+      if (levelTogglesRef.current.showBags && canvasRef.current) {
+        if (currentLevelRef.current.id === 2) {
+          if (level2PickupImagesRef.current.length > 0) {
+            if (Math.random() < 0.075 + (audioProgressRef.current / 200)) {
+              const randomPickup = level2PickupImagesRef.current[Math.floor(Math.random() * level2PickupImagesRef.current.length)];
+              gameStateRef.current.trashList.push({
+                x: canvasRef.current.width,
+                y: getSpawnY(50),
+                width: 30,
+                height: 50,
+                type: 'trash',
+                speed: 1 + Math.random() * 2,
+                rotation: Math.random() * Math.PI * 2,
+                pickupImage: randomPickup
+              });
+              gameStateRef.current.trashStats.totalSpawned++;
+            }
+          }
+        } else if (plasticBagRef.current) {
+          if (Math.random() < 0.075 + (audioProgressRef.current / 200)) {
+            gameStateRef.current.trashList.push({
+              x: canvasRef.current.width,
+              y: getSpawnY(50),
+              width: 30,
+              height: 50,
+              type: 'trash',
+              speed: 1 + Math.random() * 2,
+              rotation: Math.random() * Math.PI * 2,
+              pickupImage: plasticBagRef.current
+            });
+            gameStateRef.current.trashStats.totalSpawned++;
+          }
         }
       }
-      if (levelTogglesRef.current.showObstacles && obstacleImageRef.current && canvasRef.current) {
-        if (Math.random() < 0.075 + (audioProgressRef.current / 200)) {
-          gameStateRef.current.obstacles.push({
-            x: canvasRef.current.width,
-            y: getSpawnY(50),
-            width: 50,
-            height: 50,
-            type: 'obstacle',
-            speed: 1 + Math.random() * 2,
-            rotation: Math.random() * Math.PI * 2,
-            pickupImage: obstacleImageRef.current
-          });
+      if (levelTogglesRef.current.showObstacles && canvasRef.current) {
+        if (currentLevelRef.current.id === 2) {
+          if (level2ObstacleImagesRef.current.length > 0) {
+            if (Math.random() < 0.075 + (audioProgressRef.current / 200)) {
+              const randomObstacle = level2ObstacleImagesRef.current[Math.floor(Math.random() * level2ObstacleImagesRef.current.length)];
+              gameStateRef.current.obstacles.push({
+                x: canvasRef.current.width,
+                y: getSpawnY(50),
+                width: 50,
+                height: 50,
+                type: 'obstacle',
+                speed: 1 + Math.random() * 2,
+                rotation: Math.random() * Math.PI * 2,
+                pickupImage: randomObstacle
+              });
+              gameStateRef.current.trashStats.totalSpawned++;
+            }
+          }
+        } else if (obstacleImageRef.current) {
+          if (Math.random() < 0.075 + (audioProgressRef.current / 200)) {
+            gameStateRef.current.obstacles.push({
+              x: canvasRef.current.width,
+              y: getSpawnY(50),
+              width: 50,
+              height: 50,
+              type: 'obstacle',
+              speed: 1 + Math.random() * 2,
+              rotation: Math.random() * Math.PI * 2,
+              pickupImage: obstacleImageRef.current
+            });
+            gameStateRef.current.trashStats.totalSpawned++;
+          }
         }
       }
       if (levelTogglesRef.current.showHooks && fishHookRef.current && canvasRef.current) {
@@ -1344,68 +1426,147 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
           });
         }
       }
-      // New trash item spawns with lower probability
-      if (levelTogglesRef.current.showFlipFlops && flipflopRef.current && canvasRef.current) {
-        if (Math.random() < 0.03) {
-          gameStateRef.current.trashList.push({
-            x: canvasRef.current.width,
-            y: getSpawnY(50),
-            width: 30,
-            height: 50,
-            type: 'flipflop',
-            speed: 1 + Math.random() * 2,
-            rotation: Math.random() * Math.PI * 2,
-            pickupImage: flipflopRef.current
-          });
-          gameStateRef.current.trashStats.totalSpawned++;
+      // New trash item spawns with lower probability for flipflops
+      if (levelTogglesRef.current.showFlipFlops && canvasRef.current) {
+        if (currentLevelRef.current.id === 2) {
+          if (level2PickupImagesRef.current.length > 0) {
+            if (Math.random() < 0.03) {
+              const randomPickup = level2PickupImagesRef.current[Math.floor(Math.random() * level2PickupImagesRef.current.length)];
+              gameStateRef.current.trashList.push({
+                x: canvasRef.current.width,
+                y: getSpawnY(50),
+                width: 30,
+                height: 50,
+                type: 'flipflop',
+                speed: 1 + Math.random() * 2,
+                rotation: Math.random() * Math.PI * 2,
+                pickupImage: randomPickup
+              });
+              gameStateRef.current.trashStats.totalSpawned++;
+            }
+          }
+        } else if (flipflopRef.current) {
+          if (Math.random() < 0.03) {
+            gameStateRef.current.trashList.push({
+              x: canvasRef.current.width,
+              y: getSpawnY(50),
+              width: 30,
+              height: 50,
+              type: 'flipflop',
+              speed: 1 + Math.random() * 2,
+              rotation: Math.random() * Math.PI * 2,
+              pickupImage: flipflopRef.current
+            });
+            gameStateRef.current.trashStats.totalSpawned++;
+          }
         }
       }
-      if (levelTogglesRef.current.showToothbrushes && toothbrushRef.current && canvasRef.current) {
-        if (Math.random() < 0.03) {
-          gameStateRef.current.trashList.push({
-            x: canvasRef.current.width,
-            y: getSpawnY(50),
-            width: 10,
-            height: 40,
-            type: 'toothbrush',
-            speed: 1 + Math.random() * 2,
-            rotation: Math.random() * Math.PI * 2,
-            pickupImage: toothbrushRef.current
-          });
-          gameStateRef.current.trashStats.totalSpawned++;
+      if (levelTogglesRef.current.showToothbrushes && canvasRef.current) {
+        if (currentLevelRef.current.id === 2) {
+          if (level2PickupImagesRef.current.length > 0) {
+            if (Math.random() < 0.03) {
+              const randomPickup = level2PickupImagesRef.current[Math.floor(Math.random() * level2PickupImagesRef.current.length)];
+              gameStateRef.current.trashList.push({
+                x: canvasRef.current.width,
+                y: getSpawnY(50),
+                width: 10,
+                height: 40,
+                type: 'toothbrush',
+                speed: 1 + Math.random() * 2,
+                rotation: Math.random() * Math.PI * 2,
+                pickupImage: randomPickup
+              });
+              gameStateRef.current.trashStats.totalSpawned++;
+            }
+          }
+        } else if (toothbrushRef.current) {
+          if (Math.random() < 0.03) {
+            gameStateRef.current.trashList.push({
+              x: canvasRef.current.width,
+              y: getSpawnY(50),
+              width: 10,
+              height: 40,
+              type: 'toothbrush',
+              speed: 1 + Math.random() * 2,
+              rotation: Math.random() * Math.PI * 2,
+              pickupImage: toothbrushRef.current
+            });
+            gameStateRef.current.trashStats.totalSpawned++;
+          }
         }
       }
-      if (levelTogglesRef.current.showHotdogs && hotdogRef.current && canvasRef.current) {
-        if (Math.random() < 0.03) {
-          gameStateRef.current.trashList.push({
-            x: canvasRef.current.width,
-            y: getSpawnY(50),
-            width: 50,
-            height: 25,
-            type: 'hotdog',
-            speed: 1 + Math.random() * 2,
-            rotation: Math.random() * Math.PI * 2,
-            pickupImage: hotdogRef.current
-          });
-          gameStateRef.current.trashStats.totalSpawned++;
+      if (levelTogglesRef.current.showHotdogs && canvasRef.current) {
+        if (currentLevelRef.current.id === 2) {
+          if (level2PickupImagesRef.current.length > 0) {
+            if (Math.random() < 0.03) {
+              const randomPickup = level2PickupImagesRef.current[Math.floor(Math.random() * level2PickupImagesRef.current.length)];
+              gameStateRef.current.trashList.push({
+                x: canvasRef.current.width,
+                y: getSpawnY(50),
+                width: 50,
+                height: 25,
+                type: 'hotdog',
+                speed: 1 + Math.random() * 2,
+                rotation: Math.random() * Math.PI * 2,
+                pickupImage: randomPickup
+              });
+              gameStateRef.current.trashStats.totalSpawned++;
+            }
+          }
+        } else if (hotdogRef.current) {
+          if (Math.random() < 0.03) {
+            gameStateRef.current.trashList.push({
+              x: canvasRef.current.width,
+              y: getSpawnY(50),
+              width: 50,
+              height: 25,
+              type: 'hotdog',
+              speed: 1 + Math.random() * 2,
+              rotation: Math.random() * Math.PI * 2,
+              pickupImage: hotdogRef.current
+            });
+            gameStateRef.current.trashStats.totalSpawned++;
+          }
         }
       }
-      if (levelTogglesRef.current.showRubberDuckies && rubberDuckyRef.current && canvasRef.current) {
-        if (Math.random() < 0.03) {
-          gameStateRef.current.trashList.push({
-            x: canvasRef.current.width,
-            y: getSpawnY(50),
-            width: 50,
-            height: 50,
-            type: 'rubberducky',
-            speed: 1 + Math.random() * 2,
-            rotation: Math.random() * Math.PI * 2,
-            pickupImage: rubberDuckyRef.current
-          });
-          gameStateRef.current.trashStats.totalSpawned++;
+      if (levelTogglesRef.current.showRubberDuckies && canvasRef.current) {
+        if (currentLevelRef.current.id === 2) {
+          if (level2PickupImagesRef.current.length > 0) {
+            if (Math.random() < 0.03) {
+              const randomPickup = level2PickupImagesRef.current[Math.floor(Math.random() * level2PickupImagesRef.current.length)];
+              gameStateRef.current.trashList.push({
+                x: canvasRef.current.width,
+                y: getSpawnY(50),
+                width: 50,
+                height: 50,
+                type: 'rubberducky',
+                speed: 1 + Math.random() * 2,
+                rotation: Math.random() * Math.PI * 2,
+                pickupImage: randomPickup
+              });
+              gameStateRef.current.trashStats.totalSpawned++;
+            }
+          }
+        } else if (rubberDuckyRef.current) {
+          if (Math.random() < 0.03) {
+            gameStateRef.current.trashList.push({
+              x: canvasRef.current.width,
+              y: getSpawnY(50),
+              width: 50,
+              height: 50,
+              type: 'rubberducky',
+              speed: 1 + Math.random() * 2,
+              rotation: Math.random() * Math.PI * 2,
+              pickupImage: rubberDuckyRef.current
+            });
+            gameStateRef.current.trashStats.totalSpawned++;
+
+          }
         }
       }
     }
+
+
     drawBackground(ctx, amplitude / 100);
     if (levelTogglesRef.current.showVisualizer) {
       drawSpectrum(ctx);
@@ -1814,6 +1975,24 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
+  // ─── NEW: Load Level 2 assets function ─
+  const loadLevel2Assets = () => {
+    // Load new obstacles for level 2: bats.png, bus.png and chicken.png from /sprites/level2/obstacles/
+    const obstacleFiles = ['bats.png', 'bus.png', 'chicken.png'];
+    obstacleFiles.forEach(fileName => {
+      const img = new Image();
+      img.src = `/sprites/level2/obstacles/${fileName}`;
+      level2ObstacleImagesRef.current.push(img);
+    });
+    // Load new pickups for level 2: pill.png, vitaminC.png, tumeric.png and ginger.png from /sprites/level2/pickups/
+    const pickupFiles = ['pill.png', 'vitaminC.png', 'tumeric.png', 'ginger.png'];
+    pickupFiles.forEach(fileName => {
+      const img = new Image();
+      img.src = `/sprites/level2/pickups/${fileName}`;
+      level2PickupImagesRef.current.push(img);
+    });
+  };
+
   const togglePause = useCallback(() => {
     setIsPaused(prev => {
       const newPaused = !prev;
@@ -1862,15 +2041,20 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       if ((isAndroid || isChrome) && !isIOS) {
         if (containerRef.current.requestFullscreen) {
           containerRef.current.requestFullscreen();
-        } 
+        }
       }
     }
     setHealth(100);
     onGameStart?.();
-    backgroundColorRef.current = currentLevel.initialBackground;
-    waveColorRef.current = currentLevel.initialWaveColor;
-    if (containerRef.current) {
-      containerRef.current.style.background = currentLevel.initialBackground;
+    // For level 2, let the video show through
+    if (currentLevel.id === 2 && containerRef.current) {
+      containerRef.current.style.background = "transparent";
+    } else {
+      backgroundColorRef.current = currentLevel.initialBackground;
+      waveColorRef.current = currentLevel.initialWaveColor;
+      if (containerRef.current) {
+        containerRef.current.style.background = currentLevel.initialBackground;
+      }
     }
     colorEventsRef.current.forEach((event, index) => { event.triggered = index === 0; });
     activeColorTransitionRef.current = {
@@ -1939,10 +2123,34 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
       triggered: event.timestamp === 0
     }));
     setCurrentLevel(level);
-    backgroundColorRef.current = level.initialBackground;
-    waveColorRef.current = level.initialWaveColor;
-    if (containerRef.current) {
-      containerRef.current.style.background = level.initialBackground;
+    if (level.id === 2) {
+      if (containerRef.current) {
+        containerRef.current.style.background = "transparent";
+      }
+      if (level2ObstacleImagesRef.current.length === 0 || level2PickupImagesRef.current.length === 0) {
+        loadLevel2Assets();
+      }
+      // Set new pop up text configuration for level 2 with chosen timestamps
+      timedTextEventsRef.current = [
+        { timestamp: 10, text: "HELP TINA SAVE DANNY", triggered: false },
+        { timestamp: 20, text: "GO FLUFFY GO", triggered: false },
+        { timestamp: 30, text: "DON’T GET THE FLU!", triggered: false },
+        { timestamp: 40, text: "SAVE THE PLANET", triggered: false },
+        { timestamp: 50, text: "DON’T Get Squashed by the bus!", triggered: false },
+        { timestamp: 60, text: "MMM VITAMIN C!", triggered: false },
+        { timestamp: 70, text: "MMM TUMERIC!", triggered: false },
+        { timestamp: 80, text: "MMM GINGER!", triggered: false },
+        { timestamp: 90, text: "SAVE DANNY!", triggered: false },
+        { timestamp: 100, text: "BIOLOGICAL WEAPON’S CAN’T STOP FLUFFY!", triggered: false },
+        { timestamp: 110, text: "WE’RE COMING DANNY!", triggered: false },
+        { timestamp: 120, text: "WUHAN MAKES CYMBOLS!", triggered: false },
+      ];
+    } else {
+      backgroundColorRef.current = level.initialBackground;
+      waveColorRef.current = level.initialWaveColor;
+      if (containerRef.current) {
+        containerRef.current.style.background = level.initialBackground;
+      }
     }
     if (audioRef.current) {
       audioRef.current.src = level.songFile;
@@ -1972,14 +2180,19 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
     });
   }, [score, currentLevel.id]);
 
-  const healthColor = (function (health: number) {
-    const ratio = Math.max(0, Math.min(health / 100, 1));
-    const r = Math.round(255 * (1 - ratio));
-    const g = Math.round(255 * ratio);
-    return `rgb(${r}, ${g}, 0)`;
-  })(health);
+  // ─── URL Parameter for Level Selection ─
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const levelParam = params.get("level");
+    if (levelParam === "2") {
+      const level2 = levels.find(l => l.id === 2);
+      if (level2) {
+        selectLevel(level2);
+      }
+    }
+  }, [levels, selectLevel]);
 
-  // ─── Portrait Fish Animation Functions ─
+  // ─── UPDATED: Portrait Fish Animation Functions ─
   const drawFishPortrait = (ctx: CanvasRenderingContext2D) => {
     if (!fishImageRef.current || !portraitCanvasRef.current) return;
     const time = Date.now() / 1000;
@@ -2082,6 +2295,10 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%', minHeight: '100vh', background: backgroundColorRef.current, fontFamily: 'Orbitron, sans-serif' }}>
       <>
+        {/* For Level 2, show full-screen background video */}
+        {currentLevel.id === 2 && (
+          <video src="/videos/level2background.mp4" autoPlay loop muted style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: -1 }} />
+        )}
         <canvas ref={starsCanvasRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '200px', pointerEvents: 'none', zIndex: 5 }} />
         <div style={{ position: 'fixed', left: 0, right: 0, height: '50px', display: 'flex', alignItems: 'center', padding: '0 20px', zIndex: 10, color: '#fff', justifyContent: 'space-between', fontFamily: 'Orbitron, sans-serif' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
@@ -2507,7 +2724,12 @@ const MusicReactiveOceanGame: React.FC<Props> = ({ onGameStart }) => {
             <div style={{
               width: `${health}%`,
               height: '100%',
-              backgroundColor: healthColor,
+              backgroundColor: (function (health: number) {
+                const ratio = Math.max(0, Math.min(health / 100, 1));
+                const r = Math.round(255 * (1 - ratio));
+                const g = Math.round(255 * ratio);
+                return `rgb(${r}, ${g}, 0)`;
+              })(health),
               transition: 'width 0.3s ease-out'
             }} />
           </div>
