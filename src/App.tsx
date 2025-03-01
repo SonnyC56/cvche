@@ -1,9 +1,9 @@
 // src/App.tsx
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import MusicReactiveOceanGame from './MusicReactiveOceanGame';
-import UnderwaterTinyWingsGame from './UnderwaterTinyWingsGame';
-import UnderwaterDoodleJump from './UnderwaterDoodleJumpGame';
+import MusicReactiveOceanGame from './components/MusicReactiveOceanGame';
+import UnderwaterTinyWingsGame from './demos/UnderwaterTinyWingsGame';
+import UnderwaterDoodleJump from './demos/UnderwaterDoodleJumpGame';
 
 const App: React.FC = () => {
   const [selectedGame] = useState('ocean');
