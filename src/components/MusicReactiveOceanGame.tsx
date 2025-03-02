@@ -77,6 +77,31 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     }
   }, [audioRef.current]);
 
+  useEffect(() => {
+    if (!gameState.gameStarted) return;
+
+    // Stop current audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    // Set the new audio source based on the current level
+    if (audioRef.current) {
+      audioRef.current.src = gameState.currentLevel.songFile;
+
+      // Reset audio-related state
+      gameState.setAudioProgress(0);
+      gameState.setCurrentTime(0);
+      gameState.setDuration(0);
+
+      // If not paused, start playing the new level's audio
+      if (!gameState.isPaused) {
+        audioRef.current.play().catch(console.error);
+      }
+    }
+  }, [gameState.currentLevel, gameState.gameStarted]);
+
   // Set up input handlers
   const { inputRef, setupVisibilityHandler } = useInputHandlers(canvasRef);
 
@@ -310,6 +335,100 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     audioRef
   ]);;
 
+  const togglePause = useCallback(() => {
+    gameState.setIsPaused(prev => {
+      const newPaused = !prev;
+
+      if (newPaused) {
+        // Pause game loop and audio
+        gameState.gameLoopRef.current = false;
+        if (gameState.animationFrameIdRef.current) {
+          cancelAnimationFrame(gameState.animationFrameIdRef.current);
+          gameState.animationFrameIdRef.current = null;
+        }
+
+        // Pause audio
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+      } else {
+        // Resume audio
+        if (audioRef.current) {
+          audioRef.current.play().catch(console.error);
+        }
+
+        // Resume game loop
+        gameState.gameLoopRef.current = true;
+        gameLoop(
+          canvasRef,
+          gameState.gameStateRef,
+          gameState.lastFrameTimeRef,
+          gameState.gameLoopRef,
+          gameState.animationFrameIdRef,
+          audioRefNonNull,
+          gameState.audioProgressRef,
+          getAverageAmplitude,
+          detectBeat,
+          gameState.lastBeatTimeRef,
+          inputRef,
+          gameState.backgroundColorRef,
+          gameState.waveColorRef,
+          gameState.activeColorTransitionRef,
+          gameState.bgPatternBubblesRef,
+          gameState.levelTogglesRef,
+          gameState.bubblesRef,
+          gameState.amplitudeRef,
+          gameState.activeTimedTextsRef,
+          gameState.floraItemsRef,
+          gameState.streakDisplayRef,
+          fishImageRef,
+          waterBottleRef,
+          plasticBagRef,
+          obstacleImageRef,
+          fishHookRef,
+          flipflopRef,
+          toothbrushRef,
+          hotdogRef,
+          rubberDuckyRef,
+          gameState.level2ObstacleImagesRef,
+          gameState.level2PickupImagesRef,
+          gameState.currentLevelRef,
+          gameState.timedTextEventsRef,
+          gameState.colorEventsRef,
+          gameState.level2TimedEventsRef,
+          gameState.caveRef,
+          gameState.speedMultiplier,
+          gameState.setScore,
+          gameState.setHealth,
+          gameState.setLevelEnded,
+          gameState.lastCollisionTimeRef,
+          gameState.lastProximityScoreTimeRef,
+          gameState.pickupSoundRef as React.RefObject<HTMLAudioElement>,
+          gameState.hitSoundRef as React.RefObject<HTMLAudioElement>
+        );
+      }
+
+      return newPaused;
+    });
+  }, [
+    gameState,
+    audioRef,
+    gameLoop,
+    canvasRef,
+    audioRefNonNull,
+    getAverageAmplitude,
+    detectBeat,
+    inputRef,
+    fishImageRef,
+    waterBottleRef,
+    plasticBagRef,
+    obstacleImageRef,
+    fishHookRef,
+    flipflopRef,
+    toothbrushRef,
+    hotdogRef,
+    rubberDuckyRef
+  ]);
   return (
     <div
       ref={gameState.containerRef}
@@ -407,10 +526,9 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         id="audioControl"
         ref={audioRef}
         crossOrigin="anonymous"
-        src="https://storage.googleapis.com/assets.urnowhere.com/publicmedia/cvche/welcomeToCVCHE.mp3"
+        src={gameState.currentLevel.songFile}
         style={{ display: 'none' }}
       />
-
       {/* Pause screen */}
       <PauseScreen
         isPaused={gameState.isPaused}

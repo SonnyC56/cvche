@@ -275,7 +275,7 @@ export const useGameState = () => {
     // Reset game state for new level
     gameStateRef.current = {
       player: {
-        x: 100,
+        x: (window.innerWidth / 2) - 25,
         y: window.innerHeight / 2,
         width: 50,
         height: 30,
@@ -370,10 +370,10 @@ export const useGameState = () => {
           level2ObstacleImagesRef.current = assetLoader.level2ObstacleImages;
           level2PickupImagesRef.current = assetLoader.level2PickupImages;
           
-          // Resume game after assets are loaded
-          setIsPaused(false);
+          // Reset the game state after loading assets
           setLevelEnded(false);
           setHealth(100);
+          setIsPaused(false);
         } catch (error) {
           console.error("Failed to load level 2 assets:", error);
           // Fallback to level 1 if assets failed to load
