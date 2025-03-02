@@ -23,21 +23,21 @@ import { GameProps } from '../types';
 const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.ReactElement => {
   // Load game state from custom hook
   const gameState = useGameState();
-  
+
   // Asset loading states
   const [floraLoaded, setFloraLoaded] = useState(false);
   const [level2AssetsLoaded, setLevel2AssetsLoaded] = useState(false);
-  
+
   // Canvas refs - using non-null assertion for canvasRef to fix type issues
   const canvasRef = useRef<HTMLCanvasElement>(null!);
   const starsCanvasRef = useRef<HTMLCanvasElement>(null);
   const portraitCanvasRef = useRef<HTMLCanvasElement>(null);
-  
+
   // Asset loader
   const assetLoader = useRef<AssetLoader>(new AssetLoader());
   gameState.pickupSoundRef = useRef<HTMLAudioElement>(null!);
   gameState.hitSoundRef = useRef<HTMLAudioElement>(null!);
-  
+
   // Asset refs
   const fishImageRef = useRef<HTMLImageElement>(null!);
   const waterBottleRef = useRef<HTMLImageElement>(null!);
@@ -48,7 +48,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
   const toothbrushRef = useRef<HTMLImageElement>(null!);
   const hotdogRef = useRef<HTMLImageElement>(null!);
   const rubberDuckyRef = useRef<HTMLImageElement>(null!);
-  
+
   // Set up audio hooks with a proper type for the audio element
   const {
     audioRef,
@@ -66,32 +66,32 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     gameState.analyserRef,
     gameState.dataArrayRef
   );
-  
+
   // Create non-null audio ref for the game loop
   const audioRefNonNull = useRef<HTMLAudioElement>(null!);
-  
+
   // Keep audioRefNonNull.current in sync with audioRef.current
   useEffect(() => {
     if (audioRef.current) {
       audioRefNonNull.current = audioRef.current;
     }
   }, [audioRef.current]);
-  
+
   // Set up input handlers
   const { inputRef, setupVisibilityHandler } = useInputHandlers(canvasRef);
-  
+
   // Set up visibility change handler for pausing
   setupVisibilityHandler(gameState.isPaused, gameState.gameStarted, gameState.togglePause);
-  
+
   // Load basic assets on component mount
   useEffect(() => {
     const loader = assetLoader.current;
-    
+
     const loadAssets = async () => {
       await loader.loadBasicAssets();
-      
+
       // Update refs with loaded assets
-  
+
       if (loader.fishImage) {
         fishImageRef.current = loader.fishImage;
       }
@@ -121,38 +121,38 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
       }
       gameState.pickupSoundRef.current = loader.pickupSound;
       gameState.hitSoundRef.current = loader.hitSound;
-      
+
       // Load flora assets
       await loader.loadFloraAssets();
-      
+
       // Initialize flora once loaded
       if (canvasRef.current) {
         gameState.floraItemsRef.current = initializeFlora(canvasRef.current, loader.floraImages);
       }
-      
+
       setFloraLoaded(true);
     };
-    
+
     loadAssets();
   }, []);
-  
+
   // Load level 2 assets when needed
   useEffect(() => {
     if (gameState.currentLevel.id === 2 && !level2AssetsLoaded) {
       const loadLevel2 = async () => {
         await assetLoader.current.loadLevel2Assets();
-        
+
         // Update level 2 asset refs
         gameState.level2ObstacleImagesRef.current = assetLoader.current.level2ObstacleImages;
         gameState.level2PickupImagesRef.current = assetLoader.current.level2PickupImages;
-        
+
         setLevel2AssetsLoaded(true);
       };
-      
+
       loadLevel2();
     }
   }, [gameState.currentLevel.id, level2AssetsLoaded]);
-  
+
   // Reset canvas on resize
   useEffect(() => {
     const handleResize = () => {
@@ -161,176 +161,201 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         canvasRef.current.height = window.innerHeight;
       }
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
+
   // Portrait animation function
   const animatePortrait = useCallback((ctx: CanvasRenderingContext2D) => {
     if (!portraitCanvasRef.current) return;
-    
+
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    
+
     // Draw fish character
     const fishPosition = drawPlayerPortrait(ctx, fishImageRef.current, gameState.portraitFishPositionRef.current);
-    
+
     if (fishPosition) {
       // Create particles
       createPortraitParticles(gameState.portraitParticlesRef.current, fishPosition.x, fishPosition.y);
     }
-    
+
     // Update and draw particles
     updateAndDrawParticles(ctx, gameState.portraitParticlesRef.current, 1);
   }, [gameState.portraitFishPositionRef, gameState.portraitParticlesRef]);
-  
+
   // Start game function
+
   const startGame = useCallback(() => {
     if (gameState.gameStarted) return;
-    
+    // Center the player horizontally before starting
+    gameState.gameStateRef.current.player.y = window.innerHeight / 2;
+
     gameState.setGameStarted(true);
     gameState.setHealth(100);
     onGameStart?.();
-    
+
     // Set up container background based on level
     if (gameState.currentLevel.id === 2 && gameState.containerRef.current) {
       gameState.containerRef.current.style.background = "transparent";
+
+      // Make sure level 2 assets are loaded before starting
+      if (gameState.level2ObstacleImagesRef.current.length === 0 ||
+        gameState.level2PickupImagesRef.current.length === 0) {
+        const loadLevel2 = async () => {
+          await assetLoader.current.loadLevel2Assets();
+
+          // Update level 2 asset refs
+          gameState.level2ObstacleImagesRef.current = assetLoader.current.level2ObstacleImages;
+          gameState.level2PickupImagesRef.current = assetLoader.current.level2PickupImages;
+
+          startAudioAndGameLoop();
+        };
+
+        loadLevel2();
+      } else {
+        startAudioAndGameLoop();
+      }
     } else {
       gameState.backgroundColorRef.current = gameState.currentLevel.initialBackground;
       gameState.waveColorRef.current = gameState.currentLevel.initialWaveColor;
-      
+
       if (gameState.containerRef.current) {
         gameState.containerRef.current.style.background = gameState.currentLevel.initialBackground;
       }
+
+      startAudioAndGameLoop();
     }
-    
-    // Reset color events
-    gameState.colorEventsRef.current.forEach((event, index) => { 
-      event.triggered = index === 0; 
-    });
-    
-    // Reset color transition
-    gameState.activeColorTransitionRef.current = {
-      backgroundColor: "#1a1a2e",
-      waveColor: "rgba(0,102,255,0.4)",
-      progress: 1,
-      targetBackgroundColor: "#1a1a2e",
-      targetWaveColor: "rgba(0,102,255,0.4)",
-      transitionDuration: 3
-    };
-    
-    // Start audio and game loop
-    if (audioRef.current) {
-      audioRefNonNull.current = audioRef.current;
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().then(() => {
-        gameState.gameLoopRef.current = true;
-        gameState.animationFrameIdRef.current = requestAnimationFrame(() => 
-          gameLoop(
-            canvasRef,
-            gameState.gameStateRef,
-            gameState.lastFrameTimeRef,
-            gameState.gameLoopRef,
-            gameState.animationFrameIdRef,
-            audioRefNonNull,
-            gameState.audioProgressRef,
-            getAverageAmplitude,
-            detectBeat,
-            gameState.lastBeatTimeRef,
-            inputRef,
-            gameState.backgroundColorRef,
-            gameState.waveColorRef,
-            gameState.activeColorTransitionRef,
-            gameState.bgPatternBubblesRef,
-            gameState.levelTogglesRef,
-            gameState.bubblesRef,
-            gameState.amplitudeRef,
-            gameState.activeTimedTextsRef,
-            gameState.floraItemsRef,
-            gameState.streakDisplayRef,
-            fishImageRef,
-            waterBottleRef,
-            plasticBagRef,
-            obstacleImageRef,
-            fishHookRef,
-            flipflopRef,
-            toothbrushRef,
-            hotdogRef,
-            rubberDuckyRef,
-            gameState.level2ObstacleImagesRef,
-            gameState.level2PickupImagesRef,
-            gameState.currentLevelRef,
-            gameState.timedTextEventsRef,
-            gameState.colorEventsRef,
-            gameState.level2TimedEventsRef,
-            gameState.caveRef,
-            gameState.speedMultiplier,
-            gameState.setScore,
-            gameState.setHealth,
-            gameState.setLevelEnded,
-            gameState.lastCollisionTimeRef,
-            gameState.lastProximityScoreTimeRef,
-            gameState.pickupSoundRef as React.RefObject<HTMLAudioElement>,
-            gameState.hitSoundRef as React.RefObject<HTMLAudioElement>
-          )
-        );
-      }).catch(console.error);
+
+    function startAudioAndGameLoop() {
+      // Reset color events
+      gameState.colorEventsRef.current.forEach((event, index) => {
+        event.triggered = index === 0;
+      });
+
+      // Reset color transition
+      gameState.activeColorTransitionRef.current = {
+        backgroundColor: "#1a1a2e",
+        waveColor: "rgba(0,102,255,0.4)",
+        progress: 1,
+        targetBackgroundColor: "#1a1a2e",
+        targetWaveColor: "rgba(0,102,255,0.4)",
+        transitionDuration: 3
+      };
+
+      // Start audio and game loop
+      if (audioRef.current) {
+        audioRefNonNull.current = audioRef.current;
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().then(() => {
+          gameState.gameLoopRef.current = true;
+          gameState.animationFrameIdRef.current = requestAnimationFrame(() =>
+            gameLoop(
+              canvasRef,
+              gameState.gameStateRef,
+              gameState.lastFrameTimeRef,
+              gameState.gameLoopRef,
+              gameState.animationFrameIdRef,
+              audioRefNonNull,
+              gameState.audioProgressRef,
+              getAverageAmplitude,
+              detectBeat,
+              gameState.lastBeatTimeRef,
+              inputRef,
+              gameState.backgroundColorRef,
+              gameState.waveColorRef,
+              gameState.activeColorTransitionRef,
+              gameState.bgPatternBubblesRef,
+              gameState.levelTogglesRef,
+              gameState.bubblesRef,
+              gameState.amplitudeRef,
+              gameState.activeTimedTextsRef,
+              gameState.floraItemsRef,
+              gameState.streakDisplayRef,
+              fishImageRef,
+              waterBottleRef,
+              plasticBagRef,
+              obstacleImageRef,
+              fishHookRef,
+              flipflopRef,
+              toothbrushRef,
+              hotdogRef,
+              rubberDuckyRef,
+              gameState.level2ObstacleImagesRef,
+              gameState.level2PickupImagesRef,
+              gameState.currentLevelRef,
+              gameState.timedTextEventsRef,
+              gameState.colorEventsRef,
+              gameState.level2TimedEventsRef,
+              gameState.caveRef,
+              gameState.speedMultiplier,
+              gameState.setScore,
+              gameState.setHealth,
+              gameState.setLevelEnded,
+              gameState.lastCollisionTimeRef,
+              gameState.lastProximityScoreTimeRef,
+              gameState.pickupSoundRef as React.RefObject<HTMLAudioElement>,
+              gameState.hitSoundRef as React.RefObject<HTMLAudioElement>
+            )
+          );
+        }).catch(console.error);
+      }
     }
   }, [
-    gameState, 
-    onGameStart, 
-    getAverageAmplitude, 
-    detectBeat, 
-    inputRef, 
+    gameState,
+    onGameStart,
+    getAverageAmplitude,
+    detectBeat,
+    inputRef,
     audioRef
-  ]);
-  
+  ]);;
+
   return (
-    <div 
-      ref={gameState.containerRef} 
-      style={{ 
-        position: 'relative', 
-        width: '100%', 
-        minHeight: '100vh', 
-        background: gameState.backgroundColorRef.current, 
-        fontFamily: 'Orbitron, sans-serif' 
+    <div
+      ref={gameState.containerRef}
+      style={{
+        position: 'relative',
+        width: '100%',
+        minHeight: '100vh',
+        background: gameState.backgroundColorRef.current,
+        fontFamily: 'Orbitron, sans-serif'
       }}
     >
       {/* Background video for Level 2 */}
       {gameState.currentLevel.id === 2 && (
-        <video 
-          src="/videos/level2background.mp4" 
-          autoPlay 
-          loop 
-          muted 
-          style={{ 
-            position: 'absolute', 
-            top: 0, 
-            left: 0, 
-            width: '100%', 
-            height: '100%', 
-            objectFit: 'cover', 
-            zIndex: -1 
-          }} 
+        <video
+          src="/videos/level2background.mp4"
+          autoPlay
+          loop
+          muted
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: -1
+          }}
         />
       )}
-      
+
       {/* Stars canvas for top decoration */}
-      <canvas 
-        ref={starsCanvasRef} 
-        style={{ 
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
-          width: '100%', 
-          height: '200px', 
-          pointerEvents: 'none', 
-          zIndex: 5 
-        }} 
+      <canvas
+        ref={starsCanvasRef}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '200px',
+          pointerEvents: 'none',
+          zIndex: 5
+        }}
       />
-      
+
       {/* Game controls bar */}
-      <GameControls 
+      <GameControls
         gameStarted={gameState.gameStarted}
         isPaused={gameState.isPaused}
         togglePause={gameState.togglePause}
@@ -340,43 +365,43 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         currentTime={gameState.currentTime}
         duration={gameState.duration}
       />
-      
+
       {/* Health bar */}
       {gameState.gameStarted && <HealthBar health={gameState.health} />}
-      
+
       {/* Streak display */}
       {gameState.gameStarted && (
-        <StreakDisplay 
+        <StreakDisplay
           streak={gameState.gameStateRef.current.streak}
           multiplier={gameState.gameStateRef.current.multiplier}
           scale={gameState.streakDisplayRef.current.scale}
         />
       )}
-      
+
       {/* Welcome screen */}
-      <WelcomeScreen 
+      <WelcomeScreen
         gameStarted={gameState.gameStarted}
         isLandscape={gameState.isLandscape}
         floraLoaded={floraLoaded}
         startGame={startGame}
         setShowAboutModal={gameState.setShowAboutModal}
       />
-      
+
       {/* Portrait mode screen */}
-      <PortraitScreen 
+      <PortraitScreen
         isPortrait={!gameState.isLandscape}
         gameStarted={gameState.gameStarted}
         isPaused={gameState.isPaused}
         setShowAboutModal={gameState.setShowAboutModal}
         animatePortrait={animatePortrait}
       />
-      
+
       {/* Main game canvas */}
-      <canvas 
-        ref={canvasRef} 
-        style={{ width: '100%', height: '100%', display: 'block' }} 
+      <canvas
+        ref={canvasRef}
+        style={{ width: '100%', height: '100%', display: 'block' }}
       />
-      
+
       {/* Audio element */}
       <audio
         id="audioControl"
@@ -385,9 +410,9 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         src="https://storage.googleapis.com/assets.urnowhere.com/publicmedia/cvche/welcomeToCVCHE.mp3"
         style={{ display: 'none' }}
       />
-      
+
       {/* Pause screen */}
-      <PauseScreen 
+      <PauseScreen
         isPaused={gameState.isPaused}
         levelEnded={gameState.levelEnded}
         isLandscape={gameState.isLandscape}
@@ -398,9 +423,9 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         setPendingLevel={gameState.setPendingLevel}
         selectLevel={gameState.selectLevel}
       />
-      
+
       {/* Level complete screen */}
-      <LevelCompleteScreen 
+      <LevelCompleteScreen
         levelEnded={gameState.levelEnded}
         health={gameState.health}
         score={gameState.score}
@@ -411,9 +436,9 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         setLevelEnded={gameState.setLevelEnded}
         setGameStarted={gameState.setGameStarted}
       />
-      
+
       {/* About modal */}
-      <AboutModal 
+      <AboutModal
         showAboutModal={gameState.showAboutModal}
         setShowAboutModal={gameState.setShowAboutModal}
       />

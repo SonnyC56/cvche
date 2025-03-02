@@ -1,9 +1,9 @@
 import { GameState, LevelToggles, ActiveTimedText, TimedTextEvent, TimedColorEvent, Level2TimedEvents, ActiveColor, Bubble, StreakDisplay, Level, CaveState } from '../../types';
-import { interpolateColor, getMultiplierFromStreak } from '../../utils/colorUtils';
-import { drawBackground, drawSpectrum, updateAndDrawBubbles, updateAndDrawScorePopups, updateAndDrawTimedTexts } from './BackgroundEffects';
+import { getMultiplierFromStreak } from '../../utils/colorUtils';
+import { drawBackground, updateAndDrawBubbles, updateAndDrawScorePopups, updateAndDrawTimedTexts } from './BackgroundEffects';
 import { drawFlora } from './Flora';
 import { drawPlayer, updatePlayerPosition } from './Player';
-import { createParticles, createSwimParticles, updateAndDrawParticles } from './ParticleEffects';
+import { createSwimParticles, updateAndDrawParticles } from './ParticleEffects';
 import { updateCaveBoundaries, drawCaveEffect, checkCaveCollision, calculateCaveProximityScore } from './CaveEffects';
 import { processColorEvents, processLevel2Events, spawnItemsOnBeat, updateAndCheckObstacleCollisions, updateAndCheckTrashCollisions, updateLevelToggles } from './GameHelpers';
 

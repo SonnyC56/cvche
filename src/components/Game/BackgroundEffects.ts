@@ -218,10 +218,21 @@ export const updateAndDrawScorePopups = (ctx: CanvasRenderingContext2D, popups: 
 /**
  * Update and draw timed text events
  */
+
 export const updateAndDrawTimedTexts = (ctx: CanvasRenderingContext2D, activeTimedTexts: any[], factor: number) => {
   if (!ctx.canvas) return;
   
-  activeTimedTexts.forEach((item) => {
+  // Remove expired text events before processing
+  for (let i = activeTimedTexts.length - 1; i >= 0; i--) {
+    activeTimedTexts[i].lifetime -= factor;
+    if (activeTimedTexts[i].lifetime <= 0) {
+      activeTimedTexts.splice(i, 1);
+    }
+  }
+  
+  // Only display one text at a time (the most recent one)
+  if (activeTimedTexts.length > 0) {
+    const item = activeTimedTexts[activeTimedTexts.length - 1];
     let fontSize = 80;
     const margin = 40;
     
@@ -245,7 +256,5 @@ export const updateAndDrawTimedTexts = (ctx: CanvasRenderingContext2D, activeTim
     ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
     ctx.fillText(item.text, (ctx.canvas?.width ?? 400) / 2, (ctx.canvas?.height ?? 200) / 2);
     ctx.restore();
-    
-    item.lifetime -= factor;
-  });
+  }
 };

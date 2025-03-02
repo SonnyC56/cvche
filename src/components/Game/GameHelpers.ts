@@ -815,6 +815,7 @@ export const updateAndCheckObstacleCollisions = (
 /**
  * Handle collision with an obstacle
  */
+ 
 export const handleObstacleCollision = (
   gameState: GameState,
   item: any,

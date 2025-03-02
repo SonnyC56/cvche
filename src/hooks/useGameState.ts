@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { GameState, Level, LevelToggles, ActiveTimedText, ActiveColor, CaveState, Bubble, Flora, StreakDisplay, TimedTextEvent, TimedColorEvent, Level2TimedEvents, Particle } from '../types';
 import { getDefaultLevels, createDefaultTimedTextEvents, createLevel2TimedTextEvents, createColorEvents, createLevel2TimedEvents, getInitialLevelToggles } from '../utils/eventData';
+import { AssetLoader } from '../utils/assetLoader';
 
 export const useGameState = () => {
   // Game progress
@@ -260,8 +261,16 @@ export const useGameState = () => {
   };
   
   // Select a new level
-  const selectLevel = (level: Level) => {
+
+  const selectLevel = useCallback((level: Level) => {
     if (!level.unlocked) return;
+    
+    // Stop current game loop and audio
+    gameLoopRef.current = false;
+    if (animationFrameIdRef.current) {
+      cancelAnimationFrame(animationFrameIdRef.current);
+      animationFrameIdRef.current = null;
+    }
     
     // Reset game state for new level
     gameStateRef.current = {
@@ -322,6 +331,9 @@ export const useGameState = () => {
       lower: { points: [], amplitude: 0 }
     };
     
+    // Clear active timed texts
+    activeTimedTextsRef.current = [];
+    
     // Reset event triggers
     timedTextEventsRef.current = timedTextEventsRef.current.map(event => ({
       ...event,
@@ -343,6 +355,33 @@ export const useGameState = () => {
       
       // Set level 2 specific text events
       timedTextEventsRef.current = createLevel2TimedTextEvents();
+      
+      // Load level 2 assets before proceeding
+      const loadLevel2Assets = async () => {
+        try {
+          // Show a loading indication if needed
+          setIsPaused(true);
+          
+          // Load level 2 assets
+          const assetLoader = new AssetLoader();
+          await assetLoader.loadLevel2Assets();
+          
+          // Update level 2 asset refs
+          level2ObstacleImagesRef.current = assetLoader.level2ObstacleImages;
+          level2PickupImagesRef.current = assetLoader.level2PickupImages;
+          
+          // Resume game after assets are loaded
+          setIsPaused(false);
+          setLevelEnded(false);
+          setHealth(100);
+        } catch (error) {
+          console.error("Failed to load level 2 assets:", error);
+          // Fallback to level 1 if assets failed to load
+          selectLevel(levels[0]);
+        }
+      };
+      
+      loadLevel2Assets();
     } else {
       // Set level 1 colors and events
       backgroundColorRef.current = level.initialBackground;
@@ -353,11 +392,11 @@ export const useGameState = () => {
       }
       
       timedTextEventsRef.current = createDefaultTimedTextEvents();
+      setLevelEnded(false);
+      setHealth(100);
     }
-    
-    setLevelEnded(false);
-    setHealth(100);
-  };
+  }, [levels, setIsPaused, setLevelEnded, setHealth]);
+  
   
   return {
     // State

@@ -1,5 +1,11 @@
 import { useRef, useEffect } from 'react';
-import { InputState } from '../types';
+
+// Define the InputState interface
+interface InputState {
+  isTouching: boolean;
+  touchY: number;
+  isDesktop: boolean;
+}
 
 export const useInputHandlers = (canvasRef: React.RefObject<HTMLCanvasElement>) => {
   // Input state
