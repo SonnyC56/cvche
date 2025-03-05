@@ -216,6 +216,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     if (gameState.gameStarted) return;
     // Center the player horizontally before starting
     gameState.gameStateRef.current.player.y = window.innerHeight / 2;
+    gameState.gameStateRef.current.player.x = 100;
 
     gameState.setGameStarted(true);
     gameState.setHealth(100);
@@ -393,7 +394,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     audioRef
   ]);
 
-  const togglePause = useCallback(() => {
+/*   const togglePause = useCallback(() => {
     gameState.setIsPaused(prev => {
       const newPaused = !prev;
 
@@ -486,7 +487,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     toothbrushRef,
     hotdogRef,
     rubberDuckyRef
-  ]);
+  ]); */
   return (
     <div
       ref={gameState.containerRef}
@@ -583,7 +584,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         crossOrigin="anonymous"
         style={{ display: 'none' }}
       >
-        <source src={gameState.currentLevel.songFile} type="audio/mpeg" />
+      <source src={gameState.currentLevel.songFile} type="audio/mpeg" />
         Your browser does not support the audio element.
       </audio>
 

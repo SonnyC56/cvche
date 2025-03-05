@@ -2,11 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import MusicReactiveOceanGame from './components/MusicReactiveOceanGame';
-import UnderwaterTinyWingsGame from './demos/UnderwaterTinyWingsGame';
-import UnderwaterDoodleJump from './demos/UnderwaterDoodleJumpGame';
 
 const App: React.FC = () => {
-  const [selectedGame] = useState('ocean');
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Prevent pull-to-refresh and other touch gestures
@@ -24,16 +21,14 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ 
-      width: '100vw', 
-      height: '100vh', 
-      position: 'relative', 
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      position: 'relative',
       overflow: 'hidden',
       fontFamily: 'Orbitron, sans-serif'
     }}>
-      {selectedGame === 'ocean' && <MusicReactiveOceanGame onGameStart={() => setIsPlaying(true)} />}
-      {selectedGame === 'wings' && <UnderwaterTinyWingsGame onGameStart={() => setIsPlaying(true)} />}
-      {selectedGame === 'doodle' && <UnderwaterDoodleJump onGameStart={() => setIsPlaying(true)} />}
+      <MusicReactiveOceanGame onGameStart={() => setIsPlaying(true)} />
     </div>
   );
 };
