@@ -45,7 +45,7 @@ export class AssetLoader {
     tumeric: { width: number, height: number },
     ginger: { width: number, height: number }
   } = {
-    bus: { width: 100, height: 60 },
+    bus: { width: 200, height: 90 },
     bats: { width: 100, height: 100 },
     chicken: { width: 100, height: 100 },
     vitaminC: { width: 40, height: 40 },

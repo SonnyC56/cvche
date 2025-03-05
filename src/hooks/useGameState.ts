@@ -17,15 +17,15 @@ export const useGameState = () => {
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [pendingLevel, setPendingLevel] = useState<Level | null>(null);
   const [pausedByOrientation, setPausedByOrientation] = useState(false);
-  
+
   // Audio progress ref for use in callback functions
   const audioProgressRef = useRef(0);
-  
+
   // Game levels
   const [levels, setLevels] = useState<Level[]>(() => {
     const savedLevels = localStorage.getItem('gameLevels');
     const defaultLevels = getDefaultLevels();
-    
+
     if (savedLevels) {
       const parsedLevels = JSON.parse(savedLevels);
       const mergedLevels = defaultLevels.map(defaultLevel => {
@@ -36,11 +36,11 @@ export const useGameState = () => {
     }
     return defaultLevels;
   });
-  
+
   // Current level state
   const [currentLevel, setCurrentLevel] = useState<Level>(levels[0]);
   const currentLevelRef = useRef(currentLevel);
-  
+
   // Game state
   const gameStateRef = useRef<GameState>({
     player: {
@@ -82,7 +82,7 @@ export const useGameState = () => {
       progress: 1,
       targetBackgroundColor: "#1a1a2e",
       targetWaveColor: "rgba(0,102,255,0.4)",
-      transitionDuration: 3, 
+      transitionDuration: 3,
     },
     bubbles: [],
     flora: [],
@@ -93,11 +93,11 @@ export const useGameState = () => {
       opacity: 1
     }
   });
-  
+
   // Audio refs
   const pickupSoundRef = useRef<HTMLAudioElement | null>(null);
   const hitSoundRef = useRef<HTMLAudioElement | null>(null);
-  
+
   // Animation and game loop refs
   const gameLoopRef = useRef<boolean>(false);
   const animationFrameIdRef = useRef<number | null>(null);
@@ -105,16 +105,16 @@ export const useGameState = () => {
   const lastBeatTimeRef = useRef<number>(0);
   const lastCollisionTimeRef = useRef<number>(0);
   const lastProximityScoreTimeRef = useRef<number>(0);
-  
+
   // Audio analyzer refs
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataArrayRef = useRef<Uint8Array | null>(null);
   const amplitudeRef = useRef<number>(0);
-  
+
   // Color references
   const backgroundColorRef = useRef("#FDF200");
   const waveColorRef = useRef("rgba(253,242,0,0.4)");
-  
+
   // Dynamic game elements
   const levelTogglesRef = useRef<LevelToggles>(getInitialLevelToggles());
   const activeTimedTextsRef = useRef<ActiveTimedText[]>([]);
@@ -128,13 +128,13 @@ export const useGameState = () => {
     scale: 1,
     opacity: 1
   });
-  
+
   // Cave mechanics
   const caveRef = useRef<CaveState>({
     upper: { points: [], amplitude: 0 },
     lower: { points: [], amplitude: 0 }
   });
-  
+
   // Event references
   const timedTextEventsRef = useRef<TimedTextEvent[]>(createDefaultTimedTextEvents());
   const colorEventsRef = useRef<TimedColorEvent[]>(createColorEvents());
@@ -147,22 +147,22 @@ export const useGameState = () => {
     targetWaveColor: "rgba(0,102,255,0.4)",
     transitionDuration: 3
   });
-  
+
   // Portrait mode animation refs
   const portraitParticlesRef = useRef<Particle[]>([]);
   const portraitAnimationFrameRef = useRef<number | null>(null);
   const portraitFishPositionRef = useRef({ x: 0, y: 0, rotation: 0 });
-  
+
   // Keep currentLevelRef in sync with currentLevel
   useEffect(() => {
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
-  
+
   // Keep audioProgressRef in sync with audioProgress
   useEffect(() => {
     audioProgressRef.current = audioProgress;
   }, [audioProgress]);
-  
+
   // Update high score continuously
   useEffect(() => {
     setLevels(prev => {
@@ -174,34 +174,34 @@ export const useGameState = () => {
         }
         return level;
       });
-      
+
       localStorage.setItem('gameLevels', JSON.stringify(newLevels));
-      
+
       const updatedCurrent = newLevels.find(l => l.id === currentLevel.id);
       if (updatedCurrent) {
         setCurrentLevel(updatedCurrent);
       }
-      
+
       return newLevels;
     });
   }, [score, currentLevel.id]);
-  
+
   // Handle window resizing and device orientation
   useEffect(() => {
     const handleOrientationChange = () => {
       const landscape = window.innerWidth > window.innerHeight;
       setIsLandscape(landscape);
-      
+
       // When switching to landscape, update the player's Y position to center vertically
       if (landscape) {
         gameStateRef.current.player.y = window.innerHeight / 2;
       }
     };
-    
+
     window.addEventListener('resize', handleOrientationChange);
     return () => window.removeEventListener('resize', handleOrientationChange);
   }, []);
-  
+
   // Detect when game is put into portrait mode and pause it
   useEffect(() => {
     if (!isLandscape && gameStarted && !isPaused) {
@@ -209,7 +209,7 @@ export const useGameState = () => {
       setPausedByOrientation(true);
     }
   }, [isLandscape, gameStarted, isPaused]);
-  
+
   // Resume game when returning to landscape if it was paused due to orientation
   useEffect(() => {
     if (isLandscape && pausedByOrientation && gameStarted && isPaused) {
@@ -217,7 +217,7 @@ export const useGameState = () => {
       setPausedByOrientation(false);
     }
   }, [isLandscape, pausedByOrientation, gameStarted, isPaused]);
-  
+
   // Check URL parameters for level selection
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -229,7 +229,7 @@ export const useGameState = () => {
       }
     }
   }, [levels]);
-  
+
   // Load Orbitron font
   useEffect(() => {
     const font = new FontFace('Orbitron', 'url(/fonts/Orbitron/Orbitron-VariableFont_wght.ttf)');
@@ -237,41 +237,52 @@ export const useGameState = () => {
       document.fonts.add(font);
     });
   }, []);
-  
+
   // Container ref for DOM reference
   const containerRef = useRef<HTMLDivElement | null>(null);
-  
+
   // Level2 asset refs
   const level2ObstacleImagesRef = useRef<HTMLImageElement[]>([]);
   const level2PickupImagesRef = useRef<HTMLImageElement[]>([]);
 
-  // Toggle pause state
-  const togglePause = () => {
+  // Replace the existing togglePause function in useGameState.ts with this one
+
+  const togglePause = useCallback(() => {
     setIsPaused(prev => {
       const newPaused = !prev;
+      gameStateRef.current.player.x = 100;
+
       if (newPaused) {
+        // Pause game loop
         gameLoopRef.current = false;
         if (animationFrameIdRef.current) {
           cancelAnimationFrame(animationFrameIdRef.current);
           animationFrameIdRef.current = null;
         }
+      } else {
+        // Resume game loop
+        gameLoopRef.current = true;
+
+        // Simply set the flag to true - the actual game loop restart 
+        // will happen in the useEffect in MusicReactiveOceanGame that watches isPaused
       }
+
       return newPaused;
     });
-  };
-  
+  }, []);
+
   // Select a new level
 
   const selectLevel = useCallback((level: Level) => {
     if (!level.unlocked) return;
-    
+
     // Stop current game loop and audio
     gameLoopRef.current = false;
     if (animationFrameIdRef.current) {
       cancelAnimationFrame(animationFrameIdRef.current);
       animationFrameIdRef.current = null;
     }
-    
+
     // Reset game state for new level
     gameStateRef.current = {
       player: {
@@ -324,52 +335,52 @@ export const useGameState = () => {
         opacity: 1
       }
     };
-    
+
     // Reset cave state
     caveRef.current = {
       upper: { points: [], amplitude: 0 },
       lower: { points: [], amplitude: 0 }
     };
-    
+
     // Clear active timed texts
     activeTimedTextsRef.current = [];
-    
+
     // Reset event triggers
     timedTextEventsRef.current = timedTextEventsRef.current.map(event => ({
       ...event,
       triggered: false
     }));
-    
+
     colorEventsRef.current = colorEventsRef.current.map(event => ({
       ...event,
       triggered: event.timestamp === 0
     }));
-    
+
     setCurrentLevel(level);
-    
+
     // Handle level-specific settings
     if (level.id === 2) {
       if (containerRef.current) {
         containerRef.current.style.background = "transparent";
       }
-      
+
       // Set level 2 specific text events
       timedTextEventsRef.current = createLevel2TimedTextEvents();
-      
+
       // Load level 2 assets before proceeding
       const loadLevel2Assets = async () => {
         try {
           // Show a loading indication if needed
           setIsPaused(true);
-          
+
           // Load level 2 assets
           const assetLoader = new AssetLoader();
           await assetLoader.loadLevel2Assets();
-          
+
           // Update level 2 asset refs
           level2ObstacleImagesRef.current = assetLoader.level2ObstacleImages;
           level2PickupImagesRef.current = assetLoader.level2PickupImages;
-          
+
           // Reset the game state after loading assets
           setLevelEnded(false);
           setHealth(100);
@@ -380,24 +391,24 @@ export const useGameState = () => {
           selectLevel(levels[0]);
         }
       };
-      
+
       loadLevel2Assets();
     } else {
       // Set level 1 colors and events
       backgroundColorRef.current = level.initialBackground;
       waveColorRef.current = level.initialWaveColor;
-      
+
       if (containerRef.current) {
         containerRef.current.style.background = level.initialBackground;
       }
-      
+
       timedTextEventsRef.current = createDefaultTimedTextEvents();
       setLevelEnded(false);
       setHealth(100);
     }
   }, [levels, setIsPaused, setLevelEnded, setHealth]);
-  
-  
+
+
   return {
     // State
     score,
@@ -427,7 +438,7 @@ export const useGameState = () => {
     setLevels,
     currentLevel,
     setCurrentLevel,
-    
+
     // Refs
     containerRef,
     gameStateRef,
@@ -463,7 +474,7 @@ export const useGameState = () => {
     hitSoundRef,
     level2ObstacleImagesRef,
     level2PickupImagesRef,
-    
+
     // Functions
     togglePause,
     selectLevel

@@ -216,6 +216,7 @@ export const gameLoop = (
   
   // Detect beat and spawn items
   if (detectBeat(amplitude, lastBeatTimeRef)) {
+    console.log('Beat detected!');
     spawnItemsOnBeat(
       canvas,
       levelTogglesRef.current,

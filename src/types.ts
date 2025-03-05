@@ -37,7 +37,7 @@ export interface Level {
 export interface CaveState {
   upper: { points: CavePoint[], amplitude: number },
   lower: { points: CavePoint[], amplitude: number }
-}``
+}
 
 //points 
 export interface CavePoint {
@@ -203,6 +203,10 @@ export interface LevelToggles {
   showToothbrushes: boolean;
   showHotdogs: boolean;
   showRubberDuckies: boolean;
+  // Level 2 specific obstacle toggles
+  showBuses?: boolean;
+  showBats?: boolean;
+  showChickens?: boolean;
 }
 
 export interface Props {

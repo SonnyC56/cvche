@@ -21,18 +21,24 @@ export const createDefaultTimedTextEvents = (): TimedTextEvent[] => [
 
 // Level 2 timed text events
 export const createLevel2TimedTextEvents = (): TimedTextEvent[] => [
-  { timestamp: 10, text: "HELP TINA SAVE DANNY", triggered: false },
-  { timestamp: 20, text: "GO FLUFFY GO", triggered: false },
-  { timestamp: 30, text: "DON'T GET THE FLU!", triggered: false },
-  { timestamp: 40, text: "SAVE THE PLANET", triggered: false },
-  { timestamp: 50, text: "DON'T Get Squashed by the bus!", triggered: false },
-  { timestamp: 60, text: "MMM VITAMIN C!", triggered: false },
-  { timestamp: 70, text: "MMM TUMERIC!", triggered: false },
-  { timestamp: 80, text: "MMM GINGER!", triggered: false },
-  { timestamp: 90, text: "SAVE DANNY!", triggered: false },
-  { timestamp: 100, text: "BIOLOGICAL WEAPON'S CAN'T STOP FLUFFY!", triggered: false },
-  { timestamp: 110, text: "WE'RE COMING DANNY!", triggered: false },
-  { timestamp: 120, text: "WUHAN MAKES CYMBOLS!", triggered: false },
+  { timestamp: 6, text: "It's 1981. Endless Love by Diana Ross and Lionel Richie is song of the year.", triggered: false },
+  { timestamp: 10, text: "But still the world feels unstable.", triggered: false },
+  { timestamp: 14, text: "Tina's son Danny was killed in a tragic bus accident.", triggered: false },
+  { timestamp: 18, text: "But is Danny really DEAD?", triggered: false },
+  { timestamp: 22, text: "HELP TINA SAVE DANNY!", triggered: false },
+  { timestamp: 26, text: "COME ON FLUFFY!", triggered: false },
+  { timestamp: 36, text: "MMM Vitamin C!", triggered: false },
+  { timestamp: 49, text: "Flying Buses WTF!?", triggered: false },
+  { timestamp: 83, text: "Cock block!", triggered: false },
+  { timestamp: 93, text: "COME ON FLUFFY!", triggered: false },
+  { timestamp: 130, text: "Biological Weapons! You gotta be kidding me.", triggered: false },
+  { timestamp: 135, text: "COME ON FLUFFY!", triggered: false },
+  { timestamp: 173, text: "OH DANNY BOY!", triggered: false },
+  { timestamp: 190, text: "PUFF. PUFF. GET FLUFFY!", triggered: false },
+  { timestamp: 252, text: "HOLY SCHNIKEYS!", triggered: false },
+  { timestamp: 286, text: "DANNY HERE WE COME!", triggered: false },
+  { timestamp: 301, text: "DAAAAAAAAAAAAANNNNNNNNNNYYYYYYYY!!!", triggered: false },
+  { timestamp: 328, text: "GREAT WORK FLUFFY!!! YOU SAVED DANNY!", triggered: false },
 ];
 
 // Color change events for level 1
@@ -76,31 +82,80 @@ export const createColorEvents = (): TimedColorEvent[] => [
 // Level 2 timed events for obstacles and pickups
 export const createLevel2TimedEvents = (): Level2TimedEvents => ({
   obstacles: [
-    { timestamp: 15, type: 'bus', triggered: false },
-    { timestamp: 25, type: 'bats', triggered: false },
-    { timestamp: 35, type: 'chicken', triggered: false },
-    { timestamp: 45, type: 'bus', triggered: false },
-    { timestamp: 50, type: 'bats', triggered: false },
-    { timestamp: 55, type: 'chicken', triggered: false },
-    { timestamp: 65, type: 'bus', triggered: false },
-    { timestamp: 75, type: 'bats', triggered: false },
-    { timestamp: 85, type: 'chicken', triggered: false },
-    { timestamp: 95, type: 'bus', triggered: false },
-    { timestamp: 105, type: 'bats', triggered: false },
-    { timestamp: 115, type: 'chicken', triggered: false }
+    // Flying Buses - starting around 49 second mark
+    { timestamp: 49, type: 'bus', triggered: false },
+    { timestamp: 55, type: 'bus', triggered: false },
+    { timestamp: 62, type: 'bus', triggered: false },
+    
+    // Chickens - starting around 83 second mark
+    { timestamp: 83, type: 'chicken', triggered: false },
+    { timestamp: 88, type: 'chicken', triggered: false },
+    { timestamp: 93, type: 'chicken', triggered: false },
+    
+    // Bats - starting around 120 second mark
+    { timestamp: 120, type: 'bats', triggered: false },
+    { timestamp: 125, type: 'bats', triggered: false },
+    { timestamp: 130, type: 'bats', triggered: false },
+    
+    // Mixed obstacles - around 173 mark (all obstacles randomly mixed)
+    { timestamp: 173, type: 'bus', triggered: false },
+    { timestamp: 176, type: 'chicken', triggered: false },
+    { timestamp: 180, type: 'bats', triggered: false },
+    { timestamp: 185, type: 'bus', triggered: false },
+    { timestamp: 188, type: 'chicken', triggered: false },
+    { timestamp: 192, type: 'bats', triggered: false },
+    
+    // Major shift at 252 - HOLY SCHNIKEYS! moment
+    { timestamp: 252, type: 'bus', triggered: false },
+    { timestamp: 255, type: 'chicken', triggered: false },
+    { timestamp: 258, type: 'bats', triggered: false },
+    { timestamp: 262, type: 'bus', triggered: false },
+    { timestamp: 266, type: 'chicken', triggered: false },
+    { timestamp: 270, type: 'bats', triggered: false },
+    
+    // Final extreme obstacle flood for the outro at 301 mark
+    { timestamp: 301, type: 'bats', triggered: false },
+    { timestamp: 302, type: 'bats', triggered: false },
+    { timestamp: 303, type: 'bats', triggered: false },
+    { timestamp: 304, type: 'bats', triggered: false },
+    { timestamp: 305, type: 'bats', triggered: false },
+    { timestamp: 306, type: 'bats', triggered: false },
+    { timestamp: 307, type: 'bats', triggered: false },
+    { timestamp: 308, type: 'bats', triggered: false },
+    { timestamp: 310, type: 'bats', triggered: false },
+    { timestamp: 312, type: 'bats', triggered: false }
   ],
   pickups: [
-    { timestamp: 10, type: 'vitaminC', triggered: false },
-    { timestamp: 20, type: 'pill', triggered: false },
-    { timestamp: 30, type: 'tumeric', triggered: false },
+    // Orange Slices (VitaminC) incoming at 28 seconds
+    { timestamp: 28, type: 'vitaminC', triggered: false },
+    { timestamp: 32, type: 'vitaminC', triggered: false },
+    { timestamp: 36, type: 'vitaminC', triggered: false },
+    
+    // Ginger comes at 36 second mark
+    { timestamp: 36, type: 'ginger', triggered: false },
     { timestamp: 40, type: 'ginger', triggered: false },
-    { timestamp: 60, type: 'vitaminC', triggered: false },
+    { timestamp: 44, type: 'ginger', triggered: false },
+    
+    // Mix of health items during mid-game
     { timestamp: 70, type: 'pill', triggered: false },
     { timestamp: 80, type: 'tumeric', triggered: false },
-    { timestamp: 90, type: 'ginger', triggered: false },
-    { timestamp: 100, type: 'vitaminC', triggered: false },
+    { timestamp: 90, type: 'vitaminC', triggered: false },
+    { timestamp: 100, type: 'ginger', triggered: false },
     { timestamp: 110, type: 'pill', triggered: false },
-    { timestamp: 120, type: 'tumeric', triggered: false }
+    
+    // More pickups during intense sections
+    { timestamp: 150, type: 'tumeric', triggered: false },
+    { timestamp: 160, type: 'vitaminC', triggered: false },
+    { timestamp: 170, type: 'ginger', triggered: false },
+    
+    // Continued pickups during mixed obstacle section
+    { timestamp: 200, type: 'pill', triggered: false },
+    { timestamp: 220, type: 'tumeric', triggered: false },
+    { timestamp: 240, type: 'vitaminC', triggered: false },
+    
+    // Final stretch pickups
+    { timestamp: 280, type: 'ginger', triggered: false },
+    { timestamp: 290, type: 'pill', triggered: false }
   ]
 });
 
@@ -145,5 +200,9 @@ export const getInitialLevelToggles = (): LevelToggles => ({
   showFlipFlops: false,
   showToothbrushes: false,
   showHotdogs: false,
-  showRubberDuckies: false
+  showRubberDuckies: false,
+  // Level 2 specific obstacle toggles
+  showBuses: false,
+  showBats: false,
+  showChickens: false
 });

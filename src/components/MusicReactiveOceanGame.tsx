@@ -211,6 +211,105 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
   }, [gameState.portraitFishPositionRef, gameState.portraitParticlesRef]);
 
   // Start game function
+  // In MusicReactiveOceanGame.tsx
+
+  // Add this effect to MusicReactiveOceanGame.tsx with explicit arguments
+  // instead of using the spread operator
+
+  useEffect(() => {
+    // Skip if game hasn't started
+    if (!gameState.gameStarted) return;
+
+    if (gameState.isPaused) {
+      // Already handled in the togglePause function
+      // Audio pause logic can be here if needed
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    } else {
+      // Resume audio and restart game loop when unpaused
+      if (audioRef.current) {
+        audioRef.current.play().catch(console.error);
+      }
+
+      // Restart game loop if it's not running
+      if (gameState.gameLoopRef.current && !gameState.animationFrameIdRef.current) {
+        console.log("Restarting game loop after unpause");
+
+        // Call gameLoop with all explicit arguments
+        gameState.animationFrameIdRef.current = requestAnimationFrame(() =>
+          gameLoop(
+            canvasRef,
+            gameState.gameStateRef,
+            gameState.lastFrameTimeRef,
+            gameState.gameLoopRef,
+            gameState.animationFrameIdRef,
+            audioRefNonNull,
+            gameState.audioProgressRef,
+            getAverageAmplitude,
+            detectBeat,
+            gameState.lastBeatTimeRef,
+            inputRef,
+            gameState.backgroundColorRef,
+            gameState.waveColorRef,
+            gameState.activeColorTransitionRef,
+            gameState.bgPatternBubblesRef,
+            gameState.levelTogglesRef,
+            gameState.bubblesRef,
+            gameState.amplitudeRef,
+            gameState.activeTimedTextsRef,
+            gameState.floraItemsRef,
+            gameState.streakDisplayRef,
+            fishImageRef,
+            waterBottleRef,
+            plasticBagRef,
+            obstacleImageRef,
+            fishHookRef,
+            flipflopRef,
+            toothbrushRef,
+            hotdogRef,
+            rubberDuckyRef,
+            gameState.level2ObstacleImagesRef,
+            gameState.level2PickupImagesRef,
+            gameState.currentLevelRef,
+            gameState.timedTextEventsRef,
+            gameState.colorEventsRef,
+            gameState.level2TimedEventsRef,
+            gameState.caveRef,
+            gameState.speedMultiplier,
+            gameState.setScore,
+            gameState.setHealth,
+            gameState.setLevelEnded,
+            gameState.lastCollisionTimeRef,
+            gameState.lastProximityScoreTimeRef,
+            gameState.pickupSoundRef as React.RefObject<HTMLAudioElement>,
+            gameState.hitSoundRef as React.RefObject<HTMLAudioElement>
+          )
+        );
+      }
+    }
+  }, [
+    gameState.isPaused,
+    gameState.gameStarted,
+    // Add other dependencies here
+    audioRef,
+    canvasRef,
+    audioRefNonNull,
+    getAverageAmplitude,
+    detectBeat,
+    inputRef,
+    fishImageRef,
+    waterBottleRef,
+    plasticBagRef,
+    obstacleImageRef,
+    fishHookRef,
+    flipflopRef,
+    toothbrushRef,
+    hotdogRef,
+    rubberDuckyRef,
+    // Include gameLoop in dependencies
+    gameLoop
+  ]);
 
   const startGame = useCallback(() => {
     if (gameState.gameStarted) return;
@@ -394,100 +493,100 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     audioRef
   ]);
 
-/*   const togglePause = useCallback(() => {
-    gameState.setIsPaused(prev => {
-      const newPaused = !prev;
-
-      if (newPaused) {
-        // Pause game loop and audio
-        gameState.gameLoopRef.current = false;
-        if (gameState.animationFrameIdRef.current) {
-          cancelAnimationFrame(gameState.animationFrameIdRef.current);
-          gameState.animationFrameIdRef.current = null;
+  /*   const togglePause = useCallback(() => {
+      gameState.setIsPaused(prev => {
+        const newPaused = !prev;
+  
+        if (newPaused) {
+          // Pause game loop and audio
+          gameState.gameLoopRef.current = false;
+          if (gameState.animationFrameIdRef.current) {
+            cancelAnimationFrame(gameState.animationFrameIdRef.current);
+            gameState.animationFrameIdRef.current = null;
+          }
+  
+          // Pause audio
+          if (audioRef.current) {
+            audioRef.current.pause();
+          }
+        } else {
+          // Resume audio
+          if (audioRef.current) {
+            audioRef.current.play().catch(console.error);
+          }
+  
+          // Resume game loop
+          gameState.gameLoopRef.current = true;
+          gameLoop(
+            canvasRef,
+            gameState.gameStateRef,
+            gameState.lastFrameTimeRef,
+            gameState.gameLoopRef,
+            gameState.animationFrameIdRef,
+            audioRefNonNull,
+            gameState.audioProgressRef,
+            getAverageAmplitude,
+            detectBeat,
+            gameState.lastBeatTimeRef,
+            inputRef,
+            gameState.backgroundColorRef,
+            gameState.waveColorRef,
+            gameState.activeColorTransitionRef,
+            gameState.bgPatternBubblesRef,
+            gameState.levelTogglesRef,
+            gameState.bubblesRef,
+            gameState.amplitudeRef,
+            gameState.activeTimedTextsRef,
+            gameState.floraItemsRef,
+            gameState.streakDisplayRef,
+            fishImageRef,
+            waterBottleRef,
+            plasticBagRef,
+            obstacleImageRef,
+            fishHookRef,
+            flipflopRef,
+            toothbrushRef,
+            hotdogRef,
+            rubberDuckyRef,
+            gameState.level2ObstacleImagesRef,
+            gameState.level2PickupImagesRef,
+            gameState.currentLevelRef,
+            gameState.timedTextEventsRef,
+            gameState.colorEventsRef,
+            gameState.level2TimedEventsRef,
+            gameState.caveRef,
+            gameState.speedMultiplier,
+            gameState.setScore,
+            gameState.setHealth,
+            gameState.setLevelEnded,
+            gameState.lastCollisionTimeRef,
+            gameState.lastProximityScoreTimeRef,
+            gameState.pickupSoundRef as React.RefObject<HTMLAudioElement>,
+            gameState.hitSoundRef as React.RefObject<HTMLAudioElement>
+          );
         }
-
-        // Pause audio
-        if (audioRef.current) {
-          audioRef.current.pause();
-        }
-      } else {
-        // Resume audio
-        if (audioRef.current) {
-          audioRef.current.play().catch(console.error);
-        }
-
-        // Resume game loop
-        gameState.gameLoopRef.current = true;
-        gameLoop(
-          canvasRef,
-          gameState.gameStateRef,
-          gameState.lastFrameTimeRef,
-          gameState.gameLoopRef,
-          gameState.animationFrameIdRef,
-          audioRefNonNull,
-          gameState.audioProgressRef,
-          getAverageAmplitude,
-          detectBeat,
-          gameState.lastBeatTimeRef,
-          inputRef,
-          gameState.backgroundColorRef,
-          gameState.waveColorRef,
-          gameState.activeColorTransitionRef,
-          gameState.bgPatternBubblesRef,
-          gameState.levelTogglesRef,
-          gameState.bubblesRef,
-          gameState.amplitudeRef,
-          gameState.activeTimedTextsRef,
-          gameState.floraItemsRef,
-          gameState.streakDisplayRef,
-          fishImageRef,
-          waterBottleRef,
-          plasticBagRef,
-          obstacleImageRef,
-          fishHookRef,
-          flipflopRef,
-          toothbrushRef,
-          hotdogRef,
-          rubberDuckyRef,
-          gameState.level2ObstacleImagesRef,
-          gameState.level2PickupImagesRef,
-          gameState.currentLevelRef,
-          gameState.timedTextEventsRef,
-          gameState.colorEventsRef,
-          gameState.level2TimedEventsRef,
-          gameState.caveRef,
-          gameState.speedMultiplier,
-          gameState.setScore,
-          gameState.setHealth,
-          gameState.setLevelEnded,
-          gameState.lastCollisionTimeRef,
-          gameState.lastProximityScoreTimeRef,
-          gameState.pickupSoundRef as React.RefObject<HTMLAudioElement>,
-          gameState.hitSoundRef as React.RefObject<HTMLAudioElement>
-        );
-      }
-
-      return newPaused;
-    });
-  }, [
-    gameState,
-    audioRef,
-    gameLoop,
-    canvasRef,
-    audioRefNonNull,
-    getAverageAmplitude,
-    detectBeat,
-    inputRef,
-    fishImageRef,
-    waterBottleRef,
-    plasticBagRef,
-    obstacleImageRef,
-    fishHookRef,
-    flipflopRef,
-    toothbrushRef,
-    hotdogRef,
-    rubberDuckyRef
-  ]); */
+  
+        return newPaused;
+      });
+    }, [
+      gameState,
+      audioRef,
+      gameLoop,
+      canvasRef,
+      audioRefNonNull,
+      getAverageAmplitude,
+      detectBeat,
+      inputRef,
+      fishImageRef,
+      waterBottleRef,
+      plasticBagRef,
+      obstacleImageRef,
+      fishHookRef,
+      flipflopRef,
+      toothbrushRef,
+      hotdogRef,
+      rubberDuckyRef
+    ]); */
   return (
     <div
       ref={gameState.containerRef}
@@ -584,7 +683,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         crossOrigin="anonymous"
         style={{ display: 'none' }}
       >
-      <source src={gameState.currentLevel.songFile} type="audio/mpeg" />
+        <source src={gameState.currentLevel.songFile} type="audio/mpeg" />
         Your browser does not support the audio element.
       </audio>
 
