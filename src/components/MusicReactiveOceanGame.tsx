@@ -97,10 +97,11 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
 
       // If not paused, start playing the new level's audio
       if (!gameState.isPaused) {
+        console.log("Starting new audio, currentLevel:", gameState.currentLevel);
         audioRef.current.play().catch(console.error);
       }
     }
-  }, [gameState.currentLevel, gameState.gameStarted]);
+  }, [gameState.currentLevel.id, gameState.gameStarted]);
 
   // Set up input handlers
   const { inputRef, setupVisibilityHandler } = useInputHandlers(canvasRef);
@@ -268,11 +269,51 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         transitionDuration: 3
       };
 
-      // Start audio and game loop
+      // Start audio and game loop with proper error handling
       if (audioRef.current) {
-        audioRefNonNull.current = audioRef.current;
+        // Reset any previous state
+        audioRef.current.pause();
         audioRef.current.currentTime = 0;
-        audioRef.current.play().then(() => {
+
+        // Check if the browser can play the audio type
+        const canPlayType = audioRef.current.canPlayType(
+          gameState.currentLevel.songFile.endsWith('.mp3') ? 'audio/mpeg' :
+            gameState.currentLevel.songFile.endsWith('.wav') ? 'audio/wav' :
+              gameState.currentLevel.songFile.endsWith('.ogg') ? 'audio/ogg' : ''
+        );
+
+        if (canPlayType === '') {
+          console.warn(`Browser might not support the audio format: ${gameState.currentLevel.songFile}`);
+        }
+
+        // Ensure audio is properly loaded before playing
+        audioRef.current.load();
+
+        // Create a flag to prevent multiple initializations
+        let initialized = false;
+
+        // Handle canplaythrough event
+        const handleCanPlay = () => {
+          if (initialized || !audioRef.current) return;
+          initialized = true;
+
+          audioRef.current.currentTime = 0;
+
+          // Start the game loop even if audio fails
+          startGameLoop();
+
+          // Try to play audio, but don't block the game if it fails
+          audioRef.current.play().catch(error => {
+            console.log("Audio play error:", error.message);
+            // Game loop is already started, so we can continue without audio
+          });
+        };
+
+        // Set up the event listener
+        audioRef.current.addEventListener('canplaythrough', handleCanPlay, { once: true });
+
+        // Start game loop function to avoid code duplication
+        const startGameLoop = () => {
           gameState.gameLoopRef.current = true;
           gameState.animationFrameIdRef.current = requestAnimationFrame(() =>
             gameLoop(
@@ -323,7 +364,24 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
               gameState.hitSoundRef as React.RefObject<HTMLAudioElement>
             )
           );
-        }).catch(console.error);
+        };
+
+        // Fallback in case oncanplaythrough doesn't fire
+        const timeoutId = setTimeout(() => {
+          if (!initialized && audioRef.current) {
+            console.log("Starting game loop via timeout fallback");
+            audioRef.current.removeEventListener('canplaythrough', handleCanPlay);
+            handleCanPlay();
+          }
+        }, 3000);
+
+        // Cleanup function to prevent memory leaks
+        return () => {
+          if (audioRef.current) {
+            audioRef.current.removeEventListener('canplaythrough', handleCanPlay);
+          }
+          clearTimeout(timeoutId);
+        };
       }
     }
   }, [
@@ -333,7 +391,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     detectBeat,
     inputRef,
     audioRef
-  ]);;
+  ]);
 
   const togglePause = useCallback(() => {
     gameState.setIsPaused(prev => {
@@ -442,21 +500,18 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     >
       {/* Background video for Level 2 */}
       {gameState.currentLevel.id === 2 && (
-        <video
-          src="/videos/level2background.mp4"
-          autoPlay
-          loop
-          muted
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            zIndex: -1
-          }}
-        />
+        <video autoPlay loop muted style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          zIndex: -1
+        }}>
+          <source src="/videos/level2background.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
       )}
 
       {/* Stars canvas for top decoration */}
@@ -526,9 +581,12 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         id="audioControl"
         ref={audioRef}
         crossOrigin="anonymous"
-        src={gameState.currentLevel.songFile}
         style={{ display: 'none' }}
-      />
+      >
+        <source src={gameState.currentLevel.songFile} type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
+
       {/* Pause screen */}
       <PauseScreen
         isPaused={gameState.isPaused}

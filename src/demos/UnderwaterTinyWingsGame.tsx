@@ -1,5 +1,6 @@
 // UnderwaterTinyWingsSoundWaveGame.tsx
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { getDefaultLevels } from '../utils/eventData';
 
 interface TrashItem {
   x: number;
@@ -481,12 +482,15 @@ const UnderwaterTinyWingsSoundWaveGame: React.FC<Props> = ({ onGameStart }) => {
     };
   }, []);
 
+  const levels = getDefaultLevels();
+  const welcomeToSongUrl = levels[0].songFile;
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh', background: '#1a1a2e' }}>
       <audio
         ref={audioRef}
         crossOrigin="anonymous"
-        src="/sounds/welcomeToCVCHE.mp3"
+        src={welcomeToSongUrl}
         style={{ display: 'none' }}
         onEnded={() => {
           setGameStarted(false);

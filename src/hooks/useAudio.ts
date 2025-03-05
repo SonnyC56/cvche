@@ -1,3 +1,5 @@
+// Update to the useAudio.ts hook to improve audio handling
+
 import { useRef, useEffect } from 'react';
 import { ExtendedHTMLAudioElement } from '../types';
 
@@ -23,41 +25,66 @@ export const useAudio = (
     const audioEl = audioRef.current as ExtendedHTMLAudioElement;
     if (!audioEl) return;
     
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) {
       console.error("Web Audio API not supported.");
       return;
     }
     
-    const audioCtx = audioEl._audioCtx || new AudioContextClass();
-    audioEl._audioCtx = audioCtx;
-    
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    analyserRef.current = analyser;
-    
-    const bufferLength = analyser.frequencyBinCount;
-    dataArrayRef.current = new Uint8Array(bufferLength);
-    
-    let source: MediaElementAudioSourceNode;
-    if (!audioEl._mediaElementSource) {
-      source = audioCtx.createMediaElementSource(audioEl);
-      audioEl._mediaElementSource = source;
-    } else {
-      source = audioEl._mediaElementSource;
-    }
-    
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
-    
-    const resumeAudioCtx = () => {
-      if (audioCtx.state !== 'running') audioCtx.resume();
+    // Function to ensure the audio context is created and connected
+    const setupAudio = () => {
+      try {
+        // Create a new audio context if one doesn't exist
+        const audioCtx = audioEl._audioCtx || new AudioContextClass();
+        audioEl._audioCtx = audioCtx;
+        
+        // Create analyser
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        analyserRef.current = analyser;
+        
+        const bufferLength = analyser.frequencyBinCount;
+        dataArrayRef.current = new Uint8Array(bufferLength);
+        
+        // Create or reuse the media element source
+        let source: MediaElementAudioSourceNode;
+        if (!audioEl._mediaElementSource) {
+          source = audioCtx.createMediaElementSource(audioEl);
+          audioEl._mediaElementSource = source;
+          source.connect(analyser);
+          analyser.connect(audioCtx.destination);
+        }
+        
+        // Ensure context is running
+        if (audioCtx.state !== 'running') {
+          audioCtx.resume();
+        }
+      } catch (error) {
+        console.error("Error setting up audio:", error);
+      }
     };
     
-    document.body.addEventListener('touchstart', resumeAudioCtx, { once: true });
-    document.body.addEventListener('click', resumeAudioCtx, { once: true });
+    // Set up event listeners to handle audio context state
+    const handlePlay = () => {
+      setupAudio();
+    };
+    
+    audioEl.addEventListener('play', handlePlay);
+    
+    // Also try to set up initially
+    setupAudio();
+    
+    const resumeAudioCtx = () => {
+      if (audioEl._audioCtx && audioEl._audioCtx.state !== 'running') {
+        audioEl._audioCtx.resume();
+      }
+    };
+    
+    document.body.addEventListener('touchstart', resumeAudioCtx);
+    document.body.addEventListener('click', resumeAudioCtx);
     
     return () => {
+      audioEl.removeEventListener('play', handlePlay);
       document.body.removeEventListener('touchstart', resumeAudioCtx);
       document.body.removeEventListener('click', resumeAudioCtx);
     };
@@ -102,9 +129,14 @@ export const useAudio = (
     if (isPaused) {
       audioRef.current.pause();
     } else {
-      audioRef.current.play().catch(console.error);
+      audioRef.current.play().catch(error => {
+        if (error.name === 'AbortError') return; // Ignore abort errors.
+        console.error("Error playing audio:", error);
+        // Continue with game even if audio fails.
+      });
     }
   }, [isPaused, gameStarted]);
+  
 
   // Helper function to get average amplitude
   const getAverageAmplitude = (): number => {
@@ -113,14 +145,19 @@ export const useAudio = (
     
     if (!analyser || !dataArray) return 0;
     
-    analyser.getByteFrequencyData(dataArray);
-    let sum = 0;
-    
-    for (let i = 0; i < dataArray.length; i++) {
-      sum += dataArray[i];
+    try {
+      analyser.getByteFrequencyData(dataArray);
+      let sum = 0;
+      
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+      }
+      
+      return sum / dataArray.length;
+    } catch (error) {
+      console.error("Error getting amplitude:", error);
+      return 0;
     }
-    
-    return sum / dataArray.length;
   };
 
   // Beat detection helper

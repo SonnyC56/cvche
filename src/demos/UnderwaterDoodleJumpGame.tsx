@@ -1,5 +1,6 @@
 // UnderwaterDoodleJumpGame.tsx
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { getDefaultLevels } from '../utils/eventData';
 
 // Global declaration for Safari
 declare global {
@@ -386,33 +387,8 @@ const UnderwaterDoodleJump: React.FC<Props> = ({ onGameStart }) => {
     unlocked: true,
     isCaveMechanic: false
   });
+  const levels = getDefaultLevels();
 
-  const [levels, setLevels] = useState<Level[]>(() => {
-    const savedLevels = localStorage.getItem('gameLevels');
-    const defaultLevels: Level[] = [
-      {
-        id: 1,
-        title: "WELCOME TO CVCHE",
-        songFile: "/sounds/welcomeToCVCHE.mp3",
-        initialBackground: "#FDEE03",
-        initialWaveColor: "rgba(0,102,255,0.4)",
-        unlocked: true,
-        isCaveMechanic: false,
-        highScore: 0
-      },
-      {
-        id: 2,
-        title: "SOUL FOOD",
-        songFile: "/sounds/soulFood2.mp3",
-        initialBackground: "#8A2BE2",
-        initialWaveColor: "rgba(255,140,0,0.4)",
-        unlocked: true,
-        isCaveMechanic: false,
-        highScore: 0
-      }
-    ];
-    return savedLevels ? JSON.parse(savedLevels) : defaultLevels;
-  });
 
   // Color refs.
   const backgroundColorRef = useRef(currentLevel.initialBackground);
@@ -868,12 +844,7 @@ const UnderwaterDoodleJump: React.FC<Props> = ({ onGameStart }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, [initializeFlora]);
 
-  useEffect(() => {
-    (window as any).unlockAllLevels = () => {
-      setLevels(prev => prev.map(level => ({ ...level, unlocked: true })));
-      console.log('All levels unlocked!');
-    };
-  }, [levels]);
+
 
   const startGame = useCallback(() => {
     setGameStarted(true);
@@ -967,18 +938,6 @@ const UnderwaterDoodleJump: React.FC<Props> = ({ onGameStart }) => {
     setLevelEnded(false);
   }, []);
 
-  useEffect(() => {
-    if (levelEnded) {
-      setLevels(prev =>
-        prev.map(level =>
-          level.id === currentLevel.id
-            ? { ...level, highScore: Math.max(level.highScore || 0, gameStateRef.current.score) }
-            : level
-        )
-      );
-      localStorage.setItem('gameLevels', JSON.stringify(levels));
-    }
-  }, [levelEnded, currentLevel.id, levels]);
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%', minHeight: '100vh', background: backgroundColorRef.current, fontFamily: 'Orbitron, sans-serif' }}>
