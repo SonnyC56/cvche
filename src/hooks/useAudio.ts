@@ -1,6 +1,6 @@
 // Update to the useAudio.ts hook to improve audio handling
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import { ExtendedHTMLAudioElement } from '../types';
 
 export const useAudio = (
@@ -17,7 +17,6 @@ export const useAudio = (
 ) => {
   // Audio element ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isAudioContextReady, setIsAudioContextReady] = useState(false);
   const fallbackTimerRef = useRef<number | null>(null);
 
   // Set up AudioContext and analyser when the game starts
@@ -69,7 +68,6 @@ export const useAudio = (
           console.log('[DEBUG] AudioContext state after resume:', audioCtx.state);
         }
         
-        setIsAudioContextReady(true);
         console.log('[DEBUG] Audio setup complete - Analyzer created with bufferLength:', bufferLength);
         
         // Test the audio data
