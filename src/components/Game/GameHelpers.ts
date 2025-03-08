@@ -26,7 +26,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: false,
         showBottles: false,
-        showObstacles: false,
+        showOilSplats: false,
         showHooks: false,
         showVisualizer: true,
         showBubbles: true,
@@ -42,7 +42,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: false,
         showBottles: false,
-        showObstacles: false,
+        showOilSplats: false,
         showHooks: false,
         showVisualizer: false,
         showBubbles: false,
@@ -58,7 +58,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: true,
         showBottles: false,
-        showObstacles: false,
+        showOilSplats: false,
         showHooks: false,
         showVisualizer: false,
         showBubbles: false,
@@ -74,7 +74,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: true,
         showBottles: false,
-        showObstacles: true,
+        showOilSplats: true,
         showHooks: false,
         showVisualizer: false,
         showBubbles: false,
@@ -90,7 +90,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: false,
         showBottles: true,
-        showObstacles: true,
+        showOilSplats: true,
         showHooks: false,
         showVisualizer: false,
         showBubbles: false,
@@ -106,7 +106,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: false,
         showBottles: true,
-        showObstacles: true,
+        showOilSplats: true,
         showHooks: false,
         showVisualizer: true,
         showBubbles: false,
@@ -122,7 +122,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: true,
         showBottles: true,
-        showObstacles: true,
+        showOilSplats: true,
         showHooks: false,
         showVisualizer: true,
         showBubbles: true,
@@ -138,7 +138,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: true,
         showBottles: true,
-        showObstacles: false,
+        showOilSplats: false,
         showHooks: true,
         showVisualizer: true,
         showBubbles: true,
@@ -154,7 +154,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: true,
         showBottles: true,
-        showObstacles: true,
+        showOilSplats: true,
         showHooks: false,
         showVisualizer: true,
         showBubbles: true,
@@ -170,7 +170,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: true,
         showBottles: true,
-        showObstacles: true,
+        showOilSplats: true,
         showHooks: true,
         showVisualizer: true,
         showBubbles: true,
@@ -186,7 +186,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: true,
         showBottles: true,
-        showObstacles: false,
+        showOilSplats: false,
         showHooks: false,
         showVisualizer: true,
         showBubbles: true,
@@ -202,7 +202,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: true,
         showBottles: true,
-        showObstacles: true,
+        showOilSplats: true,
         showHooks: true,
         showVisualizer: true,
         showBubbles: true,
@@ -218,7 +218,7 @@ export const updateLevelToggles = (
         showFlora: true,
         showBags: true,
         showBottles: false,
-        showObstacles: false,
+        showOilSplats: false,
         showHooks: false,
         showVisualizer: true,
         showBubbles: true,
@@ -237,7 +237,7 @@ export const updateLevelToggles = (
         showFlora: false,
         showBags: false,
         showBottles: false,
-        showObstacles: false,
+        showOilSplats: false,
         showHooks: false,
         showVisualizer: true,
         showBubbles: true,
@@ -255,9 +255,6 @@ export const updateLevelToggles = (
     else if (audioTime >= 28 && audioTime < 36) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
-        showBottles: true,
-        showBags: false,
-        showObstacles: false,
         showBuses: false,
         showBats: false,
         showChickens: false
@@ -266,9 +263,6 @@ export const updateLevelToggles = (
     else if (audioTime >= 36 && audioTime < 49) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
-        showBottles: true,
-        showBags: true,
-        showObstacles: false,
         showBuses: false,
         showBats: false,
         showChickens: false
@@ -277,9 +271,6 @@ export const updateLevelToggles = (
     else if (audioTime >= 49 && audioTime < 83) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
-        showBottles: true,
-        showBags: true,
-        showObstacles: true,
         showBuses: true,
         showBats: false,
         showChickens: false
@@ -288,9 +279,6 @@ export const updateLevelToggles = (
     else if (audioTime >= 83 && audioTime < 120) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
-        showBottles: true,
-        showBags: true,
-        showObstacles: true,
         showBuses: true,
         showChickens: true,
         showBats: false
@@ -299,9 +287,6 @@ export const updateLevelToggles = (
     else if (audioTime >= 120 && audioTime < 173) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
-        showBottles: true,
-        showBags: true,
-        showObstacles: true,
         showBuses: true,
         showChickens: true,
         showBats: true
@@ -310,32 +295,17 @@ export const updateLevelToggles = (
     else if (audioTime >= 173 && audioTime < 252) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
-        showBottles: true,
-        showBags: true,
-        showObstacles: true,
         showBuses: true,
         showChickens: true,
         showBats: true,
-        showFlipFlops: true,
-        showToothbrushes: true,
-        showHotdogs: true,
-        showRubberDuckies: true
       };
     }
     else if (audioTime >= 252 && audioTime < 301) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
-        showFlora: true,
-        showBottles: true,
-        showBags: true,
-        showObstacles: true,
         showBuses: true,
         showChickens: true,
         showBats: true,
-        showFlipFlops: true,
-        showToothbrushes: true,
-        showHotdogs: true,
-        showRubberDuckies: true,
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
@@ -344,17 +314,9 @@ export const updateLevelToggles = (
     else if (audioTime >= 301) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
-        showFlora: true,
-        showBottles: true,
-        showBags: true,
-        showObstacles: true,
         showBuses: true,
         showChickens: true,
         showBats: true,
-        showFlipFlops: true,
-        showToothbrushes: true,
-        showHotdogs: true,
-        showRubberDuckies: true,
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
@@ -375,6 +337,7 @@ export const processColorEvents = (
 ) => {
   colorEvents.forEach(event => {
     if (!event.triggered && audioTime >= event.timestamp) {
+      console.log('proccessing color event (inside for loop): ', event, 'color: ', backgroundColorRef.current)
       event.triggered = true;
       activeColorTransition.backgroundColor = backgroundColorRef.current;
       activeColorTransition.waveColor = waveColorRef.current;
@@ -471,26 +434,10 @@ export const processLevel2Events = (
           width = 60;
           height = 60;
           break;
-        case 'bus':
-          img = level2ObstacleImages[0] || null;
-          width = 100;
-          height = 60;
-          break;
-        case 'bats':
-          img = level2ObstacleImages[1] || null;
-          width = 60;
-          height = 60;
-          break;
-        case 'chicken':
-          img = level2ObstacleImages[2] || null;
-          width = 60;
-          height = 60;
-          break;
-
       }
 
       if (img) {
-        gameState.trashList.push({
+        gameState.pickups.push({
           x: canvas.width,
           y: getSpawnY(canvas, height),
           width,
@@ -518,7 +465,7 @@ export const spawnItemsOnBeat = (
   audioProgress: number,
   waterBottleImage: HTMLImageElement | null,
   plasticBagImage: HTMLImageElement | null,
-  obstacleImage: HTMLImageElement | null,
+  oilSplatImage: HTMLImageElement | null,
   fishHookImage: HTMLImageElement | null,
   flipflopImage: HTMLImageElement | null,
   toothbrushImage: HTMLImageElement | null,
@@ -531,12 +478,12 @@ export const spawnItemsOnBeat = (
     JSON.stringify({
       showBottles: levelToggles.showBottles,
       showBags: levelToggles.showBags,
-      showObstacles: levelToggles.showObstacles,
+      showOilSplats: levelToggles.showOilSplats,
       showHooks: levelToggles.showHooks
     })
   );
 
-  console.log(`[DEBUG] Images loaded - waterBottle: ${!!waterBottleImage}, plasticBag: ${!!plasticBagImage}, obstacle: ${!!obstacleImage}, fishHook: ${!!fishHookImage}`);
+  console.log(`[DEBUG] Images loaded - waterBottle: ${!!waterBottleImage}, plasticBag: ${!!plasticBagImage}, obstacle: ${!!oilSplatImage}, fishHook: ${!!fishHookImage}`);
 
   if (currentLevelId === 1) {
     // Level 1 spawning logic remains unchanged
@@ -549,7 +496,7 @@ export const spawnItemsOnBeat = (
 
       if (roll < spawnChance) {
         console.log('[DEBUG] 🍶 Spawning water bottle');
-        gameState.trashList.push({
+        gameState.pickups.push({
           x: canvas.width,
           y: getSpawnY(canvas, 50),
           width: 30,
@@ -573,7 +520,7 @@ export const spawnItemsOnBeat = (
 
       if (roll < spawnChance) {
         console.log('[DEBUG] 👜 Spawning plastic bag');
-        gameState.trashList.push({
+        gameState.pickups.push({
           x: canvas.width,
           y: getSpawnY(canvas, 50),
           width: 30,
@@ -590,7 +537,7 @@ export const spawnItemsOnBeat = (
     }
 
     // Spawn obstacles
-    if (levelToggles.showObstacles && obstacleImage) {
+    if (levelToggles.showOilSplats && oilSplatImage) {
       const spawnChance = 0.075 + (audioProgress / 200);
       const roll = Math.random();
       console.log(`[DEBUG] Obstacle spawn check - chance: ${spawnChance.toFixed(3)}, roll: ${roll.toFixed(3)}, willSpawn: ${roll < spawnChance}`);
@@ -605,10 +552,10 @@ export const spawnItemsOnBeat = (
           type: 'obstacle',
           speed: 1 + Math.random() * 2,
           rotation: Math.random() * Math.PI * 2,
-          pickupImage: obstacleImage
+          pickupImage: oilSplatImage
         });
       }
-    } else if (levelToggles.showObstacles) {
+    } else if (levelToggles.showOilSplats) {
       console.log('[DEBUG] ❌ Cannot spawn obstacle - image is null');
     }
 
@@ -698,7 +645,7 @@ export const spawnItemsOnBeat = (
     // Spawn vitaminC pickup from index 0
     if (levelToggles.showBottles && level2PickupImages.length > 0 && level2PickupImages[0]) {
       if (Math.random() < 0.075 + (audioProgress / 200)) {
-        gameState.trashList.push({
+        gameState.pickups.push({
           x: canvas.width,
           y: getSpawnY(canvas, 50),
           width: 60,
@@ -715,7 +662,7 @@ export const spawnItemsOnBeat = (
     // Spawn ginger pickup from index 3
     if (levelToggles.showBags && level2PickupImages.length > 3 && level2PickupImages[3]) {
       if (Math.random() < 0.075 + (audioProgress / 200)) {
-        gameState.trashList.push({
+        gameState.pickups.push({
           x: canvas.width,
           y: getSpawnY(canvas, 50),
           width: 60,
@@ -732,7 +679,7 @@ export const spawnItemsOnBeat = (
     // Spawn tumeric pickup from index 2
     if (level2PickupImages.length > 2 && level2PickupImages[2]) {
       if (Math.random() < 0.05 + (audioProgress / 200)) {
-        gameState.trashList.push({
+        gameState.pickups.push({
           x: canvas.width,
           y: getSpawnY(canvas, 50),
           width: 60,
@@ -747,7 +694,7 @@ export const spawnItemsOnBeat = (
     }
 
     // Spawn obstacles: only buses, bats, and chickens
-    if (levelToggles.showObstacles && level2ObstacleImages.length > 0) {
+    if (levelToggles.showOilSplats && level2ObstacleImages.length > 0) {
       const baseProbability = 0.075 + (audioProgress / 200);
       let availableObstacles: { img: HTMLImageElement, type: string, width: number, height: number }[] = [];
 
@@ -830,7 +777,7 @@ export const spawnSpecialTrashItem = (
     if (level2PickupImages.length > 0) {
       if (Math.random() < probability) {
         const randomPickup = level2PickupImages[Math.floor(Math.random() * level2PickupImages.length)];
-        gameState.trashList.push({
+        gameState.pickups.push({
           x: canvas.width,
           y: getSpawnY(canvas, height),
           width,
@@ -846,7 +793,7 @@ export const spawnSpecialTrashItem = (
   }
   else if (image) {
     if (Math.random() < probability) {
-      gameState.trashList.push({
+      gameState.pickups.push({
         x: canvas.width,
         y: getSpawnY(canvas, height),
         width,
@@ -873,8 +820,8 @@ export const updateAndCheckTrashCollisions = (
   setHealth: (callback: (prev: number) => number) => void,
   pickupSound: HTMLAudioElement | null
 ) => {
-  for (let i = gameState.trashList.length - 1; i >= 0; i--) {
-    const item = gameState.trashList[i];
+  for (let i = gameState.pickups.length - 1; i >= 0; i--) {
+    const item = gameState.pickups[i];
 
     // Update position
     item.x -= item.speed * speedMultiplier * factor;
@@ -882,7 +829,7 @@ export const updateAndCheckTrashCollisions = (
     // Remove if off screen
     if (item.x + item.width * pulse < 0) {
       gameState.trashStats.missed++;
-      gameState.trashList.splice(i, 1);
+      gameState.pickups.splice(i, 1);
       continue;
     }
 
@@ -937,7 +884,7 @@ export const updateAndCheckTrashCollisions = (
         createParticles(gameState.particles, item.x, item.y, getParticleColorFromStreak(streak), 20);
       }
 
-      gameState.trashList.splice(i, 1);
+      gameState.pickups.splice(i, 1);
 
       setHealth(prev => Math.min(100, prev + 1));
 

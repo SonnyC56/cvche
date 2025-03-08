@@ -253,7 +253,7 @@ export const updateAndDrawTimedTexts = (ctx: CanvasRenderingContext2D, activeTim
     } while (fontSize > 10);
     
     const opacity = item.lifetime / 200;
-    ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+    ctx.fillStyle = item.color ?? `rgba(0, 0, 0, ${opacity})`;
     ctx.fillText(item.text, (ctx.canvas?.width ?? 400) / 2, (ctx.canvas?.height ?? 200) / 2);
     ctx.restore();
   }

@@ -1,5 +1,5 @@
 import { GameState, LevelToggles, ActiveTimedText, TimedTextEvent, TimedColorEvent, Level2TimedEvents, ActiveColor, Bubble, StreakDisplay, Level, CaveState } from '../../types';
-import { getMultiplierFromStreak } from '../../utils/colorUtils';
+import { getMultiplierFromStreak, interpolateColor } from '../../utils/colorUtils';
 import { drawBackground, updateAndDrawBubbles, updateAndDrawScorePopups, updateAndDrawTimedTexts } from './BackgroundEffects';
 import { drawFlora } from './Flora';
 import { drawPlayer, updatePlayerPosition } from './Player';
@@ -69,7 +69,7 @@ export const drawItem = (ctx: CanvasRenderingContext2D, item: any, pulse: number
 // Main game loop
 export const gameLoop = (
   canvasRef: React.RefObject<HTMLCanvasElement>,
-  gameStateRef: React.RefObject<GameState>,
+  gameStateRef: React.MutableRefObject<GameState>,
   lastFrameTimeRef: React.MutableRefObject<number>,
   gameLoopRef: React.MutableRefObject<boolean>,
   animationFrameIdRef: React.MutableRefObject<number | null>,
@@ -98,7 +98,7 @@ export const gameLoop = (
   fishImageRef: React.RefObject<HTMLImageElement>,
   waterBottleRef: React.RefObject<HTMLImageElement>,
   plasticBagRef: React.RefObject<HTMLImageElement>,
-  obstacleImageRef: React.RefObject<HTMLImageElement>,
+  oilSplatImageRef: React.RefObject<HTMLImageElement>,
   fishHookRef: React.RefObject<HTMLImageElement>,
   flipflopRef: React.RefObject<HTMLImageElement>,
   toothbrushRef: React.RefObject<HTMLImageElement>,
@@ -129,29 +129,18 @@ export const gameLoop = (
   hitSoundRef: React.RefObject<HTMLAudioElement>
 ) => {
   if (!gameLoopRef.current || !canvasRef.current) return;
-  
   const ctx = canvasRef.current.getContext('2d');
   if (!ctx) return;
-  
-  // Calculate delta time for smooth animation
   const nowTime = performance.now();
   const deltaTime = (nowTime - lastFrameTimeRef.current) / 1000;
   lastFrameTimeRef.current = nowTime;
   const factor = deltaTime * 120;
-  
-  // Resize canvas to window size
   const canvas = canvasRef.current;
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  
-  // Get current audio position
   const audioTime = audioRef.current?.currentTime || 0;
   const songDuration = audioRef.current?.duration || 1;
-  
-  // Handle level-specific toggles based on audio time
   updateLevelToggles(audioTime, currentLevelRef.current.id, levelTogglesRef);
-  
-  // Process level 2 specific events
   if (currentLevelRef.current.id === 2) {
     processLevel2Events(
       audioTime, 
@@ -162,61 +151,50 @@ export const gameLoop = (
       gameStateRef.current
     );
   }
-  
-  // Check for color transition events
   processColorEvents(audioTime, colorEventsRef.current, activeColorTransitionRef.current, backgroundColorRef, waveColorRef);
-  
-  // Get current audio amplitude
+  // Interpolate active color transition for background and wave colors
+  if (activeColorTransitionRef.current.progress < 1) {
+    activeColorTransitionRef.current.progress += factor / (activeColorTransitionRef.current.transitionDuration * 60);
+    if (activeColorTransitionRef.current.progress > 1) activeColorTransitionRef.current.progress = 1;
+    backgroundColorRef.current = interpolateColor(
+      activeColorTransitionRef.current.backgroundColor,
+      activeColorTransitionRef.current.targetBackgroundColor,
+      activeColorTransitionRef.current.progress
+    );
+    waveColorRef.current = interpolateColor(
+      activeColorTransitionRef.current.waveColor,
+      activeColorTransitionRef.current.targetWaveColor,
+      activeColorTransitionRef.current.progress
+    );
+  }
   const amplitude = getAverageAmplitude();
   amplitudeRef.current = amplitude;
   const pulse = 1 + amplitude / 100;
-  
-  // Update speed multiplier based on song progress
   const audioTimeMs = audioRef.current ? audioRef.current.currentTime * 1000 : 0;
   const levelStartDelay = 0;
   const effectiveTime = Math.max(0, audioTimeMs - levelStartDelay);
   speedMultiplier.current = 1 + ((effectiveTime / 1000) / 120) * 0.5;
-  
-  // Draw background with effects
   drawBackground(ctx, amplitude / 100, backgroundColorRef, currentLevelRef.current.id, levelTogglesRef.current.showBackgroundPattern, bgPatternBubblesRef);
-  
-  // Draw audio visualizer if enabled
-  if (levelTogglesRef.current.showVisualizer) {
-   // drawSpectrum(ctx);
-  }
-  
-  // Draw flora if enabled
   if (levelTogglesRef.current.showFlora) {
     drawFlora(ctx, floraItemsRef.current, amplitude, factor, speedMultiplier.current, currentLevelRef.current.id);
   }
-  
-  // Process timed text events
   timedTextEventsRef.current.forEach(event => {
     if (!event.triggered && audioTime >= event.timestamp) {
       event.triggered = true;
-      activeTimedTextsRef.current.push({ text: event.text, lifetime: 200 });
+      activeTimedTextsRef.current.push({ text: event.text, lifetime: event.lifetime ?? 200, color: event.color ?? 'black' });
     }
   });
-  
-  // Draw bubbles if enabled
   if (levelTogglesRef.current.showBubbles) {
     updateAndDrawBubbles(ctx, bubblesRef.current, amplitude, factor);
   }
-  
-  // Draw timed text events
   updateAndDrawTimedTexts(ctx, activeTimedTextsRef.current, factor);
-  
-  // Update player position based on input
   updatePlayerPosition(
     gameStateRef.current.player,
     inputRef.current.touchY,
     factor,
     inputRef.current.isDesktop || inputRef.current.isTouching
   );
-  
-  // Detect beat and spawn items
   if (detectBeat(amplitude, lastBeatTimeRef)) {
-    console.log('Beat detected!');
     spawnItemsOnBeat(
       canvas,
       levelTogglesRef.current,
@@ -225,7 +203,7 @@ export const gameLoop = (
       audioProgressRef.current,
       waterBottleRef.current,
       plasticBagRef.current,
-      obstacleImageRef.current,
+      oilSplatImageRef.current,
       fishHookRef.current,
       flipflopRef.current,
       toothbrushRef.current,
@@ -235,8 +213,6 @@ export const gameLoop = (
       level2ObstacleImagesRef.current
     );
   }
-  
-  // Update and check collisions for trash items
   updateAndCheckTrashCollisions(
     ctx,
     gameStateRef.current,
@@ -247,8 +223,6 @@ export const gameLoop = (
     setHealth,
     pickupSoundRef.current
   );
-  
-  // Update and check collisions for obstacles
   updateAndCheckObstacleCollisions(
     ctx,
     gameStateRef.current,
@@ -263,32 +237,18 @@ export const gameLoop = (
     gameLoopRef,
     animationFrameIdRef
   );
-  
-  // Create swimming particles
   createSwimParticles(gameStateRef.current.particles, gameStateRef.current.player, gameStateRef.current.streak);
-  
-  // Update and draw particles
   updateAndDrawParticles(ctx, gameStateRef.current.particles, factor);
-  
-  // Update and draw score popups
   updateAndDrawScorePopups(ctx, gameStateRef.current.scorePopups, factor);
-  
-  // Draw player
   drawPlayer(ctx, gameStateRef.current.player, fishImageRef.current);
-  
-  // Check for cave mechanic
   const caveActive = currentLevelRef.current.isCaveMechanic || (currentLevelRef.current.id === 1 && audioTime >= 330 && audioTime < 390);
   if (caveActive) {
     const CAVE_WARNING_DURATION = 3;
     const isWarningPeriod = currentLevelRef.current.id === 1 && audioTime < 330 + CAVE_WARNING_DURATION;
-    
-    // Update cave boundaries
-    updateCaveBoundaries(canvas, caveRef.current, amplitude, inputRef.current.isDesktop);
-    
-    // Draw cave effect
-    drawCaveEffect(ctx, caveRef.current, amplitude, isWarningPeriod);
-    
-    // Calculate proximity score
+    // Normalize amplitude for cave mode
+    const normalizedAmplitude = amplitude / 100;
+    updateCaveBoundaries(canvas, caveRef.current, normalizedAmplitude, inputRef.current.isDesktop);
+    drawCaveEffect(ctx, caveRef.current, normalizedAmplitude, isWarningPeriod);
     calculateCaveProximityScore(
       gameStateRef.current.player,
       caveRef.current,
@@ -296,8 +256,6 @@ export const gameLoop = (
       (callback) => setScore(callback(gameStateRef.current.score)),
       gameStateRef.current.scorePopups
     );
-    
-    // Check for collision with cave walls
     checkCaveCollision(
       gameStateRef.current.player,
       caveRef.current,
@@ -315,13 +273,9 @@ export const gameLoop = (
       animationFrameIdRef
     );
   }
-  
-  // Update score and streak display
   setScore(gameStateRef.current.score);
   const streakScale = Math.min(3, 0.5 + (gameStateRef.current.streak / 50) + (amplitudeRef.current / 255) * 0.5);
   streakDisplayRef.current.scale = streakScale;
-  
-  // Schedule next frame
   animationFrameIdRef.current = requestAnimationFrame(() => gameLoop(
     canvasRef,
     gameStateRef,
@@ -347,7 +301,7 @@ export const gameLoop = (
     fishImageRef,
     waterBottleRef,
     plasticBagRef,
-    obstacleImageRef,
+    oilSplatImageRef,
     fishHookRef,
     flipflopRef,
     toothbrushRef,

@@ -25,7 +25,6 @@ export const useGameState = () => {
   const [levels, setLevels] = useState<Level[]>(() => {
     const savedLevels = localStorage.getItem('gameLevels');
     const defaultLevels = getDefaultLevels();
-
     if (savedLevels) {
       const parsedLevels = JSON.parse(savedLevels);
       const mergedLevels = defaultLevels.map(defaultLevel => {
@@ -55,7 +54,7 @@ export const useGameState = () => {
       hitTime: undefined,
       hitType: undefined
     },
-    trashList: [],
+    pickups: [],
     obstacles: [],
     particles: [],
     score: 0,
@@ -153,17 +152,14 @@ export const useGameState = () => {
   const portraitAnimationFrameRef = useRef<number | null>(null);
   const portraitFishPositionRef = useRef({ x: 0, y: 0, rotation: 0 });
 
-  // Keep currentLevelRef in sync with currentLevel
   useEffect(() => {
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
 
-  // Keep audioProgressRef in sync with audioProgress
   useEffect(() => {
     audioProgressRef.current = audioProgress;
   }, [audioProgress]);
 
-  // Update high score continuously
   useEffect(() => {
     setLevels(prev => {
       const newLevels = prev.map(level => {
@@ -174,35 +170,27 @@ export const useGameState = () => {
         }
         return level;
       });
-
       localStorage.setItem('gameLevels', JSON.stringify(newLevels));
-
       const updatedCurrent = newLevels.find(l => l.id === currentLevel.id);
       if (updatedCurrent) {
         setCurrentLevel(updatedCurrent);
       }
-
       return newLevels;
     });
   }, [score, currentLevel.id]);
 
-  // Handle window resizing and device orientation
   useEffect(() => {
     const handleOrientationChange = () => {
       const landscape = window.innerWidth > window.innerHeight;
       setIsLandscape(landscape);
-
-      // When switching to landscape, update the player's Y position to center vertically
       if (landscape) {
         gameStateRef.current.player.y = window.innerHeight / 2;
       }
     };
-
     window.addEventListener('resize', handleOrientationChange);
     return () => window.removeEventListener('resize', handleOrientationChange);
   }, []);
 
-  // Detect when game is put into portrait mode and pause it
   useEffect(() => {
     if (!isLandscape && gameStarted && !isPaused) {
       togglePause();
@@ -210,7 +198,6 @@ export const useGameState = () => {
     }
   }, [isLandscape, gameStarted, isPaused]);
 
-  // Resume game when returning to landscape if it was paused due to orientation
   useEffect(() => {
     if (isLandscape && pausedByOrientation && gameStarted && isPaused) {
       togglePause();
@@ -218,19 +205,20 @@ export const useGameState = () => {
     }
   }, [isLandscape, pausedByOrientation, gameStarted, isPaused]);
 
-  // Check URL parameters for level selection
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const levelParam = params.get("level");
     if (levelParam === "2") {
       const level2 = levels.find(l => l.id === 2);
       if (level2) {
-        selectLevel(level2);
+        (async () => {
+          await selectLevel(level2);
+        })();
       }
     }
   }, [levels]);
+  
 
-  // Load Orbitron font
   useEffect(() => {
     const font = new FontFace('Orbitron', 'url(/fonts/Orbitron/Orbitron-VariableFont_wght.ttf)');
     font.load().then(() => {
@@ -238,52 +226,35 @@ export const useGameState = () => {
     });
   }, []);
 
-  // Container ref for DOM reference
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Level2 asset refs
   const level2ObstacleImagesRef = useRef<HTMLImageElement[]>([]);
   const level2PickupImagesRef = useRef<HTMLImageElement[]>([]);
-
-  // Replace the existing togglePause function in useGameState.ts with this one
 
   const togglePause = useCallback(() => {
     setIsPaused(prev => {
       const newPaused = !prev;
       gameStateRef.current.player.x = 100;
-
       if (newPaused) {
-        // Pause game loop
         gameLoopRef.current = false;
         if (animationFrameIdRef.current) {
           cancelAnimationFrame(animationFrameIdRef.current);
           animationFrameIdRef.current = null;
         }
       } else {
-        // Resume game loop
         gameLoopRef.current = true;
-
-        // Simply set the flag to true - the actual game loop restart 
-        // will happen in the useEffect in MusicReactiveOceanGame that watches isPaused
       }
-
       return newPaused;
     });
   }, []);
 
-  // Select a new level
-
-  const selectLevel = useCallback((level: Level) => {
+  const selectLevel = useCallback(async (level: Level) => {
     if (!level.unlocked) return;
-
-    // Stop current game loop and audio
     gameLoopRef.current = false;
     if (animationFrameIdRef.current) {
       cancelAnimationFrame(animationFrameIdRef.current);
       animationFrameIdRef.current = null;
     }
-
-    // Reset game state for new level
     gameStateRef.current = {
       player: {
         x: (window.innerWidth / 2) - 25,
@@ -297,7 +268,7 @@ export const useGameState = () => {
         hitTime: undefined,
         hitType: undefined
       },
-      trashList: [],
+      pickups: [],
       obstacles: [],
       particles: [],
       score: 0,
@@ -316,7 +287,7 @@ export const useGameState = () => {
       highScore: level.highScore || 0,
       level: level,
       timedTextEvents: [],
-      activeTimedText: { text: "", lifetime: 0 },
+      activeTimedText: { text: "", lifetime: 0, color: 'black' },
       timedColorEvents: [],
       activeColor: {
         backgroundColor: level.initialBackground || "#1a1a2e",
@@ -335,82 +306,56 @@ export const useGameState = () => {
         opacity: 1
       }
     };
-
-    // Reset cave state
     caveRef.current = {
       upper: { points: [], amplitude: 0 },
       lower: { points: [], amplitude: 0 }
     };
-
-    // Clear active timed texts
     activeTimedTextsRef.current = [];
-
-    // Reset event triggers
     timedTextEventsRef.current = timedTextEventsRef.current.map(event => ({
       ...event,
       triggered: false
     }));
-
     colorEventsRef.current = colorEventsRef.current.map(event => ({
       ...event,
       triggered: event.timestamp === 0
     }));
-
     setCurrentLevel(level);
-
-    // Handle level-specific settings
+  
     if (level.id === 2) {
       if (containerRef.current) {
         containerRef.current.style.background = "transparent";
       }
-
-      // Set level 2 specific text events
       timedTextEventsRef.current = createLevel2TimedTextEvents();
-
-      // Load level 2 assets before proceeding
       const loadLevel2Assets = async () => {
-        try {
-          // Show a loading indication if needed
+        if (gameStateRef.current.gameStarted) {
           setIsPaused(true);
-
-          // Load level 2 assets
-          const assetLoader = new AssetLoader();
-          await assetLoader.loadLevel2Assets();
-
-          // Update level 2 asset refs
-          level2ObstacleImagesRef.current = assetLoader.level2ObstacleImages;
-          level2PickupImagesRef.current = assetLoader.level2PickupImages;
-
-          // Reset the game state after loading assets
-          setLevelEnded(false);
-          setHealth(100);
+        }
+        const assetLoader = new AssetLoader();
+        await assetLoader.loadLevel2Assets();
+        level2ObstacleImagesRef.current = assetLoader.level2ObstacleImages;
+        level2PickupImagesRef.current = assetLoader.level2PickupImages;
+        setLevelEnded(false);
+        setHealth(100);
+        if (gameStateRef.current.gameStarted) {
           setIsPaused(false);
-        } catch (error) {
-          console.error("Failed to load level 2 assets:", error);
-          // Fallback to level 1 if assets failed to load
-          selectLevel(levels[0]);
         }
       };
-
-      loadLevel2Assets();
+      // Await the level‑2 assets to ensure they’re fully loaded before continuing
+      await loadLevel2Assets();
     } else {
-      // Set level 1 colors and events
       backgroundColorRef.current = level.initialBackground;
       waveColorRef.current = level.initialWaveColor;
-
       if (containerRef.current) {
         containerRef.current.style.background = level.initialBackground;
       }
-
       timedTextEventsRef.current = createDefaultTimedTextEvents();
       setLevelEnded(false);
       setHealth(100);
     }
   }, [levels, setIsPaused, setLevelEnded, setHealth]);
-
+  
 
   return {
-    // State
     score,
     setScore,
     gameStarted,
@@ -438,8 +383,6 @@ export const useGameState = () => {
     setLevels,
     currentLevel,
     setCurrentLevel,
-
-    // Refs
     containerRef,
     gameStateRef,
     currentLevelRef,
@@ -474,8 +417,6 @@ export const useGameState = () => {
     hitSoundRef,
     level2ObstacleImagesRef,
     level2PickupImagesRef,
-
-    // Functions
     togglePause,
     selectLevel
   };

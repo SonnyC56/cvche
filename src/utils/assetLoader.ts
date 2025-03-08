@@ -5,7 +5,7 @@ export class AssetLoader {
   fishImage: HTMLImageElement | null = null;
   waterBottleImage: HTMLImageElement | null = null;
   plasticBagImage: HTMLImageElement | null = null;
-  obstacleImage: HTMLImageElement | null = null;
+  oilSplatImage: HTMLImageElement | null = null;
   fishHookImage: HTMLImageElement | null = null;
   flipflopImage: HTMLImageElement | null = null;
   toothbrushImage: HTMLImageElement | null = null;
@@ -35,24 +35,6 @@ export class AssetLoader {
   level2AssetsLoaded = false;
   level2VideoLoaded = false;
 
-  // Level 2 asset sizes
-  level2Sizes: {
-    bus: { width: number, height: number },
-    bats: { width: number, height: number },
-    chicken: { width: number, height: number },
-    vitaminC: { width: number, height: number },
-    pill: { width: number, height: number },
-    tumeric: { width: number, height: number },
-    ginger: { width: number, height: number }
-  } = {
-    bus: { width: 200, height: 90 },
-    bats: { width: 100, height: 100 },
-    chicken: { width: 100, height: 100 },
-    vitaminC: { width: 40, height: 40 },
-    pill: { width: 30, height: 50 },
-    tumeric: { width: 80, height: 80 },
-    ginger: { width: 80, height: 80 }
-  };
 
   constructor() {}
 
@@ -62,7 +44,7 @@ export class AssetLoader {
       this.loadImage('/sprites/cvcheFish.webp').then(img => this.fishImage = img),
       this.loadImage('/sprites/waterBottle.webp').then(img => this.waterBottleImage = img),
       this.loadImage('/sprites/plasticBag.webp').then(img => this.plasticBagImage = img),
-      this.loadImage('/sprites/oilSplat.webp').then(img => this.obstacleImage = img),
+      this.loadImage('/sprites/oilSplat.webp').then(img => this.oilSplatImage = img),
       this.loadImage('/sprites/fishHook.webp').then(img => this.fishHookImage = img),
       this.loadImage('/sprites/flipflop.webp').then(img => this.flipflopImage = img),
       this.loadImage('/sprites/toothbrush.webp').then(img => this.toothbrushImage = img),

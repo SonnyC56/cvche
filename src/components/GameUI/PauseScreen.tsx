@@ -11,6 +11,7 @@ interface PauseScreenProps {
   togglePause: () => void;
   setPendingLevel: (level: Level | null) => void;
   selectLevel: (level: Level) => void;
+  restartGameLoop: () => void; // <-- Added prop
 }
 
 const PauseScreen: React.FC<PauseScreenProps> = ({
@@ -22,7 +23,8 @@ const PauseScreen: React.FC<PauseScreenProps> = ({
   levels,
   togglePause,
   setPendingLevel,
-  selectLevel
+  selectLevel,
+  restartGameLoop // <-- Destructure new prop
 }) => {
   if (!isPaused || levelEnded || !isLandscape) return null;
   
@@ -53,6 +55,7 @@ const PauseScreen: React.FC<PauseScreenProps> = ({
               selectLevel(pendingLevel);
               setPendingLevel(null);
               togglePause();
+              restartGameLoop(); // <-- Restart game loop after level switch
             }}
             style={{
               padding: '10px 20px',

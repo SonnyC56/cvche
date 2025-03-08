@@ -76,7 +76,7 @@ export interface GameState {
   gameEnded: boolean;
   gameItems: GameItem[];
   particles: Particle[];
-  trashList: GameItem[];
+  pickups: GameItem[];
   trashStats: TrashStats;
   obstacles: GameItem[];
   scorePopups: ScorePopup[];
@@ -127,11 +127,14 @@ export interface TimedTextEvent {
   timestamp: number;
   text: string;
   triggered: boolean;
+  color?: string; // Optional text color property
+  lifetime?: number;
 }
 
 export interface ActiveTimedText {
   text: string;
   lifetime: number;
+  color: string;
 }
 
 export interface TimedColorEvent {
@@ -194,7 +197,7 @@ export interface LevelToggles {
   showFlora: boolean;
   showBags: boolean;         // replaced showTrash
   showBottles: boolean;       // replaced showTrash
-  showObstacles: boolean;
+  showOilSplats: boolean;
   showHooks: boolean;
   showVisualizer: boolean;
   showBubbles: boolean;
