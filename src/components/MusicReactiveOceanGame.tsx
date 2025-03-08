@@ -102,7 +102,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
       }
     }
   }, [gameState.currentLevel.id, gameState.gameStarted]);
-  const { inputRef, setupVisibilityHandler } = useInputHandlers(canvasRef);
+  const { inputRef } = useInputHandlers(canvasRef);
 
 
   // Load basic assets on component mount
@@ -116,9 +116,11 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
       }
       if (loader.waterBottleImage) {
         waterBottleRef.current = loader.waterBottleImage;
+        window.waterBottleRef = waterBottleRef;
       }
       if (loader.plasticBagImage) {
         plasticBagRef.current = loader.plasticBagImage;
+        window.plasticBagRef = plasticBagRef;
       }
       if (loader.oilSplatImage) {
         oilSplatImageRef.current = loader.oilSplatImage;
