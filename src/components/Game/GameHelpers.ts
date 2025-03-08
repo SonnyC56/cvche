@@ -1,4 +1,4 @@
-import { LevelToggles, GameState } from '../../types';
+import { LevelToggles, GameState, Level3TimedEvents } from '../../types';
 import { drawItem, getSpawnY } from './GameLoop';
 import { createParticles } from './ParticleEffects';
 import { getParticleColorFromStreak } from '../../utils/colorUtils';
@@ -323,6 +323,163 @@ export const updateLevelToggles = (
       };
     }
   }
+  // Level 3 toggles logic
+  else if (currentLevelId === 3) {
+    if (audioTime < 3) {
+      levelTogglesRef.current = {
+        showFlora: false,
+        showBags: false,
+        showBottles: false,
+        showOilSplats: false,
+        showHooks: false,
+        showVisualizer: true,
+        showBubbles: false,
+        showBackgroundPattern: false,
+        showFlipFlops: false,
+        showToothbrushes: false,
+        showHotdogs: false,
+        showRubberDuckies: false,
+        // Level 3 specific toggles
+        showClouds: false,
+        showMushrooms: false,
+        showEagles: false,
+        showTrippyObjects: false,
+        showStormEffects: false
+      };
+    }
+    else if (audioTime >= 3 && audioTime < 30) {
+      // Cloud video rises
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: true,
+        showMushrooms: false,
+        showEagles: false,
+        showTrippyObjects: false,
+        showStormEffects: false
+      };
+    }
+    else if (audioTime >= 30 && audioTime < 71) {
+      // First clouds float by
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: true,
+        showMushrooms: false,
+        showEagles: false,
+        showTrippyObjects: false,
+        showStormEffects: false
+      };
+    }
+    else if (audioTime >= 71 && audioTime < 90) {
+      // The first mushrooms come
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: true,
+        showMushrooms: true,
+        showEagles: false,
+        showTrippyObjects: false,
+        showStormEffects: false
+      };
+    }
+    else if (audioTime >= 90 && audioTime < 125) {
+      // Less Clouds
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: true,
+        showMushrooms: true,
+        showEagles: false,
+        showTrippyObjects: false,
+        showStormEffects: false
+      };
+    }
+    else if (audioTime >= 125 && audioTime < 150) {
+      // Now just Mushrooms
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: false,
+        showMushrooms: true,
+        showEagles: false,
+        showTrippyObjects: false,
+        showStormEffects: false
+      };
+    }
+    else if (audioTime >= 150 && audioTime < 165) {
+      // Clouds return
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: true,
+        showMushrooms: false,
+        showEagles: false,
+        showTrippyObjects: false,
+        showStormEffects: false
+      };
+    }
+    else if (audioTime >= 165 && audioTime < 185) {
+      // Clouds are now darker - storm is brewing
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: true,
+        showMushrooms: false,
+        showEagles: false,
+        showTrippyObjects: false,
+        showStormEffects: true
+      };
+    }
+    else if (audioTime >= 185 && audioTime < 210) {
+      // THE CAVE - with storm clouds and lightning
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: true,
+        showMushrooms: false,
+        showEagles: false,
+        showTrippyObjects: false,
+        showStormEffects: true
+      };
+    }
+    else if (audioTime >= 210 && audioTime < 230) {
+      // Here come the Black Headed Gulls
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: true,
+        showMushrooms: false,
+        showEagles: true,
+        showTrippyObjects: false,
+        showStormEffects: true
+      };
+    }
+    else if (audioTime >= 230 && audioTime < 270) {
+      // Add Bald Eagles
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: true,
+        showMushrooms: false,
+        showEagles: true,
+        showTrippyObjects: false,
+        showStormEffects: true
+      };
+    }
+    else if (audioTime >= 270 && audioTime < 304) {
+      // Exit the cave - mushrooms return
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: false,
+        showMushrooms: true,
+        showEagles: true,
+        showTrippyObjects: false,
+        showStormEffects: false
+      };
+    }
+    else if (audioTime >= 304) {
+      // Trippy section
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: true,
+        showMushrooms: true,
+        showEagles: false,
+        showTrippyObjects: true,
+        showStormEffects: false
+      };
+    }
+  }
 };
 
 /**
@@ -330,14 +487,23 @@ export const updateLevelToggles = (
  */
 export const processColorEvents = (
   audioTime: number,
-  colorEvents: any[],
+  colorEvents: any,
   activeColorTransition: any,
   backgroundColorRef: React.MutableRefObject<string>,
   waveColorRef: React.MutableRefObject<string>
 ) => {
-  colorEvents.forEach(event => {
+  // Ensure colorEvents is initialized as an array
+  const eventsArray = Array.isArray(colorEvents) ? colorEvents : [];
+  
+  // Log warning if colorEvents is not an array
+  if (!Array.isArray(colorEvents)) {
+    console.error('colorEvents is not an array', colorEvents);
+  }
+  
+  // Now safely iterate through the events
+  eventsArray.forEach(event => {
     if (!event.triggered && audioTime >= event.timestamp) {
-      console.log('proccessing color event (inside for loop): ', event, 'color: ', backgroundColorRef.current)
+      console.log('processing color event (inside for loop): ', event, 'color: ', backgroundColorRef.current);
       event.triggered = true;
       activeColorTransition.backgroundColor = backgroundColorRef.current;
       activeColorTransition.waveColor = waveColorRef.current;
@@ -455,6 +621,152 @@ export const processLevel2Events = (
 };
 
 /**
+ * Process level 3 specific events
+ */
+export const processLevel3Events = (
+  audioTime: number,
+  canvas: HTMLCanvasElement,
+  level3TimedEvents: Level3TimedEvents,
+  level3ObstacleImages: HTMLImageElement[],
+  level3MushroomImages: HTMLImageElement[],
+  level3TrippyImages: HTMLImageElement[],
+  gameState: GameState
+) => {
+  // Process obstacles (eagles)
+  level3TimedEvents.obstacles.forEach((event) => {
+    if (!event.triggered && audioTime >= event.timestamp) {
+      event.triggered = true;
+
+      if (!canvas) return;
+
+      const eagleImg = level3ObstacleImages.find(img => img.src.includes('eagle'));
+      if (eagleImg) {
+        gameState.obstacles.push({
+          x: canvas.width,
+          y: getSpawnY(canvas, 80),
+          width: 100,
+          height: 80,
+          type: 'obstacle',
+          speed: 2 + Math.random() * 2.5, // Eagles are faster
+          rotation: 0,
+          pickupImage: eagleImg
+        });
+      }
+    }
+  });
+
+  // Process pickups (mushrooms)
+  level3TimedEvents.pickups.forEach((event) => {
+    if (!event.triggered && audioTime >= event.timestamp) {
+      event.triggered = true;
+
+      if (!canvas) return;
+
+      if (event.type === 'mushroom' && level3MushroomImages.length > 0) {
+        // Select mushroom variant if specified, otherwise random
+        let index = 0;
+        if (event.variant) {
+          index = parseInt(event.variant, 10) - 1;
+          if (isNaN(index) || index < 0 || index >= level3MushroomImages.length) {
+            index = Math.floor(Math.random() * level3MushroomImages.length);
+          }
+        } else {
+          index = Math.floor(Math.random() * level3MushroomImages.length);
+        }
+
+        const mushroomImg = level3MushroomImages[index];
+        if (mushroomImg) {
+          gameState.pickups.push({
+            x: canvas.width,
+            y: getSpawnY(canvas, 60),
+            width: 60,
+            height: 60,
+            type: 'trash',
+            speed: 1 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: mushroomImg
+          });
+          gameState.trashStats.totalSpawned++;
+        }
+      }
+    }
+  });
+
+  // Process visual effects (clouds and trippy objects)
+  level3TimedEvents.visuals.forEach((event) => {
+    if (!event.triggered && audioTime >= event.timestamp) {
+      event.triggered = true;
+
+      if (!canvas) return;
+
+      if (event.type === 'cloud') {
+        const cloudImg = level3ObstacleImages.find(img => img.src.includes('clouds'));
+        if (cloudImg) {
+          // For rising clouds at beginning
+          if (audioTime < 10) {
+            gameState.obstacles.push({
+              x: canvas.width * Math.random(), // Random x position
+              y: canvas.height + 50, // Start off-screen at bottom
+              width: 120,
+              height: 80,
+              type: 'obstacle',
+              speed: -0.5 - Math.random(), // Negative speed means moving upward
+              rotation: 0,
+              pickupImage: cloudImg,
+              baseY: canvas.height + 50 // Store initial Y for animations
+            });
+          } 
+          // For floating clouds during regular phase
+          else {
+            gameState.obstacles.push({
+              x: canvas.width,
+              y: getSpawnY(canvas, 80),
+              width: 120 + Math.random() * 80, // Variable size
+              height: 80 + Math.random() * 40,
+              type: 'obstacle',
+              speed: 0.5 + Math.random() * 1.5, // Slow moving
+              rotation: 0,
+              pickupImage: cloudImg
+            });
+          }
+        }
+      } 
+      else if (event.type === 'trippy' && level3TrippyImages.length > 0) {
+        // Select specific trippy object if variant specified
+        let trippyImg;
+        if (event.variant) {
+          const variant = event.variant; // Assign to const to make TypeScript happy
+          trippyImg = level3TrippyImages.find(img => img.src.includes(variant));
+        }
+        
+        // Fallback to random if not found or not specified
+        if (!trippyImg) {
+          trippyImg = level3TrippyImages[Math.floor(Math.random() * level3TrippyImages.length)];
+        }
+
+        if (trippyImg) {
+          // In the trippy section, objects can be anywhere in the screen
+          // They also change size and move in random patterns
+          const size = 50 + Math.random() * 100; // Random size for trippy effect
+          const speed = 0.5 + Math.random() * 2;
+          
+          gameState.pickups.push({
+            x: canvas.width,
+            y: Math.random() * (canvas.height - 100) + 50, // Anywhere on screen
+            width: size,
+            height: size,
+            type: 'trash',
+            speed: speed,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: trippyImg
+          });
+        }
+      }
+    }
+  });
+};
+
+/**
  * Spawn items on beat detection
  */
 export const spawnItemsOnBeat = (
@@ -472,7 +784,10 @@ export const spawnItemsOnBeat = (
   hotdogImage: HTMLImageElement | null,
   rubberDuckyImage: HTMLImageElement | null,
   level2PickupImages: HTMLImageElement[],
-  level2ObstacleImages: HTMLImageElement[]
+  level2ObstacleImages: HTMLImageElement[],
+  level3ObstacleImages: HTMLImageElement[] = [],
+  level3MushroomImages: HTMLImageElement[] = [],
+  level3TrippyImages: HTMLImageElement[] = []
 ) => {
   console.log(`[DEBUG] spawnItemsOnBeat called - Level: ${currentLevelId}, LevelToggles:`,
     JSON.stringify({
@@ -759,6 +1074,110 @@ export const spawnItemsOnBeat = (
         });
       }
     }
+  } else if (currentLevelId === 3) {
+    // Level 3 spawning logic
+    
+    // Spawn mushrooms on beat when the toggle is active
+    if (levelToggles.showMushrooms && level3MushroomImages?.length > 0) {
+      const spawnChance = 0.1 + (audioProgress / 150); // Higher chance than level 1/2 items
+      
+      if (Math.random() < spawnChance) {
+        // Select a random mushroom image
+        const mushroomIndex = Math.floor(Math.random() * level3MushroomImages.length);
+        const mushroomImg = level3MushroomImages[mushroomIndex];
+        
+        if (mushroomImg) {
+          gameState.pickups.push({
+            x: canvas.width,
+            y: getSpawnY(canvas, 60),
+            width: 60,
+            height: 60,
+            type: 'trash',
+            speed: 1 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: mushroomImg
+          });
+          gameState.trashStats.totalSpawned++;
+        }
+      }
+    }
+    
+    // Spawn trippy objects during the trippy section (after timestamp 304)
+    if (levelToggles.showTrippyObjects && level3TrippyImages?.length > 0) {
+      // Higher chance during the trippy section
+      const spawnChance = 0.15 + (audioProgress / 100);
+      
+      if (Math.random() < spawnChance) {
+        const trippyIndex = Math.floor(Math.random() * level3TrippyImages.length);
+        const trippyImg = level3TrippyImages[trippyIndex];
+        
+        if (trippyImg) {
+          // Random size for trippy effect
+          const size = 50 + Math.random() * 100;
+          
+          // Add warping property to trippy pickups
+          gameState.pickups.push({
+            x: canvas.width,
+            y: Math.random() * (canvas.height - 100) + 50, // Anywhere on screen
+            width: size,
+            height: size,
+            type: 'trash',
+            speed: 0.5 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: trippyImg,
+            // Add custom properties for warping effect
+            warpFactor: 0.5 + Math.random() * 0.5,
+            warpSpeed: 0.1 + Math.random() * 0.3,
+            warpOffset: Math.random() * Math.PI * 2
+          });
+          gameState.trashStats.totalSpawned++;
+        }
+      }
+    }
+
+    //spawn clouds if showClouds is true
+    if (levelToggles.showClouds && level3ObstacleImages?.length > 0) {
+      const spawnChance = 0.05 + (audioProgress / 150);
+      
+      if (Math.random() < spawnChance) {
+        const cloudImg = level3ObstacleImages.find(img => img.src.includes('clouds'));
+        
+        if (cloudImg) {
+          gameState.obstacles.push({
+            x: canvas.width,
+            y: getSpawnY(canvas, 80),
+            width: 80 + Math.random() * 80,
+            height: 40 + Math.random() * 40,
+            type: 'obstacle',
+            speed: 0.5 + Math.random() * 1.5,
+            rotation: 0,
+            pickupImage: cloudImg
+          });
+        }
+      }
+    }
+
+    //spawn eagles if showEagles is true
+    if (levelToggles.showEagles && level3ObstacleImages?.length > 0) {
+      const spawnChance = 0.1 + (audioProgress / 150);
+      
+      if (Math.random() < spawnChance) {
+        const eagleImg = level3ObstacleImages.find(img => img.src.includes('eagle'));
+        
+        if (eagleImg) {
+          gameState.obstacles.push({
+            x: canvas.width,
+            y: getSpawnY(canvas, 80),
+            width: 100,
+            height: 80,
+            type: 'obstacle',
+            speed: 2 + Math.random() * 2.5,
+            rotation: 0,
+            pickupImage: eagleImg
+          });
+        }
+      }
+    } 
   }
 };
 

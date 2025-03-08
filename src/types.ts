@@ -20,6 +20,20 @@ export interface Level2TimedEvent {
   type: 'bus' | 'bats' | 'chicken' | 'vitaminC' | 'pill' | 'tumeric' | 'ginger';
   triggered: boolean;
 }
+
+//Level3TimedEvents
+export interface Level3TimedEvents {
+  obstacles: Level3TimedEvent[];
+  pickups: Level3TimedEvent[];
+  visuals: Level3TimedEvent[];
+}
+//Level3TimedEvent
+export interface Level3TimedEvent {
+  timestamp: number;
+  type: 'mushroom' | 'cloud' | 'eagle' | 'trippy';
+  variant?: string; // For different trippy objects or mushroom types
+  triggered: boolean;
+}
 //Level
 export interface Level {
   id: number;
@@ -108,6 +122,10 @@ export interface GameItem {
   rotation?: number;
   pickupImage?: HTMLImageElement;
   baseY?: number;
+  // For trippy warping effects in level 3
+  warpFactor?: number;
+  warpSpeed?: number;
+  warpOffset?: number;
 }
 
 export interface ExtendedHTMLAudioElement extends HTMLAudioElement {
@@ -210,6 +228,12 @@ export interface LevelToggles {
   showBuses?: boolean;
   showBats?: boolean;
   showChickens?: boolean;
+  // Level 3 specific toggles
+  showClouds?: boolean;
+  showMushrooms?: boolean;
+  showEagles?: boolean;
+  showTrippyObjects?: boolean;
+  showStormEffects?: boolean;
 }
 
 export interface Props {

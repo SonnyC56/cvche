@@ -1,11 +1,11 @@
-import { GameState, LevelToggles, ActiveTimedText, TimedTextEvent, TimedColorEvent, Level2TimedEvents, ActiveColor, Bubble, StreakDisplay, Level, CaveState } from '../../types';
+import { GameState, LevelToggles, ActiveTimedText, TimedTextEvent, TimedColorEvent, Level2TimedEvents, Level3TimedEvents, ActiveColor, Bubble, StreakDisplay, Level, CaveState } from '../../types';
 import { getMultiplierFromStreak, interpolateColor } from '../../utils/colorUtils';
 import { drawBackground, updateAndDrawBubbles, updateAndDrawScorePopups, updateAndDrawTimedTexts } from './BackgroundEffects';
 import { drawFlora } from './Flora';
 import { drawPlayer, updatePlayerPosition } from './Player';
 import { createSwimParticles, updateAndDrawParticles } from './ParticleEffects';
 import { updateCaveBoundaries, drawCaveEffect, checkCaveCollision, calculateCaveProximityScore } from './CaveEffects';
-import { processColorEvents, processLevel2Events, spawnItemsOnBeat, updateAndCheckObstacleCollisions, updateAndCheckTrashCollisions, updateLevelToggles } from './GameHelpers';
+import { processColorEvents, processLevel2Events, processLevel3Events, spawnItemsOnBeat, updateAndCheckObstacleCollisions, updateAndCheckTrashCollisions, updateLevelToggles } from './GameHelpers';
 
 // Use a constant top buffer to ensure nothing spawns behind the hearts
 const TOP_BUFFER = 80;
@@ -43,13 +43,24 @@ export const drawItem = (ctx: CanvasRenderingContext2D, item: any, pulse: number
     ctx.drawImage(item.pickupImage, -effectiveWidth / 2, -effectiveHeight / 2, effectiveWidth, effectiveHeight);
   } 
   else if (item.type === 'obstacle' && item.pickupImage) {
-    // Handle obstacles
-    item.rotation = (item.rotation || 0) + 0.0125;
+    // Check if the item is a cloud or a bus (which shouldn't rotate)
+    const isCloud = item.pickupImage.src.includes('clouds');
+    const isBus = item.pickupImage.src.includes('bus');
+    
     const effectiveWidth = item.width, effectiveHeight = item.height;
     const centerX = item.x + effectiveWidth / 2, centerY = item.y + effectiveHeight / 2;
-    ctx.translate(centerX, centerY);
-    ctx.rotate(item.rotation!);
-    ctx.drawImage(item.pickupImage, -effectiveWidth / 2, -effectiveHeight / 2, effectiveWidth, effectiveHeight);
+    
+    // Only rotate if it's not a cloud or bus
+    if (!isCloud && !isBus) {
+      item.rotation = (item.rotation || 0) + 0.0125;
+      ctx.translate(centerX, centerY);
+      ctx.rotate(item.rotation!);
+      ctx.drawImage(item.pickupImage, -effectiveWidth / 2, -effectiveHeight / 2, effectiveWidth, effectiveHeight);
+    } else {
+      // Draw without rotation for clouds and buses
+      ctx.translate(centerX, centerY);
+      ctx.drawImage(item.pickupImage, -effectiveWidth / 2, -effectiveHeight / 2, effectiveWidth, effectiveHeight);
+    }
   } 
   else if (item.type === 'fishhook' && item.pickupImage) {
     // Handle fishhooks
@@ -106,12 +117,16 @@ export const gameLoop = (
   rubberDuckyRef: React.RefObject<HTMLImageElement>,
   level2ObstacleImagesRef: React.MutableRefObject<HTMLImageElement[]>,
   level2PickupImagesRef: React.MutableRefObject<HTMLImageElement[]>,
+  level3ObstacleImagesRef: React.MutableRefObject<HTMLImageElement[]>,
+  level3MushroomImagesRef: React.MutableRefObject<HTMLImageElement[]>,
+  level3TrippyImagesRef: React.MutableRefObject<HTMLImageElement[]>,
   
   // Level data
   currentLevelRef: React.MutableRefObject<Level>,
   timedTextEventsRef: React.MutableRefObject<TimedTextEvent[]>,
   colorEventsRef: React.MutableRefObject<TimedColorEvent[]>,
   level2TimedEventsRef: React.MutableRefObject<Level2TimedEvents>,
+  level3TimedEventsRef: React.MutableRefObject<Level3TimedEvents>,
   caveRef: React.MutableRefObject<CaveState>,
   speedMultiplier: React.MutableRefObject<number>,
   
@@ -150,6 +165,16 @@ export const gameLoop = (
       level2PickupImagesRef.current,
       gameStateRef.current
     );
+  } else if (currentLevelRef.current.id === 3) {
+    processLevel3Events(
+      audioTime,
+      canvasRef.current,
+      level3TimedEventsRef.current,
+      level3ObstacleImagesRef.current,
+      level3MushroomImagesRef.current,
+      level3TrippyImagesRef.current,
+      gameStateRef.current
+    );
   }
   processColorEvents(audioTime, colorEventsRef.current, activeColorTransitionRef.current, backgroundColorRef, waveColorRef);
   // Interpolate active color transition for background and wave colors
@@ -178,7 +203,11 @@ export const gameLoop = (
   if (levelTogglesRef.current.showFlora) {
     drawFlora(ctx, floraItemsRef.current, amplitude, factor, speedMultiplier.current, currentLevelRef.current.id);
   }
-  timedTextEventsRef.current.forEach(event => {
+  // Ensure timedTextEventsRef.current is an array
+  const timedEvents = Array.isArray(timedTextEventsRef.current) ? timedTextEventsRef.current : [];
+  
+  // Now safely iterate through the events
+  timedEvents.forEach(event => {
     if (!event.triggered && audioTime >= event.timestamp) {
       event.triggered = true;
       activeTimedTextsRef.current.push({ text: event.text, lifetime: event.lifetime ?? 200, color: event.color ?? 'black' });
@@ -195,11 +224,14 @@ export const gameLoop = (
     inputRef.current.isDesktop || inputRef.current.isTouching
   );
   if (detectBeat(amplitude, lastBeatTimeRef)) {
+    // Safely access currentLevel ID with a fallback to prevent undefined errors
+    const currentLevelId = currentLevelRef?.current?.id || 1;
+    
     spawnItemsOnBeat(
       canvas,
       levelTogglesRef.current,
       gameStateRef.current,
-      currentLevelRef.current.id,
+      currentLevelId,
       audioProgressRef.current,
       waterBottleRef.current,
       plasticBagRef.current,
@@ -210,7 +242,10 @@ export const gameLoop = (
       hotdogRef.current,
       rubberDuckyRef.current,
       level2PickupImagesRef.current,
-      level2ObstacleImagesRef.current
+      level2ObstacleImagesRef.current,
+      level3ObstacleImagesRef.current,
+      level3MushroomImagesRef.current,
+      level3TrippyImagesRef.current,
     );
   }
   updateAndCheckTrashCollisions(
@@ -309,10 +344,14 @@ export const gameLoop = (
     rubberDuckyRef,
     level2ObstacleImagesRef,
     level2PickupImagesRef,
+    level3ObstacleImagesRef,
+    level3MushroomImagesRef,
+    level3TrippyImagesRef,
     currentLevelRef,
     timedTextEventsRef,
     colorEventsRef,
     level2TimedEventsRef,
+    level3TimedEventsRef,
     caveRef,
     speedMultiplier,
     setScore,

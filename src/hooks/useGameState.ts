@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { GameState, Level, LevelToggles, ActiveTimedText, ActiveColor, CaveState, Bubble, Flora, StreakDisplay, TimedTextEvent, TimedColorEvent, Level2TimedEvents, Particle } from '../types';
-import { getDefaultLevels, createDefaultTimedTextEvents, createLevel2TimedTextEvents, createColorEvents, createLevel2TimedEvents, getInitialLevelToggles } from '../utils/eventData';
+import { GameState, Level, LevelToggles, ActiveTimedText, ActiveColor, CaveState, Bubble, Flora, StreakDisplay, TimedTextEvent, TimedColorEvent, Level2TimedEvents, Level3TimedEvents, Particle } from '../types';
+import { getDefaultLevels, createDefaultTimedTextEvents, createLevel2TimedTextEvents, createLevel3TimedTextEvents, createColorEventsByLevel, createLevel2TimedEvents, createLevel3TimedEvents, getInitialLevelToggles } from '../utils/eventData';
 import { AssetLoader } from '../utils/assetLoader';
 
 export const useGameState = () => {
@@ -136,8 +136,9 @@ export const useGameState = () => {
 
   // Event references
   const timedTextEventsRef = useRef<TimedTextEvent[]>(createDefaultTimedTextEvents());
-  const colorEventsRef = useRef<TimedColorEvent[]>(createColorEvents());
+  const colorEventsRef = useRef<TimedColorEvent[]>(createColorEventsByLevel(1)); // Default to level 1
   const level2TimedEventsRef = useRef<Level2TimedEvents>(createLevel2TimedEvents());
+  const level3TimedEventsRef = useRef<Level3TimedEvents>(createLevel3TimedEvents());
   const activeColorTransitionRef = useRef<ActiveColor>({
     backgroundColor: "#1a1a2e",
     waveColor: "rgba(0,102,255,0.4)",
@@ -215,6 +216,13 @@ export const useGameState = () => {
           await selectLevel(level2);
         })();
       }
+    } else if (levelParam === "3") {
+      const level3 = levels.find(l => l.id === 3);
+      if (level3) {
+        (async () => {
+          await selectLevel(level3);
+        })();
+      }
     }
   }, [levels]);
   
@@ -230,6 +238,9 @@ export const useGameState = () => {
 
   const level2ObstacleImagesRef = useRef<HTMLImageElement[]>([]);
   const level2PickupImagesRef = useRef<HTMLImageElement[]>([]);
+  const level3ObstacleImagesRef = useRef<HTMLImageElement[]>([]);
+  const level3MushroomImagesRef = useRef<HTMLImageElement[]>([]);
+  const level3TrippyImagesRef = useRef<HTMLImageElement[]>([]);
 
   const togglePause = useCallback(() => {
     setIsPaused(prev => {
@@ -315,7 +326,8 @@ export const useGameState = () => {
       ...event,
       triggered: false
     }));
-    colorEventsRef.current = colorEventsRef.current.map(event => ({
+    // Update color events for the selected level
+    colorEventsRef.current = createColorEventsByLevel(level.id).map(event => ({
       ...event,
       triggered: event.timestamp === 0
     }));
@@ -340,8 +352,30 @@ export const useGameState = () => {
           setIsPaused(false);
         }
       };
-      // Await the level‑2 assets to ensure they’re fully loaded before continuing
+      // Await the level‑2 assets to ensure they're fully loaded before continuing
       await loadLevel2Assets();
+    } else if (level.id === 3) {
+      if (containerRef.current) {
+        containerRef.current.style.background = "transparent";
+      }
+      timedTextEventsRef.current = createLevel3TimedTextEvents();
+      const loadLevel3Assets = async () => {
+        if (gameStateRef.current.gameStarted) {
+          setIsPaused(true);
+        }
+        const assetLoader = new AssetLoader();
+        await assetLoader.loadLevel3Assets();
+        level3ObstacleImagesRef.current = assetLoader.level3ObstacleImages;
+        level3MushroomImagesRef.current = assetLoader.level3MushroomImages;
+        level3TrippyImagesRef.current = assetLoader.level3TrippyImages;
+        setLevelEnded(false);
+        setHealth(100);
+        if (gameStateRef.current.gameStarted) {
+          setIsPaused(false);
+        }
+      };
+      // Await the level‑3 assets to ensure they're fully loaded before continuing
+      await loadLevel3Assets();
     } else {
       backgroundColorRef.current = level.initialBackground;
       waveColorRef.current = level.initialWaveColor;
@@ -409,6 +443,7 @@ export const useGameState = () => {
     timedTextEventsRef,
     colorEventsRef,
     level2TimedEventsRef,
+    level3TimedEventsRef,
     activeColorTransitionRef,
     portraitParticlesRef,
     portraitAnimationFrameRef,
@@ -417,6 +452,9 @@ export const useGameState = () => {
     hitSoundRef,
     level2ObstacleImagesRef,
     level2PickupImagesRef,
+    level3ObstacleImagesRef,
+    level3MushroomImagesRef,
+    level3TrippyImagesRef,
     togglePause,
     selectLevel
   };

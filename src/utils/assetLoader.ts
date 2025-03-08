@@ -21,10 +21,17 @@ export class AssetLoader {
   gingerImage: HTMLImageElement | null = null;
   tumericImage: HTMLImageElement | null = null;
   
+  // Level 3 specific assets
+  cloudImage: HTMLImageElement | null = null;
+  eagleImage: HTMLImageElement | null = null;
+  
   // Collections
   floraImages: HTMLImageElement[] = [];
   level2ObstacleImages: HTMLImageElement[] = [];
   level2PickupImages: HTMLImageElement[] = [];
+  level3ObstacleImages: HTMLImageElement[] = [];
+  level3MushroomImages: HTMLImageElement[] = [];
+  level3TrippyImages: HTMLImageElement[] = [];
   
   // Sound effects
   pickupSound: HTMLAudioElement | null = null;
@@ -34,6 +41,7 @@ export class AssetLoader {
   floraLoaded = false;
   level2AssetsLoaded = false;
   level2VideoLoaded = false;
+  level3AssetsLoaded = false;
 
 
   constructor() {}
@@ -108,6 +116,47 @@ export class AssetLoader {
 
     await Promise.all([...obstaclePromises, ...pickupPromises, videoPromise]);
     this.level2AssetsLoaded = true;
+  }
+  
+  // Load level 3 specific assets
+  async loadLevel3Assets(): Promise<void> {
+    // Load obstacle images
+    const obstaclePromises = [
+      this.loadImage('/sprites/level3/obstacles/clouds.png').then(img => {
+        this.cloudImage = img;
+        this.level3ObstacleImages.push(img);
+      }),
+      this.loadImage('/sprites/level3/obstacles/eagle.png').then(img => {
+        this.eagleImage = img;
+        this.level3ObstacleImages.push(img);
+      })
+    ];
+    
+    // Load mushroom images
+    const mushroomPromises = [];
+    for (let i = 1; i <= 9; i++) {
+      mushroomPromises.push(
+        this.loadImage(`/sprites/level3/mushrooms/mushroom (${i}).png`).then(img => {
+          this.level3MushroomImages.push(img);
+        })
+      );
+    }
+    
+    // Load trippy images
+    const trippyTypes = [
+      'baby', 'baby2', 'blueMan', 'gummyWorm', 'kitten', 
+      'magicRabbit', 'pomeranian', 'squirtToy', 'woman'
+    ];
+    
+    const trippyPromises = trippyTypes.map(type => {
+      const ext = type === 'blueMan' ? 'jpg' : 'png'; // blueMan is jpg, others are png
+      return this.loadImage(`/sprites/level3/trippyPickups/${type}.${ext}`).then(img => {
+        this.level3TrippyImages.push(img);
+      });
+    });
+    
+    await Promise.all([...obstaclePromises, ...mushroomPromises, ...trippyPromises]);
+    this.level3AssetsLoaded = true;
   }
 
   // Helper method to load an image
