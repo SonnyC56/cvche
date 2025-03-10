@@ -98,7 +98,7 @@ const PortraitScreen: React.FC<PortraitScreenProps> = ({
         zIndex: 101, 
         padding: '20px', 
         textAlign: 'center',
-        marginTop: '20vh',
+        marginTop: '2vh',
         backgroundColor: 'rgba(0, 0, 0, 0.6)',
         borderRadius: '10px'
       }}>
