@@ -32,7 +32,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
   // Canvas refs - using non-null assertion for canvasRef to fix type issues
   const canvasRef = useRef<HTMLCanvasElement>(null!);
   const starsCanvasRef = useRef<HTMLCanvasElement>(null);
-  const portraitCanvasRef = useRef<HTMLCanvasElement>(null);
+ // const portraitCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Asset loader
   const assetLoader = useRef<AssetLoader>(new AssetLoader());

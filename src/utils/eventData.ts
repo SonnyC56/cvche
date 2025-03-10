@@ -132,8 +132,8 @@ export const createLevel3TimedTextEvents = (): TimedTextEvent[] => [
 export const createLevel3ColorEvents = (): TimedColorEvent[] => [
   //orangehex
 
-  { timestamp: 0.01, backgroundColor: "#fd6100", waveColor: "rgba(253,242,0,0.4)", triggered: true, transitionDuration: 3 },
-  { timestamp: 125, backgroundColor: "#A0D8EF", waveColor: "rgba(160,216,239,0.4)", triggered: false, transitionDuration: 2 },
+  { timestamp: 0.01, backgroundColor: "#a0d8ef", waveColor: "rgba(253,242,0,0.4)", triggered: true, transitionDuration: 3 },
+  { timestamp: 125, backgroundColor: "#A0D8EF", waveColor: "rgba(160, 216, 239, 0.4)", triggered: false, transitionDuration: 2 },
   { timestamp: 150, backgroundColor: "#FF8800", waveColor: "rgba(255,136,0,0.4)", triggered: false, transitionDuration: 2 },
   // Light purple pastels
   { timestamp: 160, backgroundColor: "#E6C3E6", waveColor: "rgba(230,195,230,0.4)", triggered: false, transitionDuration: 2 },
