@@ -33,8 +33,19 @@ const PortraitScreen: React.FC<PortraitScreenProps> = ({
         
         animate();
         
+        // Handle resize to keep canvas dimensions updated
+        const handleResize = () => {
+          if (portraitCanvasRef.current) {
+            portraitCanvasRef.current.width = window.innerWidth;
+            portraitCanvasRef.current.height = window.innerHeight;
+          }
+        };
+        
+        window.addEventListener('resize', handleResize);
+        
         return () => {
           cancelAnimationFrame(animationFrameId);
+          window.removeEventListener('resize', handleResize);
         };
       }
     }
@@ -73,7 +84,7 @@ const PortraitScreen: React.FC<PortraitScreenProps> = ({
       
       <h1 style={{ 
         fontSize: '3rem', 
-        margin: 0, 
+        margin: '15vh 0 0 0', 
         fontWeight: 'bold', 
         color: '#FDEE03', 
         zIndex: 101 
@@ -83,12 +94,15 @@ const PortraitScreen: React.FC<PortraitScreenProps> = ({
       
       <div style={{ 
         fontSize: '1.2rem', 
-        color: '#ED1D24', 
+        color: '#FFFFFF', 
         zIndex: 101, 
         padding: '20px', 
-        textAlign: 'center' 
+        textAlign: 'center',
+        marginTop: '20vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        borderRadius: '10px'
       }}>
-        Please rotate your device to <strong>landscape</strong> to {showWhenPaused ? 'resume' : 'play'} this game.
+        Please rotate your device to <strong style={{ color: '#ED1D24' }}>landscape</strong> to {showWhenPaused ? 'resume' : 'play'} this game.
       </div>
       
       <nav style={{ 

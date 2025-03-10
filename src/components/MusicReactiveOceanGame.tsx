@@ -27,6 +27,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
   // Asset loading states
   const [floraLoaded, setFloraLoaded] = useState(false);
   const [level2AssetsLoaded, setLevel2AssetsLoaded] = useState(false);
+  const [level3AssetsLoaded, setLevel3AssetsLoaded] = useState(false);
 
   // Canvas refs - using non-null assertion for canvasRef to fix type issues
   const canvasRef = useRef<HTMLCanvasElement>(null!);
@@ -241,6 +242,26 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     }
   }, [gameState.currentLevel.id, level2AssetsLoaded]);
 
+  // Load level 3 assets when needed
+  useEffect(() => {
+    if (gameState.currentLevel.id === 3 && !level3AssetsLoaded) {
+      const loadLevel3 = async () => {
+        await assetLoader.current.loadLevel3Assets();
+        // Update level 3 asset refs
+        gameState.level3ObstacleImagesRef.current = assetLoader.current.level3ObstacleImages;
+        gameState.level3MushroomImagesRef.current = assetLoader.current.level3MushroomImages;
+        gameState.level3TrippyImagesRef.current = assetLoader.current.level3TrippyImages;
+        setLevel3AssetsLoaded(true);
+        console.log('Level 3 assets loaded:', {
+          obstacles: gameState.level3ObstacleImagesRef.current.length,
+          mushrooms: gameState.level3MushroomImagesRef.current.length,
+          trippyImages: gameState.level3TrippyImagesRef.current.length
+        });
+      };
+      loadLevel3();
+    }
+  }, [gameState.currentLevel.id, level3AssetsLoaded]);
+
   // Reset canvas on resize
   useEffect(() => {
     const handleResize = () => {
@@ -255,8 +276,12 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
 
   // Portrait animation function
   const animatePortrait = useCallback((ctx: CanvasRenderingContext2D) => {
-    if (!portraitCanvasRef.current) return;
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    //fill color black
+    ctx.fillStyle = 'black';
+    // Set background color
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    
     // Draw fish character
     const fishPosition = drawPlayerPortrait(ctx, fishImageRef.current, gameState.portraitFishPositionRef.current);
     if (fishPosition) {
@@ -265,7 +290,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     }
     // Update and draw particles
     updateAndDrawParticles(ctx, gameState.portraitParticlesRef.current, 1);
-  }, [gameState.portraitFishPositionRef, gameState.portraitParticlesRef]);
+  }, [gameState.portraitFishPositionRef, gameState.portraitParticlesRef, gameState.currentLevel.initialBackground]);
 
   // startGame callback (unchanged)
   const startGame = useCallback(() => {
@@ -293,6 +318,28 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
       } else {
         startAudioAndGameLoop();
       }
+    } else if (gameState.currentLevel.id === 3 && gameState.containerRef.current) {
+      // Make sure level 3 assets are loaded before starting
+      if (gameState.level3ObstacleImagesRef.current.length === 0 ||
+        gameState.level3MushroomImagesRef.current.length === 0 ||
+        gameState.level3TrippyImagesRef.current.length === 0) {
+        const loadLevel3 = async () => {
+          await assetLoader.current.loadLevel3Assets();
+          // Update level 3 asset refs
+          gameState.level3ObstacleImagesRef.current = assetLoader.current.level3ObstacleImages;
+          gameState.level3MushroomImagesRef.current = assetLoader.current.level3MushroomImages;
+          gameState.level3TrippyImagesRef.current = assetLoader.current.level3TrippyImages;
+          console.log('Level 3 assets loaded in startGame:', {
+            obstacles: gameState.level3ObstacleImagesRef.current.length,
+            mushrooms: gameState.level3MushroomImagesRef.current.length,
+            trippyImages: gameState.level3TrippyImagesRef.current.length
+          });
+          startAudioAndGameLoop();
+        };
+        loadLevel3();
+      } else {
+        startAudioAndGameLoop();
+      }
     } else {
       gameState.backgroundColorRef.current = gameState.currentLevel.initialBackground;
       gameState.waveColorRef.current = gameState.currentLevel.initialWaveColor;
@@ -301,6 +348,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
       }
       startAudioAndGameLoop();
     }
+    
     function startAudioAndGameLoop() {
       // Reset color events
       gameState.colorEventsRef.current.forEach((event, index) => {
@@ -345,6 +393,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
             console.log("Audio play error:", error.message);
           });
         };
+        
         // Set up the event listener
         audioRef.current.addEventListener('canplaythrough', handleCanPlay, { once: true });
         // Start game loop function to avoid code duplication

@@ -24,10 +24,10 @@ export const useAudio = (
     if (fallbackTimerRef.current) return; // Don't start if already running
     const BPM = 120; // Beats per minute
     const interval = 60000 / BPM; 
-    console.log(`[DEBUG] Starting fallback beat generator at ${BPM} BPM (${interval}ms)`);
+   // console.log(`[DEBUG] Starting fallback beat generator at ${BPM} BPM (${interval}ms)`);
     fallbackTimerRef.current = window.setInterval(() => {
       lastBeatTimeRef.current = Date.now();
-      console.log('[DEBUG] Fallback beat generated');
+    //  console.log('[DEBUG] Fallback beat generated');
     }, interval);
   };
   useEffect(() => {
@@ -53,22 +53,22 @@ export const useAudio = (
         dataArrayRef.current = new Uint8Array(bufferLength);
   
         if (!audioEl._mediaElementSource) {
-          console.log('[DEBUG] Creating new media element source');
+      //    console.log('[DEBUG] Creating new media element source');
           const source = audioCtx.createMediaElementSource(audioEl);
           audioEl._mediaElementSource = source;
         } else {
-          console.log('[DEBUG] Reusing existing media element source');
+        //  console.log('[DEBUG] Reusing existing media element source');
           audioEl._mediaElementSource.disconnect();
         }
         audioEl._mediaElementSource.connect(analyser);
         analyser.connect(audioCtx.destination);
   
         if (audioCtx.state !== 'running') {
-          console.log('[DEBUG] Resuming AudioContext...');
+       //   console.log('[DEBUG] Resuming AudioContext...');
           await audioCtx.resume();
-          console.log('[DEBUG] AudioContext state after resume:', audioCtx.state);
+          //console.log('[DEBUG] AudioContext state after resume:', audioCtx.state);
         }
-        console.log('[DEBUG] Audio setup complete - Analyzer created with bufferLength:', bufferLength);
+      //  console.log('[DEBUG] Audio setup complete - Analyzer created with bufferLength:', bufferLength);
         setTimeout(() => {
           if (analyserRef.current && dataArrayRef.current) {
             analyserRef.current.getByteFrequencyData(dataArrayRef.current);
@@ -76,9 +76,9 @@ export const useAudio = (
             for (let i = 0; i < dataArrayRef.current.length; i++) {
               sum += dataArrayRef.current[i];
             }
-            console.log('[DEBUG] Initial audio data test:', sum > 0 ? 'RECEIVING DATA ✅' : 'NO DATA ❌');
+          //  console.log('[DEBUG] Initial audio data test:', sum > 0 ? 'RECEIVING DATA ✅' : 'NO DATA ❌');
             if (sum === 0) {
-              console.log('[DEBUG] No audio data detected, activating fallback beat generation');
+          //    console.log('[DEBUG] No audio data detected, activating fallback beat generation');
               startFallbackBeatGeneration();
             }
           }
@@ -97,9 +97,9 @@ export const useAudio = (
       if (audioEl._audioCtx && audioEl._audioCtx.state !== 'running') {
         try {
           await audioEl._audioCtx.resume();
-          console.log('[DEBUG] AudioContext resumed from user interaction');
+     //     console.log('[DEBUG] AudioContext resumed from user interaction');
         } catch (error) {
-          console.error('[DEBUG] Error resuming AudioContext:', error);
+       //   console.error('[DEBUG] Error resuming AudioContext:', error);
         }
       }
     };
@@ -168,7 +168,7 @@ export const useAudio = (
     const analyser = analyserRef.current;
     const dataArray = dataArrayRef.current;
     if (!analyser || !dataArray) {
-      console.log('[DEBUG] getAverageAmplitude: Analyzer or dataArray not available');
+    //  console.log('[DEBUG] getAverageAmplitude: Analyzer or dataArray not available');
       return 0;
     }
     try {
@@ -182,11 +182,11 @@ export const useAudio = (
       }
       const avg = count > 0 ? sum / count : 0;
       if (Math.random() < 0.05) {
-        console.log(`[DEBUG] Current amplitude: ${avg.toFixed(2)}, from ${count} frequency bins`);
+    //    console.log(`[DEBUG] Current amplitude: ${avg.toFixed(2)}, from ${count} frequency bins`);
       }
       return avg;
     } catch (error) {
-      console.error("[DEBUG] Error getting amplitude:", error);
+     // console.error("[DEBUG] Error getting amplitude:", error);
       return 0;
     }
   };
@@ -198,13 +198,13 @@ export const useAudio = (
     const forceBeatInterval = 800;
     const timeSinceLastBeat = now - lastBeatTimeRefParam.current;
     if (timeSinceLastBeat > forceBeatInterval) {
-      console.log('[DEBUG] Generating fallback beat after timeout');
+    //  console.log('[DEBUG] Generating fallback beat after timeout');
       lastBeatTimeRefParam.current = now;
       return true;
     }
     if (amplitude > beatThreshold && timeSinceLastBeat > minTimeBetweenBeats) {
       lastBeatTimeRefParam.current = now;
-      console.log('[DEBUG] 🎵 Beat detected from audio!');
+    //  console.log('[DEBUG] 🎵 Beat detected from audio!');
       return true;
     }
     return false;

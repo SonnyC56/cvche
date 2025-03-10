@@ -112,7 +112,7 @@ export class AssetLoader {
       })
     ];
 
-    const videoPromise = this.preloadVideo('/videos/level2background.mp4');
+    const videoPromise = this.preloadVideo('/videos/level2background-compressed.mp4');
 
     await Promise.all([...obstaclePromises, ...pickupPromises, videoPromise]);
     this.level2AssetsLoaded = true;
@@ -131,7 +131,7 @@ export class AssetLoader {
         this.level3ObstacleImages.push(img);
       })
     ];
-    
+  console.log('Loading level 3 assets... level3ObstacleImages: ',this.level3ObstacleImages);
     // Load mushroom images
     const mushroomPromises = [];
     for (let i = 1; i <= 9; i++) {
@@ -149,8 +149,7 @@ export class AssetLoader {
     ];
     
     const trippyPromises = trippyTypes.map(type => {
-      const ext = type === 'blueMan' ? 'jpg' : 'png'; // blueMan is jpg, others are png
-      return this.loadImage(`/sprites/level3/trippyPickups/${type}.${ext}`).then(img => {
+      return this.loadImage(`/sprites/level3/trippyPickups/${type}.${'webp'}`).then(img => {
         this.level3TrippyImages.push(img);
       });
     });

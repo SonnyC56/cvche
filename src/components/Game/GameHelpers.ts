@@ -788,7 +788,7 @@ export const spawnItemsOnBeat = (
     })
   );
 
-  console.log(`[DEBUG] Images loaded - waterBottle: ${!!waterBottleImage}, plasticBag: ${!!plasticBagImage}, obstacle: ${!!oilSplatImage}, fishHook: ${!!fishHookImage}`);
+  //console.log(`[DEBUG] Images loaded - waterBottle: ${!!waterBottleImage}, plasticBag: ${!!plasticBagImage}, obstacle: ${!!oilSplatImage}, fishHook: ${!!fishHookImage}`);
 
   if (currentLevelId === 1) {
     // Level 1 spawning logic remains unchanged
@@ -1066,7 +1066,7 @@ export const spawnItemsOnBeat = (
     }
   } else if (currentLevelId === 3) {
     // Level 3 spawning logic
-
+    console.log(`[DEBUG] Level 3 spawning logic - audioProgress: ${audioProgress}, levelToggles:`, levelToggles, 'level3MushroomImages:', level3MushroomImages, 'level3ObstacleImages:', level3ObstacleImages);
     // Spawn mushrooms on beat when the toggle is active
     if (levelToggles.showMushrooms && level3MushroomImages?.length > 0) {
       const spawnChance = 0.1 + (audioProgress / 150); // Higher chance than level 1/2 items
@@ -1131,7 +1131,7 @@ export const spawnItemsOnBeat = (
 
       if (Math.random() < spawnChance) {
         const cloudImg = level3ObstacleImages.find(img => img.src.includes('clouds'));
-
+        console.log('spawning cloud - cloudImg', cloudImg);
         if (cloudImg) {
           gameState.obstacles.push({
             x: canvas.width,
@@ -1297,7 +1297,12 @@ export const updateAndCheckTrashCollisions = (
 
       setHealth(prev => Math.min(100, prev + 1));
 
-      pickupSound?.play().catch(console.error);
+      // Check if sound is properly initialized before playing
+      if (pickupSound && pickupSound.readyState >= 2) {
+        pickupSound.play().catch(error => {
+          console.warn("Error playing pickup sound:", error);
+        });
+      }
 
       continue;
     } else {
@@ -1426,7 +1431,12 @@ export const handleObstacleCollision = (
   const particleColor = '#000000';
   createParticles(gameState.particles, item.x, item.y, particleColor, 20);
 
-  hitSound?.play().catch(console.error);
+  // Check if sound is properly initialized before playing
+  if (hitSound && hitSound.readyState >= 2) {
+    hitSound.play().catch(error => {
+      console.warn("Error playing hit sound:", error);
+    });
+  }
 
   gameState.player.spinRotation = item.type === 'fishhook' ? Math.PI * 4 : -Math.PI * 4;
   gameState.player.hitTime = Date.now();
