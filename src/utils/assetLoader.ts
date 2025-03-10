@@ -79,34 +79,34 @@ export class AssetLoader {
   // Load level 2 specific assets
   async loadLevel2Assets(): Promise<void> {
     const obstaclePromises = [
-      this.loadImage('/sprites/level2/obstacles/bus.png').then(img => {
+      this.loadImage('/sprites/level2/obstacles/bus.webp').then(img =>  {
         this.busImage = img;
         this.level2ObstacleImages.push(img);
       }),
-      this.loadImage('/sprites/level2/obstacles/bats.png').then(img => {
+      this.loadImage('/sprites/level2/obstacles/bats.webp').then(img => {
         this.batsImage = img;
         this.level2ObstacleImages.push(img);
       }),
-      this.loadImage('/sprites/level2/obstacles/chicken.png').then(img => {
+      this.loadImage('/sprites/level2/obstacles/chicken.webp').then(img => {
         this.chickenImage = img;
         this.level2ObstacleImages.push(img);
       })
     ];
 
     const pickupPromises = [
-      this.loadImage('/sprites/level2/pickups/vitaminC.png').then(img => {
+      this.loadImage('/sprites/level2/pickups/vitaminC.webp').then(img => {
         this.vitaminCImage = img;
         this.level2PickupImages.push(img);
       }),
-      this.loadImage('/sprites/level2/pickups/pill.png').then(img => {
+      this.loadImage('/sprites/level2/pickups/pill.webp').then(img => {
         this.pillImage = img;
         this.level2PickupImages.push(img);
       }),
-      this.loadImage('/sprites/level2/pickups/tumeric.png').then(img => {
+      this.loadImage('/sprites/level2/pickups/tumeric.webp').then(img => {
         this.tumericImage = img;
         this.level2PickupImages.push(img);
       }),
-      this.loadImage('/sprites/level2/pickups/ginger.png').then(img => {
+      this.loadImage('/sprites/level2/pickups/ginger.webp').then(img => {
         this.gingerImage = img;
         this.level2PickupImages.push(img);
       })
@@ -122,11 +122,11 @@ export class AssetLoader {
   async loadLevel3Assets(): Promise<void> {
     // Load obstacle images
     const obstaclePromises = [
-      this.loadImage('/sprites/level3/obstacles/clouds.png').then(img => {
+      this.loadImage('/sprites/level3/obstacles/clouds.webp').then(img => {
         this.cloudImage = img;
         this.level3ObstacleImages.push(img);
       }),
-      this.loadImage('/sprites/level3/obstacles/eagle.png').then(img => {
+      this.loadImage('/sprites/level3/obstacles/eagle.webp').then(img => {
         this.eagleImage = img;
         this.level3ObstacleImages.push(img);
       })
@@ -136,7 +136,7 @@ export class AssetLoader {
     const mushroomPromises = [];
     for (let i = 1; i <= 9; i++) {
       mushroomPromises.push(
-        this.loadImage(`/sprites/level3/mushrooms/mushroom (${i}).png`).then(img => {
+        this.loadImage(`/sprites/level3/mushrooms/mushroom (${i}).webp`).then(img => {
           this.level3MushroomImages.push(img);
         })
       );

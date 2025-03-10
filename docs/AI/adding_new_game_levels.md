@@ -274,15 +274,16 @@ export const createLevel3TimedEvents = (): Level3TimedEvents => {
     obstacles: [
       // Eagles, clouds, etc.
       { type: 'eagle', timestamp: 210, triggered: false },
+            // Cloud and trippy effects
+      { type: 'cloud', timestamp: 3, triggered: false },
     ],
     pickups: [
       // Mushrooms
       { type: 'mushroom', timestamp: 71, triggered: false },
+      //trippy
+          { type: 'trippy', timestamp: 71, triggered: false },
     ],
-    visuals: [
-      // Cloud and trippy effects
-      { type: 'cloud', timestamp: 3, triggered: false },
-    ]
+
   };
 };
 ```

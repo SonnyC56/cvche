@@ -104,6 +104,80 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
   }, [gameState.currentLevel.id, gameState.gameStarted]);
   const { inputRef } = useInputHandlers(canvasRef);
 
+  // Define the restartGameLoop function first so we can register it with useGameState
+  const restartGameLoop = useCallback(() => {
+    gameState.gameLoopRef.current = true;
+    gameState.animationFrameIdRef.current = requestAnimationFrame(() =>
+      gameLoop(
+        canvasRef,
+        gameState.gameStateRef,
+        gameState.lastFrameTimeRef,
+        gameState.gameLoopRef,
+        gameState.animationFrameIdRef,
+        audioRefNonNull,
+        gameState.audioProgressRef,
+        getAverageAmplitude,
+        detectBeat,
+        gameState.lastBeatTimeRef,
+        inputRef,
+        gameState.backgroundColorRef,
+        gameState.waveColorRef,
+        gameState.activeColorTransitionRef,
+        gameState.bgPatternBubblesRef,
+        gameState.levelTogglesRef,
+        gameState.bubblesRef,
+        gameState.amplitudeRef,
+        gameState.activeTimedTextsRef,
+        gameState.floraItemsRef,
+        gameState.streakDisplayRef,
+        fishImageRef,
+        waterBottleRef,
+        plasticBagRef,
+        oilSplatImageRef,
+        fishHookRef,
+        flipflopRef,
+        toothbrushRef,
+        hotdogRef,
+        rubberDuckyRef,
+        gameState.level2ObstacleImagesRef,
+        gameState.level2PickupImagesRef,
+        gameState.level3ObstacleImagesRef,
+        gameState.level3MushroomImagesRef,
+        gameState.level3TrippyImagesRef,
+        gameState.currentLevelRef,
+        gameState.timedTextEventsRef,
+        gameState.colorEventsRef,
+        gameState.level2TimedEventsRef,
+        gameState.level3TimedEventsRef,
+        gameState.caveRef,
+        gameState.speedMultiplier,
+        gameState.setScore,
+        gameState.setHealth,
+        gameState.setLevelEnded,
+        gameState.lastCollisionTimeRef,
+        gameState.lastProximityScoreTimeRef,
+        gameState.pickupSoundRef as React.RefObject<HTMLAudioElement>,
+        gameState.hitSoundRef as React.RefObject<HTMLAudioElement>
+      )
+    );
+  }, [
+    canvasRef,
+    gameState,
+    audioRefNonNull,
+    getAverageAmplitude,
+    detectBeat,
+    inputRef,
+    gameState.setScore,
+    gameState.setHealth,
+    gameState.setLevelEnded
+  ]);
+
+  // Register the restartGameLoop function with useGameState
+  useEffect(() => {
+    if (gameState.setRestartGameLoopRef) {
+      gameState.setRestartGameLoopRef(restartGameLoop);
+    }
+  }, [restartGameLoop, gameState.setRestartGameLoopRef]);
 
   // Load basic assets on component mount
   useEffect(() => {
@@ -355,72 +429,6 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     inputRef,
     audioRef
   ]);
-  const restartGameLoop = useCallback(() => {
-    gameState.gameLoopRef.current = true;
-    gameState.animationFrameIdRef.current = requestAnimationFrame(() =>
-      gameLoop(
-        canvasRef,
-        gameState.gameStateRef,
-        gameState.lastFrameTimeRef,
-        gameState.gameLoopRef,
-        gameState.animationFrameIdRef,
-        audioRefNonNull,
-        gameState.audioProgressRef,
-        getAverageAmplitude,
-        detectBeat,
-        gameState.lastBeatTimeRef,
-        inputRef,
-        gameState.backgroundColorRef,
-        gameState.waveColorRef,
-        gameState.activeColorTransitionRef,
-        gameState.bgPatternBubblesRef,
-        gameState.levelTogglesRef,
-        gameState.bubblesRef,
-        gameState.amplitudeRef,
-        gameState.activeTimedTextsRef,
-        gameState.floraItemsRef,
-        gameState.streakDisplayRef,
-        fishImageRef,
-        waterBottleRef,
-        plasticBagRef,
-        oilSplatImageRef,
-        fishHookRef,
-        flipflopRef,
-        toothbrushRef,
-        hotdogRef,
-        rubberDuckyRef,
-        gameState.level2ObstacleImagesRef,
-        gameState.level2PickupImagesRef,
-        gameState.level3ObstacleImagesRef,
-        gameState.level3MushroomImagesRef,
-        gameState.level3TrippyImagesRef,
-        gameState.currentLevelRef,
-        gameState.timedTextEventsRef,
-        gameState.colorEventsRef,
-        gameState.level2TimedEventsRef,
-        gameState.level3TimedEventsRef,
-        gameState.caveRef,
-        gameState.speedMultiplier,
-        gameState.setScore,
-        gameState.setHealth,
-        gameState.setLevelEnded,
-        gameState.lastCollisionTimeRef,
-        gameState.lastProximityScoreTimeRef,
-        gameState.pickupSoundRef as React.RefObject<HTMLAudioElement>,
-        gameState.hitSoundRef as React.RefObject<HTMLAudioElement>
-      )
-    );
-  }, [
-    canvasRef,
-    gameState,
-    audioRefNonNull,
-    getAverageAmplitude,
-    detectBeat,
-    inputRef,
-    gameState.setScore,
-    gameState.setHealth,
-    gameState.setLevelEnded
-  ]);
 
   return (
     <div
@@ -443,7 +451,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
           objectFit: 'cover',
           zIndex: -1
         }}>
-          <source src="/videos/level2background.mp4" type="video/mp4" />
+          <source src="/videos/level2background-compressed.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
       )}
@@ -536,7 +544,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         selectLevel={gameState.selectLevel}
         setLevelEnded={gameState.setLevelEnded}
         setGameStarted={gameState.setGameStarted}
-        
+        restartGameLoop={restartGameLoop}
       />
 
       <AboutModal

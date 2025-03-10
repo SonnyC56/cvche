@@ -3,6 +3,7 @@ import { GameState, Level, LevelToggles, ActiveTimedText, ActiveColor, CaveState
 import { getDefaultLevels, createDefaultTimedTextEvents, createLevel2TimedTextEvents, createLevel3TimedTextEvents, createColorEventsByLevel, createLevel2TimedEvents, createLevel3TimedEvents, getInitialLevelToggles } from '../utils/eventData';
 import { AssetLoader } from '../utils/assetLoader';
 
+// Add a reference to the restartGameLoop function
 export const useGameState = () => {
   // Game progress
   const [score, setScore] = useState(0);
@@ -18,6 +19,9 @@ export const useGameState = () => {
   const [pendingLevel, setPendingLevel] = useState<Level | null>(null);
   const [pausedByOrientation, setPausedByOrientation] = useState(false);
 
+  // Store the restartGameLoop function reference
+  const restartGameLoopRef = useRef<(() => void) | null>(null);
+
   // Audio progress ref for use in callback functions
   const audioProgressRef = useRef(0);
 
@@ -26,12 +30,23 @@ export const useGameState = () => {
     const savedLevels = localStorage.getItem('gameLevels');
     const defaultLevels = getDefaultLevels();
     if (savedLevels) {
-      const parsedLevels = JSON.parse(savedLevels);
-      const mergedLevels = defaultLevels.map(defaultLevel => {
-        const savedLevel = parsedLevels.find((level: Level) => level.id === defaultLevel.id);
-        return savedLevel ? { ...defaultLevel, ...savedLevel } : defaultLevel;
-      });
-      return mergedLevels;
+      try {
+        const parsedLevels = JSON.parse(savedLevels);
+        return defaultLevels.map(defaultLevel => {
+          const savedLevel = parsedLevels.find((level: Level) => level.id === defaultLevel.id);
+          if (savedLevel) {
+            return {
+              ...defaultLevel,
+              highScore: Math.max(savedLevel.highScore || 0, defaultLevel.highScore || 0),
+              highestStreak: Math.max(savedLevel.highestStreak || 0, defaultLevel.highestStreak || 0)
+            };
+          }
+          return defaultLevel;
+        });
+      } catch (e) {
+        console.error("Error parsing saved levels:", e);
+        return defaultLevels;
+      }
     }
     return defaultLevels;
   });
@@ -254,6 +269,10 @@ export const useGameState = () => {
         }
       } else {
         gameLoopRef.current = true;
+        // Call the restartGameLoop function from the parent component
+        if (restartGameLoopRef.current) {
+          restartGameLoopRef.current();
+        }
       }
       return newPaused;
     });
@@ -350,6 +369,12 @@ export const useGameState = () => {
         setHealth(100);
         if (gameStateRef.current.gameStarted) {
           setIsPaused(false);
+          // When unpausing after level change, make sure the game loop restarts
+          gameLoopRef.current = true;
+          // Call the restartGameLoop function if it exists
+          if (restartGameLoopRef.current) {
+            restartGameLoopRef.current();
+          }
         }
       };
       // Await the level‑2 assets to ensure they're fully loaded before continuing
@@ -372,6 +397,12 @@ export const useGameState = () => {
         setHealth(100);
         if (gameStateRef.current.gameStarted) {
           setIsPaused(false);
+          // When unpausing after level change, make sure the game loop restarts
+          gameLoopRef.current = true;
+          // Call the restartGameLoop function if it exists
+          if (restartGameLoopRef.current) {
+            restartGameLoopRef.current();
+          }
         }
       };
       // Await the level‑3 assets to ensure they're fully loaded before continuing
@@ -385,9 +416,22 @@ export const useGameState = () => {
       timedTextEventsRef.current = createDefaultTimedTextEvents();
       setLevelEnded(false);
       setHealth(100);
+      
+      // For level 1 or any other level, make sure the game loop restarts if game has started
+      if (gameStateRef.current.gameStarted) {
+        gameLoopRef.current = true;
+        // Call the restartGameLoop function if it exists
+        if (restartGameLoopRef.current) {
+          restartGameLoopRef.current();
+        }
+      }
     }
   }, [levels, setIsPaused, setLevelEnded, setHealth]);
   
+  // Function to set the restart game loop reference
+  const setRestartGameLoopRef = useCallback((fn: () => void) => {
+    restartGameLoopRef.current = fn;
+  }, []);
 
   return {
     score,
@@ -456,6 +500,8 @@ export const useGameState = () => {
     level3MushroomImagesRef,
     level3TrippyImagesRef,
     togglePause,
-    selectLevel
+    selectLevel,
+    // Game loop integration
+    setRestartGameLoopRef
   };
 };

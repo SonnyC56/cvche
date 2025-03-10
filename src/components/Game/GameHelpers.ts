@@ -494,12 +494,12 @@ export const processColorEvents = (
 ) => {
   // Ensure colorEvents is initialized as an array
   const eventsArray = Array.isArray(colorEvents) ? colorEvents : [];
-  
+
   // Log warning if colorEvents is not an array
   if (!Array.isArray(colorEvents)) {
     console.error('colorEvents is not an array', colorEvents);
   }
-  
+
   // Now safely iterate through the events
   eventsArray.forEach(event => {
     if (!event.triggered && audioTime >= event.timestamp) {
@@ -638,19 +638,51 @@ export const processLevel3Events = (
       event.triggered = true;
 
       if (!canvas) return;
-
-      const eagleImg = level3ObstacleImages.find(img => img.src.includes('eagle'));
-      if (eagleImg) {
-        gameState.obstacles.push({
-          x: canvas.width,
-          y: getSpawnY(canvas, 80),
-          width: 100,
-          height: 80,
-          type: 'obstacle',
-          speed: 2 + Math.random() * 2.5, // Eagles are faster
-          rotation: 0,
-          pickupImage: eagleImg
-        });
+      if (event.type === 'eagle') {
+        const eagleImg = level3ObstacleImages.find(img => img.src.includes('eagle'));
+        if (eagleImg) {
+          gameState.obstacles.push({
+            x: canvas.width,
+            y: getSpawnY(canvas, 80),
+            width: 100,
+            height: 80,
+            type: 'obstacle',
+            speed: 2 + Math.random() * 2.5, // Eagles are faster
+            rotation: 0,
+            pickupImage: eagleImg
+          });
+        }
+      }
+      if (event.type === 'cloud') {
+        const cloudImg = level3ObstacleImages.find(img => img.src.includes('clouds'));
+        if (cloudImg) {
+          // For rising clouds at beginning
+          if (audioTime < 10) {
+            gameState.obstacles.push({
+              x: canvas.width * Math.random(), // Random x position
+              y: canvas.height + 50, // Start off-screen at bottom
+              width: 120,
+              height: 80,
+              type: 'obstacle',
+              speed: -0.5 - Math.random(), // Negative speed means moving upward
+              rotation: 0,
+              pickupImage: cloudImg,
+              baseY: canvas.height + 50 // Store initial Y for animations
+            });
+          }
+          else {
+            gameState.obstacles.push({
+              x: canvas.width,
+              y: getSpawnY(canvas, 80),
+              width: 120 + Math.random() * 80, // Variable size
+              height: 80 + Math.random() * 40,
+              type: 'obstacle',
+              speed: 0.5 + Math.random() * 1.5, // Slow moving
+              rotation: 0,
+              pickupImage: cloudImg
+            });
+          }
+        }
       }
     }
   });
@@ -689,56 +721,14 @@ export const processLevel3Events = (
           gameState.trashStats.totalSpawned++;
         }
       }
-    }
-  });
-
-  // Process visual effects (clouds and trippy objects)
-  level3TimedEvents.visuals.forEach((event) => {
-    if (!event.triggered && audioTime >= event.timestamp) {
-      event.triggered = true;
-
-      if (!canvas) return;
-
-      if (event.type === 'cloud') {
-        const cloudImg = level3ObstacleImages.find(img => img.src.includes('clouds'));
-        if (cloudImg) {
-          // For rising clouds at beginning
-          if (audioTime < 10) {
-            gameState.obstacles.push({
-              x: canvas.width * Math.random(), // Random x position
-              y: canvas.height + 50, // Start off-screen at bottom
-              width: 120,
-              height: 80,
-              type: 'obstacle',
-              speed: -0.5 - Math.random(), // Negative speed means moving upward
-              rotation: 0,
-              pickupImage: cloudImg,
-              baseY: canvas.height + 50 // Store initial Y for animations
-            });
-          } 
-          // For floating clouds during regular phase
-          else {
-            gameState.obstacles.push({
-              x: canvas.width,
-              y: getSpawnY(canvas, 80),
-              width: 120 + Math.random() * 80, // Variable size
-              height: 80 + Math.random() * 40,
-              type: 'obstacle',
-              speed: 0.5 + Math.random() * 1.5, // Slow moving
-              rotation: 0,
-              pickupImage: cloudImg
-            });
-          }
-        }
-      } 
-      else if (event.type === 'trippy' && level3TrippyImages.length > 0) {
+      if (event.type === 'trippy' && level3TrippyImages.length > 0) {
         // Select specific trippy object if variant specified
         let trippyImg;
         if (event.variant) {
           const variant = event.variant; // Assign to const to make TypeScript happy
           trippyImg = level3TrippyImages.find(img => img.src.includes(variant));
         }
-        
+
         // Fallback to random if not found or not specified
         if (!trippyImg) {
           trippyImg = level3TrippyImages[Math.floor(Math.random() * level3TrippyImages.length)];
@@ -749,7 +739,7 @@ export const processLevel3Events = (
           // They also change size and move in random patterns
           const size = 50 + Math.random() * 100; // Random size for trippy effect
           const speed = 0.5 + Math.random() * 2;
-          
+
           gameState.pickups.push({
             x: canvas.width,
             y: Math.random() * (canvas.height - 100) + 50, // Anywhere on screen
@@ -1076,16 +1066,16 @@ export const spawnItemsOnBeat = (
     }
   } else if (currentLevelId === 3) {
     // Level 3 spawning logic
-    
+
     // Spawn mushrooms on beat when the toggle is active
     if (levelToggles.showMushrooms && level3MushroomImages?.length > 0) {
       const spawnChance = 0.1 + (audioProgress / 150); // Higher chance than level 1/2 items
-      
+
       if (Math.random() < spawnChance) {
         // Select a random mushroom image
         const mushroomIndex = Math.floor(Math.random() * level3MushroomImages.length);
         const mushroomImg = level3MushroomImages[mushroomIndex];
-        
+
         if (mushroomImg) {
           gameState.pickups.push({
             x: canvas.width,
@@ -1101,20 +1091,20 @@ export const spawnItemsOnBeat = (
         }
       }
     }
-    
+
     // Spawn trippy objects during the trippy section (after timestamp 304)
     if (levelToggles.showTrippyObjects && level3TrippyImages?.length > 0) {
       // Higher chance during the trippy section
       const spawnChance = 0.15 + (audioProgress / 100);
-      
+
       if (Math.random() < spawnChance) {
         const trippyIndex = Math.floor(Math.random() * level3TrippyImages.length);
         const trippyImg = level3TrippyImages[trippyIndex];
-        
+
         if (trippyImg) {
           // Random size for trippy effect
           const size = 50 + Math.random() * 100;
-          
+
           // Add warping property to trippy pickups
           gameState.pickups.push({
             x: canvas.width,
@@ -1138,10 +1128,10 @@ export const spawnItemsOnBeat = (
     //spawn clouds if showClouds is true
     if (levelToggles.showClouds && level3ObstacleImages?.length > 0) {
       const spawnChance = 0.05 + (audioProgress / 150);
-      
+
       if (Math.random() < spawnChance) {
         const cloudImg = level3ObstacleImages.find(img => img.src.includes('clouds'));
-        
+
         if (cloudImg) {
           gameState.obstacles.push({
             x: canvas.width,
@@ -1160,10 +1150,10 @@ export const spawnItemsOnBeat = (
     //spawn eagles if showEagles is true
     if (levelToggles.showEagles && level3ObstacleImages?.length > 0) {
       const spawnChance = 0.1 + (audioProgress / 150);
-      
+
       if (Math.random() < spawnChance) {
         const eagleImg = level3ObstacleImages.find(img => img.src.includes('eagle'));
-        
+
         if (eagleImg) {
           gameState.obstacles.push({
             x: canvas.width,
@@ -1171,13 +1161,13 @@ export const spawnItemsOnBeat = (
             width: 100,
             height: 80,
             type: 'obstacle',
-            speed: 2 + Math.random() * 2.5,
+            speed: 1 + Math.random() * 2,
             rotation: 0,
             pickupImage: eagleImg
           });
         }
       }
-    } 
+    }
   }
 };
 

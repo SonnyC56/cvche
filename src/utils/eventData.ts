@@ -22,7 +22,7 @@ export const createDefaultTimedTextEvents = (): TimedTextEvent[] => [
 // Level 2 timed text events
 export const createLevel2TimedTextEvents = (): TimedTextEvent[] => [
   { timestamp: 6, text: "It's 1981. Endless Love by Diana Ross and Lionel Richie is song of the year.", triggered: false, color: "#FDF200", lifetime: 400 },
-  { timestamp: 10, text: "But still the world feels unstable.", triggered: false, color: "#FDF200" , lifetime: 400},
+  { timestamp: 10, text: "But still the world feels unstable.", triggered: false, color: "#FDF200", lifetime: 400 },
   { timestamp: 14, text: "Tina's son Danny was killed in a tragic bus accident.", triggered: false, color: "#FDF200", lifetime: 400 },
   { timestamp: 18, text: "But is Danny really DEAD?", triggered: false, color: "#FDF200" },
   { timestamp: 22, text: "HELP TINA SAVE DANNY!", triggered: false, color: "#FDF200" },
@@ -82,42 +82,59 @@ export const createLevel1ColorEvents = (): TimedColorEvent[] => [
 // Color change events for level 2
 export const createLevel2ColorEvents = (): TimedColorEvent[] => [
   { timestamp: 0, backgroundColor: "#000000", waveColor: "rgba(0,0,0,0.4)", triggered: true, transitionDuration: 3 },
-/*   { timestamp: 5, backgroundColor: "#1A0A1F", waveColor: "rgba(26,10,31,0.4)", triggered: false, transitionDuration: 3 },
-  { timestamp: 49, backgroundColor: "#14142E", waveColor: "rgba(20,20,46,0.4)", triggered: false, transitionDuration: 2 },
-  { timestamp: 83, backgroundColor: "#2E0D0D", waveColor: "rgba(46,13,13,0.4)", triggered: false, transitionDuration: 2 },
-  { timestamp: 130, backgroundColor: "#1A0A1F", waveColor: "rgba(26,10,31,0.4)", triggered: false, transitionDuration: 3 },
-  { timestamp: 173, backgroundColor: "#2E142E", waveColor: "rgba(46,20,46,0.4)", triggered: false, transitionDuration: 2 },
-  { timestamp: 190, backgroundColor: "#A8238E", waveColor: "rgba(168,35,142,0.4)", triggered: false, transitionDuration: 3 },
-  { timestamp: 252, backgroundColor: "#14AEEF", waveColor: "rgba(20,174,239,0.4)", triggered: false, transitionDuration: 1 },
-  { timestamp: 286, backgroundColor: "#2E142E", waveColor: "rgba(46,20,46,0.4)", triggered: false, transitionDuration: 2 },
-  { timestamp: 301, backgroundColor: "#A8238E", waveColor: "rgba(168,35,142,0.4)", triggered: false, transitionDuration: 1 },
-  { timestamp: 328, backgroundColor: "#1A0A1F", waveColor: "rgba(26,10,31,0.4)", triggered: false, transitionDuration: 3 }, */
+  /*   { timestamp: 5, backgroundColor: "#1A0A1F", waveColor: "rgba(26,10,31,0.4)", triggered: false, transitionDuration: 3 },
+    { timestamp: 49, backgroundColor: "#14142E", waveColor: "rgba(20,20,46,0.4)", triggered: false, transitionDuration: 2 },
+    { timestamp: 83, backgroundColor: "#2E0D0D", waveColor: "rgba(46,13,13,0.4)", triggered: false, transitionDuration: 2 },
+    { timestamp: 130, backgroundColor: "#1A0A1F", waveColor: "rgba(26,10,31,0.4)", triggered: false, transitionDuration: 3 },
+    { timestamp: 173, backgroundColor: "#2E142E", waveColor: "rgba(46,20,46,0.4)", triggered: false, transitionDuration: 2 },
+    { timestamp: 190, backgroundColor: "#A8238E", waveColor: "rgba(168,35,142,0.4)", triggered: false, transitionDuration: 3 },
+    { timestamp: 252, backgroundColor: "#14AEEF", waveColor: "rgba(20,174,239,0.4)", triggered: false, transitionDuration: 1 },
+    { timestamp: 286, backgroundColor: "#2E142E", waveColor: "rgba(46,20,46,0.4)", triggered: false, transitionDuration: 2 },
+    { timestamp: 301, backgroundColor: "#A8238E", waveColor: "rgba(168,35,142,0.4)", triggered: false, transitionDuration: 1 },
+    { timestamp: 328, backgroundColor: "#1A0A1F", waveColor: "rgba(26,10,31,0.4)", triggered: false, transitionDuration: 3 }, */
 ];
 
 // Level 3 timed text events
 export const createLevel3TimedTextEvents = (): TimedTextEvent[] => [
-  { timestamp: 6, text: "HAVE YOU EVER HAD A FEELING YOU COULD FLY", triggered: false, color: "#FDF200" },
-  { timestamp: 30, text: "GET FLUFFY WITH FLUFFY", triggered: false, color: "#FDF200" },
-  { timestamp: 71, text: "MMM MUSHROOMS!", triggered: false, color: "#FDF200" },
-  { timestamp: 90, text: "FLUFFY THE FLYING FISH", triggered: false, color: "#FDF200" },
-  { timestamp: 125, text: "MMM MUSHROOMS!", triggered: false, color: "#A0D8EF" },
-  { timestamp: 150, text: "FLY FLUFFY FLY!", triggered: false, color: "#FDF200" },
-  { timestamp: 165, text: "A STORMS A BREWING!", triggered: false, color: "#FDF200" },
-  { timestamp: 185, text: "WATCH OUT FOR LIGHTING FLUFF!", triggered: false, color: "#888888" },
-  { timestamp: 210, text: "BIRDS OF PREY! WTF!", triggered: false, color: "#888888" },
-  { timestamp: 230, text: "BALD EAGLES TOO!", triggered: false, color: "#888888" },
-  { timestamp: 270, text: "MUSHROOOOOOOOOOOMS!!!", triggered: false, color: "#FDF200" },
-  { timestamp: 304, text: "WOWOWOWOWEEEEWOW! THE COLORS!", triggered: false, color: "#FF00FF" },
-  { timestamp: 340, text: "FLUFFY FLUFF FLUFF! IT'S BEAUTIFUL", triggered: false, color: "#00FFFF" },
-  { timestamp: 370, text: "IT'S SOOO BEAUTIFUL", triggered: false, color: "#FF8800" },
-  { timestamp: 410, text: "HOLY SMOKES! NICE WORK FLUFF!", triggered: false, color: "#FDF200" },
+  // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
+  { timestamp: 6, text: "HAVE YOU EVER HAD A FEELING YOU COULD FLY", triggered: false, color: "#020DFF" },
+  // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
+  { timestamp: 30, text: "GET FLUFFY WITH FLUFFY", triggered: false, color: "#020DFF" },
+  // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
+  { timestamp: 71, text: "MMM MUSHROOMS!", triggered: false, color: "#020DFF" },
+  // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
+  { timestamp: 90, text: "FLUFFY THE FLYING FISH", triggered: false, color: "#020DFF" },
+  // Blue background (#A0D8EF) -> Complementary color: Orange/Brown (#5F2710)
+  { timestamp: 125, text: "MMM MUSHROOMS!", triggered: false, color: "#5F2710" },
+  // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
+  { timestamp: 150, text: "FLY FLUFFY FLY!", triggered: false, color: "#020DFF" },
+  // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
+  { timestamp: 165, text: "A STORMS A BREWING!", triggered: false, color: "#000000" },
+  // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
+  { timestamp: 185, text: "WATCH OUT FOR LIGHTING FLUFF!", triggered: false, color: "#000000" },
+  // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
+  { timestamp: 210, text: "BIRDS OF PREY! WTF!", triggered: false, color: "#000000" },
+  // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
+  { timestamp: 230, text: "BALD EAGLES TOO!", triggered: false, color: "#000000" },
+  // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
+  { timestamp: 270, text: "MUSHROOOOOOOOOOOMS!!!", triggered: false, color: "#020DFF" },
+  // Magenta background (#FF00FF) -> Complementary color: Green (#00FF00)
+  { timestamp: 304, text: "WOWOWOWOWEEEEWOW! THE COLORS!", triggered: false, color: "#00FF00" },
+  // Cyan background (#00FFFF) -> Complementary color: Red (#FF0000)
+  { timestamp: 340, text: "FLUFFY FLUFF FLUFF! IT'S BEAUTIFUL", triggered: false, color: "#FF0000" },
+  // Orange background (#FF8800) -> Complementary color: Blue (#0077FF)
+  { timestamp: 370, text: "IT'S SOOO BEAUTIFUL", triggered: false, color: "#0077FF" },
+  // Light Purple background (#E6C3E6) -> Complementary color: Green (#193C19)
+  { timestamp: 410, text: "HOLY SMOKES! NICE WORK FLUFF!", triggered: false, color: "#193C19" },
 ];
 
 // Color change events for level 3
 export const createLevel3ColorEvents = (): TimedColorEvent[] => [
-  { timestamp: 0, backgroundColor: "#FDF200", waveColor: "rgba(253,242,0,0.4)", triggered: true, transitionDuration: 3 },
+  //orangehex
+
+  { timestamp: 0.01, backgroundColor: "#fd6100", waveColor: "rgba(253,242,0,0.4)", triggered: true, transitionDuration: 3 },
   { timestamp: 125, backgroundColor: "#A0D8EF", waveColor: "rgba(160,216,239,0.4)", triggered: false, transitionDuration: 2 },
-  { timestamp: 150, backgroundColor: "#FDF200", waveColor: "rgba(253,242,0,0.4)", triggered: false, transitionDuration: 2 },
+  { timestamp: 150, backgroundColor: "#FF8800", waveColor: "rgba(255,136,0,0.4)", triggered: false, transitionDuration: 2 },
   // Light purple pastels
   { timestamp: 160, backgroundColor: "#E6C3E6", waveColor: "rgba(230,195,230,0.4)", triggered: false, transitionDuration: 2 },
   // Storm colors
@@ -167,6 +184,18 @@ export const createLevel3TimedEvents = (): Level3TimedEvents => ({
     { timestamp: 250, type: 'eagle', triggered: false },
     { timestamp: 255, type: 'eagle', triggered: false },
     { timestamp: 260, type: 'eagle', triggered: false },
+    // Clouds rising at beginning
+    { timestamp: 3, type: 'cloud', triggered: false },
+    // Floating clouds
+    { timestamp: 30, type: 'cloud', triggered: false },
+    { timestamp: 40, type: 'cloud', triggered: false },
+    { timestamp: 50, type: 'cloud', triggered: false },
+    { timestamp: 60, type: 'cloud', triggered: false },
+    // Storm clouds
+    { timestamp: 165, type: 'cloud', variant: 'storm', triggered: false },
+    { timestamp: 170, type: 'cloud', variant: 'storm', triggered: false },
+    { timestamp: 175, type: 'cloud', variant: 'storm', triggered: false },
+    { timestamp: 180, type: 'cloud', variant: 'storm', triggered: false },
   ],
   pickups: [
     // Mushrooms as pickups
@@ -185,20 +214,6 @@ export const createLevel3TimedEvents = (): Level3TimedEvents => ({
     { timestamp: 290, type: 'mushroom', variant: '4', triggered: false },
     { timestamp: 295, type: 'mushroom', variant: '5', triggered: false },
     { timestamp: 300, type: 'mushroom', variant: '6', triggered: false },
-  ],
-  visuals: [
-    // Clouds rising at beginning
-    { timestamp: 3, type: 'cloud', triggered: false },
-    // Floating clouds
-    { timestamp: 30, type: 'cloud', triggered: false },
-    { timestamp: 40, type: 'cloud', triggered: false },
-    { timestamp: 50, type: 'cloud', triggered: false },
-    { timestamp: 60, type: 'cloud', triggered: false },
-    // Storm clouds
-    { timestamp: 165, type: 'cloud', variant: 'storm', triggered: false },
-    { timestamp: 170, type: 'cloud', variant: 'storm', triggered: false },
-    { timestamp: 175, type: 'cloud', variant: 'storm', triggered: false },
-    { timestamp: 180, type: 'cloud', variant: 'storm', triggered: false },
     // Trippy visuals starting at 304s
     { timestamp: 304, type: 'trippy', variant: 'gummyWorm', triggered: false },
     { timestamp: 310, type: 'trippy', variant: 'magicRabbit', triggered: false },
@@ -227,17 +242,17 @@ export const createLevel2TimedEvents = (): Level2TimedEvents => ({
     { timestamp: 49, type: 'bus', triggered: false },
     { timestamp: 55, type: 'bus', triggered: false },
     { timestamp: 62, type: 'bus', triggered: false },
-    
+
     // Chickens - starting around 83 second mark
     { timestamp: 83, type: 'chicken', triggered: false },
     { timestamp: 88, type: 'chicken', triggered: false },
     { timestamp: 93, type: 'chicken', triggered: false },
-    
+
     // Bats - starting around 120 second mark
     { timestamp: 120, type: 'bats', triggered: false },
     { timestamp: 125, type: 'bats', triggered: false },
     { timestamp: 130, type: 'bats', triggered: false },
-    
+
     // Mixed obstacles - around 173 mark (all obstacles randomly mixed)
     { timestamp: 173, type: 'bus', triggered: false },
     { timestamp: 176, type: 'chicken', triggered: false },
@@ -245,7 +260,7 @@ export const createLevel2TimedEvents = (): Level2TimedEvents => ({
     { timestamp: 185, type: 'bus', triggered: false },
     { timestamp: 188, type: 'chicken', triggered: false },
     { timestamp: 192, type: 'bats', triggered: false },
-    
+
     // Major shift at 252 - HOLY SCHNIKEYS! moment
     { timestamp: 252, type: 'bus', triggered: false },
     { timestamp: 255, type: 'chicken', triggered: false },
@@ -253,7 +268,7 @@ export const createLevel2TimedEvents = (): Level2TimedEvents => ({
     { timestamp: 262, type: 'bus', triggered: false },
     { timestamp: 266, type: 'chicken', triggered: false },
     { timestamp: 270, type: 'bats', triggered: false },
-    
+
     // Final extreme obstacle flood for the outro at 301 mark
     { timestamp: 301, type: 'bats', triggered: false },
     { timestamp: 302, type: 'bats', triggered: false },
@@ -271,29 +286,29 @@ export const createLevel2TimedEvents = (): Level2TimedEvents => ({
     { timestamp: 28, type: 'vitaminC', triggered: false },
     { timestamp: 32, type: 'vitaminC', triggered: false },
     { timestamp: 36, type: 'vitaminC', triggered: false },
-    
+
     // Ginger comes at 36 second mark
     { timestamp: 36, type: 'ginger', triggered: false },
     { timestamp: 40, type: 'ginger', triggered: false },
     { timestamp: 44, type: 'ginger', triggered: false },
-    
+
     // Mix of health items during mid-game
     { timestamp: 70, type: 'pill', triggered: false },
     { timestamp: 80, type: 'tumeric', triggered: false },
     { timestamp: 90, type: 'vitaminC', triggered: false },
     { timestamp: 100, type: 'ginger', triggered: false },
     { timestamp: 110, type: 'pill', triggered: false },
-    
+
     // More pickups during intense sections
     { timestamp: 150, type: 'tumeric', triggered: false },
     { timestamp: 160, type: 'vitaminC', triggered: false },
     { timestamp: 170, type: 'ginger', triggered: false },
-    
+
     // Continued pickups during mixed obstacle section
     { timestamp: 200, type: 'pill', triggered: false },
     { timestamp: 220, type: 'tumeric', triggered: false },
     { timestamp: 240, type: 'vitaminC', triggered: false },
-    
+
     // Final stretch pickups
     { timestamp: 280, type: 'ginger', triggered: false },
     { timestamp: 290, type: 'pill', triggered: false }
@@ -332,7 +347,7 @@ export const getDefaultLevels = (): Level[] => {
       initialBackground: "#FDF200",
       initialWaveColor: "rgba(253,242,0,0.4)",
       unlocked: true,
-      isCaveMechanic: true, // For the storm section with cave mechanics
+      isCaveMechanic: false, // For the storm section with cave mechanics
       highScore: 0,
       highestStreak: 0
     }

@@ -11,6 +11,7 @@ interface LevelCompleteScreenProps {
   selectLevel: (level: Level) => void;
   setLevelEnded: (ended: boolean) => void;
   setGameStarted: (started: boolean) => void;
+  restartGameLoop: () => void; // Add new prop for restarting the game loop
 }
 
 const LevelCompleteScreen: React.FC<LevelCompleteScreenProps> = ({
@@ -22,7 +23,8 @@ const LevelCompleteScreen: React.FC<LevelCompleteScreenProps> = ({
   currentLevel,
   selectLevel,
   setLevelEnded,
-  setGameStarted
+  setGameStarted,
+  restartGameLoop // Destructure the new prop
 }) => {
   if (!levelEnded) return null;
   
@@ -38,6 +40,8 @@ const LevelCompleteScreen: React.FC<LevelCompleteScreenProps> = ({
       selectLevel(nextLevel);
       setLevelEnded(false);
       setGameStarted(true);
+      // Restart the game loop to ensure rendering continues
+      restartGameLoop();
     }
   };
   

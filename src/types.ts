@@ -25,7 +25,6 @@ export interface Level2TimedEvent {
 export interface Level3TimedEvents {
   obstacles: Level3TimedEvent[];
   pickups: Level3TimedEvent[];
-  visuals: Level3TimedEvent[];
 }
 //Level3TimedEvent
 export interface Level3TimedEvent {
