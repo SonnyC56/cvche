@@ -468,11 +468,22 @@ export const updateLevelToggles = (
         showStormEffects: false
       };
     }
-    else if (audioTime >= 304) {
-      // Trippy section
+    else if (audioTime >= 304 && audioTime < 330) {
+      // Trippy section beginning - no clouds, trippy objects start appearing
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
-        showClouds: true,
+        showClouds: false,
+        showMushrooms: true,
+        showEagles: false,
+        showTrippyObjects: true,
+        showStormEffects: false
+      };
+    }
+    else if (audioTime >= 330) {
+      // Trippy section in full effect - no clouds, maximum trippy effect
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showClouds: false,
         showMushrooms: true,
         showEagles: false,
         showTrippyObjects: true,
@@ -656,6 +667,9 @@ export const processLevel3Events = (
       if (event.type === 'cloud') {
         const cloudImg = level3ObstacleImages.find(img => img.src.includes('clouds'));
         if (cloudImg) {
+          // Check if this is during the storm (between 165-210 seconds)
+          const isStormPeriod = audioTime >= 165 && audioTime < 270;
+          
           // For rising clouds at beginning
           if (audioTime < 10) {
             gameState.obstacles.push({
@@ -667,7 +681,8 @@ export const processLevel3Events = (
               speed: -0.5 - Math.random(), // Negative speed means moving upward
               rotation: 0,
               pickupImage: cloudImg,
-              baseY: canvas.height + 50 // Store initial Y for animations
+              baseY: canvas.height + 50, // Store initial Y for animations
+              stormEffect: isStormPeriod // Flag for dark storm clouds
             });
           }
           else {
@@ -679,7 +694,8 @@ export const processLevel3Events = (
               type: 'obstacle',
               speed: 0.5 + Math.random() * 1.5, // Slow moving
               rotation: 0,
-              pickupImage: cloudImg
+              pickupImage: cloudImg,
+              stormEffect: isStormPeriod // Flag for dark storm clouds
             });
           }
         }
@@ -777,7 +793,8 @@ export const spawnItemsOnBeat = (
   level2ObstacleImages: HTMLImageElement[],
   level3ObstacleImages: HTMLImageElement[] = [],
   level3MushroomImages: HTMLImageElement[] = [],
-  level3TrippyImages: HTMLImageElement[] = []
+  level3TrippyImages: HTMLImageElement[] = [],
+  audioTime: number
 ) => {
   console.log(`[DEBUG] spawnItemsOnBeat called - Level: ${currentLevelId}, LevelToggles:`,
     JSON.stringify({
@@ -1105,20 +1122,20 @@ export const spawnItemsOnBeat = (
           // Random size for trippy effect
           const size = 50 + Math.random() * 100;
 
-          // Add warping property to trippy pickups
-          gameState.pickups.push({
-            x: canvas.width,
-            y: Math.random() * (canvas.height - 100) + 50, // Anywhere on screen
-            width: size,
-            height: size,
-            type: 'trash',
-            speed: 0.5 + Math.random() * 2,
-            rotation: Math.random() * Math.PI * 2,
-            pickupImage: trippyImg,
-            // Add custom properties for warping effect
-            warpFactor: 0.5 + Math.random() * 0.5,
-            warpSpeed: 0.1 + Math.random() * 0.3,
-            warpOffset: Math.random() * Math.PI * 2
+            // Add warping property to trippy pickups (with reduced intensity)
+            gameState.pickups.push({
+              x: canvas.width,
+              y: Math.random() * (canvas.height - 100) + 50, // Anywhere on screen
+              width: size,
+              height: size,
+              type: 'trash',
+              speed: 0.5 + Math.random() * 2,
+              rotation: Math.random() * Math.PI * 2,
+              pickupImage: trippyImg,
+              // Add custom properties for warping effect with reduced intensity
+              warpFactor: 0.05 + Math.random() * 0.01, // Much smaller factor (max 30% size change)
+              warpSpeed: 0.05 + Math.random() * 0.01, // Slower warping
+              warpOffset: Math.random() * Math.PI * 2
           });
           gameState.trashStats.totalSpawned++;
         }
@@ -1128,6 +1145,7 @@ export const spawnItemsOnBeat = (
     //spawn clouds if showClouds is true
     if (levelToggles.showClouds && level3ObstacleImages?.length > 0) {
       const spawnChance = 0.05 + (audioProgress / 150);
+      const isStormPeriod = audioTime >= 165 && audioTime < 270;
 
       if (Math.random() < spawnChance) {
         const cloudImg = level3ObstacleImages.find(img => img.src.includes('clouds'));
@@ -1141,7 +1159,8 @@ export const spawnItemsOnBeat = (
             type: 'obstacle',
             speed: 0.5 + Math.random() * 1.5,
             rotation: 0,
-            pickupImage: cloudImg
+            pickupImage: cloudImg,
+            stormEffect: isStormPeriod // Flag for dark storm clouds
           });
         }
       }
@@ -1234,6 +1253,18 @@ export const updateAndCheckTrashCollisions = (
 
     // Update position
     item.x -= item.speed * speedMultiplier * factor;
+    
+    // Apply warping effect for trippy items in level 3
+    if (item.warpFactor && item.warpSpeed) {
+      // Calculate a warping scale based on time
+      const time = Date.now() / 1000; // Convert to seconds
+      const warpOffset = item.warpOffset || 0;
+      const warpScale = 1 + item.warpFactor * Math.sin((time * item.warpSpeed) + warpOffset);
+      
+      // Apply the warping scale to the item's dimensions
+      item.width = item.width * warpScale;
+      item.height = item.height * warpScale;
+    }
 
     // Remove if off screen
     if (item.x + item.width * pulse < 0) {

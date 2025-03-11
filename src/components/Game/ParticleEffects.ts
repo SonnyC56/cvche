@@ -46,7 +46,7 @@ export const createParticles = (particles: Particle[], x: number, y: number, col
 /**
  * Create swimming particles behind the fish based on streak
  */
-export const createSwimParticles = (particles: Particle[], player: Player, streak: number) => {
+export const createSwimParticles = (particles: Particle[], player: Player, streak: number, customColor?: string) => {
   const fishCenterX = player.x + player.width;
   const fishCenterY = player.y + player.height / 2;
   const tailX = fishCenterX - player.width;
@@ -59,7 +59,7 @@ export const createSwimParticles = (particles: Particle[], player: Player, strea
       vx: -2 - Math.random() * 2 - (streak * 0.1),
       vy: (Math.random() - 0.5) * (0.5 + streak * 0.05),
       life: 1.0,
-      color: getParticleColorFromStreak(streak),
+      color: customColor || getParticleColorFromStreak(streak),
       size: 4 + Math.random() * 3 + (streak * 0.1),
       opacity: 0.8,
       shape: 'circle',

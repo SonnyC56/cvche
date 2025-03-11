@@ -121,6 +121,8 @@ export interface GameItem {
   rotation?: number;
   pickupImage?: HTMLImageElement;
   baseY?: number;
+  // For storm effect in level 3
+  stormEffect?: boolean;
   // For trippy warping effects in level 3
   warpFactor?: number;
   warpSpeed?: number;

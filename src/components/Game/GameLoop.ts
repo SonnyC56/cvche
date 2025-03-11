@@ -17,9 +17,13 @@ export const getSpawnY = (canvas: HTMLCanvasElement | null, itemHeight: number):
 };
 
 // Draw a game item (trash, obstacle, etc)
-export const drawItem = (ctx: CanvasRenderingContext2D, item: any, pulse: number) => {
+export const drawItem = (
+  ctx: CanvasRenderingContext2D,
+  item: any,
+  pulse: number
+) => {
   ctx.save();
-  
+
   if (
     (item.type === 'trash' ||
       item.type === 'flipflop' ||
@@ -29,29 +33,30 @@ export const drawItem = (ctx: CanvasRenderingContext2D, item: any, pulse: number
   ) {
     // Rotate trash items for visual interest
     item.rotation = (item.rotation || 0) + 0.0125;
-    
+
     // Calculate dimensions preserving aspect ratio
     const aspect = item.pickupImage!.naturalWidth / item.pickupImage!.naturalHeight;
     const effectiveWidth = item.width * pulse;
     const effectiveHeight = effectiveWidth / aspect;
-    
+
     // Draw with rotation
     const centerX = item.x + effectiveWidth / 2;
     const centerY = item.y + effectiveHeight / 2;
     ctx.translate(centerX, centerY);
     ctx.rotate(item.rotation!);
     ctx.drawImage(item.pickupImage, -effectiveWidth / 2, -effectiveHeight / 2, effectiveWidth, effectiveHeight);
-  } 
+  }
   else if (item.type === 'obstacle' && item.pickupImage) {
-    // Check if the item is a cloud or a bus (which shouldn't rotate)
+    // Check if the item is a cloud, bus, or eagle (which shouldn't rotate)
     const isCloud = item.pickupImage.src.includes('clouds');
     const isBus = item.pickupImage.src.includes('bus');
-    
+    const isEagle = item.pickupImage.src.includes('eagle');
+
     const effectiveWidth = item.width, effectiveHeight = item.height;
     const centerX = item.x + effectiveWidth / 2, centerY = item.y + effectiveHeight / 2;
-    
-    // Only rotate if it's not a cloud or bus
-    if (!isCloud && !isBus) {
+
+    // Only rotate if it's not a cloud, bus, or eagle
+    if (!isCloud && !isBus && !isEagle) {
       item.rotation = (item.rotation || 0) + 0.0125;
       ctx.translate(centerX, centerY);
       ctx.rotate(item.rotation!);
@@ -59,21 +64,32 @@ export const drawItem = (ctx: CanvasRenderingContext2D, item: any, pulse: number
     } else {
       // Draw without rotation for clouds and buses
       ctx.translate(centerX, centerY);
-      ctx.drawImage(item.pickupImage, -effectiveWidth / 2, -effectiveHeight / 2, effectiveWidth, effectiveHeight);
+
+      // Apply dark grey filter for clouds during storm
+      if (isCloud && item.stormEffect) {
+        // Save context to restore after applying filters
+        ctx.save();
+        // Apply stronger dark grey filter
+        ctx.filter = 'brightness(0.4) contrast(1.4) grayscale(1.0)';
+        ctx.drawImage(item.pickupImage, -effectiveWidth / 2, -effectiveHeight / 2, effectiveWidth, effectiveHeight);
+        ctx.restore();
+      } else {
+        ctx.drawImage(item.pickupImage, -effectiveWidth / 2, -effectiveHeight / 2, effectiveWidth, effectiveHeight);
+      }
     }
-  } 
+  }
   else if (item.type === 'fishhook' && item.pickupImage) {
     // Handle fishhooks
     const effectiveWidth = item.width, effectiveHeight = item.height;
     const centerX = item.x + effectiveWidth / 2, centerY = item.y + effectiveHeight / 2;
     ctx.drawImage(item.pickupImage, centerX - effectiveWidth / 2, centerY - effectiveHeight / 2, effectiveWidth, effectiveHeight);
-  } 
+  }
   else {
     // Fallback red rectangle for missing images
     ctx.fillStyle = '#FF0000';
     ctx.fillRect(0, 0, item.width, item.height);
   }
-  
+
   ctx.restore();
 };
 
@@ -84,7 +100,7 @@ export const gameLoop = (
   lastFrameTimeRef: React.MutableRefObject<number>,
   gameLoopRef: React.MutableRefObject<boolean>,
   animationFrameIdRef: React.MutableRefObject<number | null>,
-  
+
   // Audio and input
   audioRef: React.RefObject<HTMLAudioElement>,
   audioProgressRef: React.MutableRefObject<number>,
@@ -92,7 +108,7 @@ export const gameLoop = (
   detectBeat: (amplitude: number, lastBeatTimeRef: React.MutableRefObject<number>) => boolean,
   lastBeatTimeRef: React.MutableRefObject<number>,
   inputRef: React.MutableRefObject<{ isTouching: boolean; touchY: number; isDesktop: boolean }>,
-  
+
   // Visuals
   backgroundColorRef: React.MutableRefObject<string>,
   waveColorRef: React.MutableRefObject<string>,
@@ -104,7 +120,7 @@ export const gameLoop = (
   activeTimedTextsRef: React.MutableRefObject<ActiveTimedText[]>,
   floraItemsRef: React.MutableRefObject<any[]>,
   streakDisplayRef: React.MutableRefObject<StreakDisplay>,
-  
+
   // Images
   fishImageRef: React.RefObject<HTMLImageElement>,
   waterBottleRef: React.RefObject<HTMLImageElement>,
@@ -120,7 +136,7 @@ export const gameLoop = (
   level3ObstacleImagesRef: React.MutableRefObject<HTMLImageElement[]>,
   level3MushroomImagesRef: React.MutableRefObject<HTMLImageElement[]>,
   level3TrippyImagesRef: React.MutableRefObject<HTMLImageElement[]>,
-  
+
   // Level data
   currentLevelRef: React.MutableRefObject<Level>,
   timedTextEventsRef: React.MutableRefObject<TimedTextEvent[]>,
@@ -129,16 +145,16 @@ export const gameLoop = (
   level3TimedEventsRef: React.MutableRefObject<Level3TimedEvents>,
   caveRef: React.MutableRefObject<CaveState>,
   speedMultiplier: React.MutableRefObject<number>,
-  
+
   // Game state setters
   setScore: (value: number) => void,
   setHealth: (callback: (prev: number) => number) => void,
   setLevelEnded: (value: boolean) => void,
-  
+
   // Collision handling
   lastCollisionTimeRef: React.MutableRefObject<number>,
   lastProximityScoreTimeRef: React.MutableRefObject<number>,
-  
+
   // Sound effects
   pickupSoundRef: React.RefObject<HTMLAudioElement>,
   hitSoundRef: React.RefObject<HTMLAudioElement>
@@ -146,9 +162,22 @@ export const gameLoop = (
   if (!gameLoopRef.current || !canvasRef.current) return;
   const ctx = canvasRef.current.getContext('2d');
   if (!ctx) return;
+  
+  // Get current time for delta time calculation
   const nowTime = performance.now();
-  const deltaTime = (nowTime - lastFrameTimeRef.current) / 1000;
+  
+  // Calculate delta time, but apply a cap to prevent extreme values
+  // This can happen after unpausing when timestamps have a large gap
+  let deltaTime = (nowTime - lastFrameTimeRef.current) / 1000;
+  
+  // Cap deltaTime to prevent physics glitches after resuming from pause
+  // (using 0.1 seconds as max delta to maintain consistent physics)
+  deltaTime = Math.min(deltaTime, 0.1);
+  
+  // Update last frame time
   lastFrameTimeRef.current = nowTime;
+  
+  // Calculate factor using capped delta time
   const factor = deltaTime * 120;
   const canvas = canvasRef.current;
   canvas.width = window.innerWidth;
@@ -158,9 +187,9 @@ export const gameLoop = (
   updateLevelToggles(audioTime, currentLevelRef.current.id, levelTogglesRef);
   if (currentLevelRef.current.id === 2) {
     processLevel2Events(
-      audioTime, 
-      canvasRef.current, 
-      level2TimedEventsRef.current, 
+      audioTime,
+      canvasRef.current,
+      level2TimedEventsRef.current,
       level2ObstacleImagesRef.current,
       level2PickupImagesRef.current,
       gameStateRef.current
@@ -194,7 +223,8 @@ export const gameLoop = (
   }
   const amplitude = getAverageAmplitude();
   amplitudeRef.current = amplitude;
-  const pulse = 1 + amplitude / 100;
+  // Reduced audio reactivity scaling by 75%
+  const pulse = 1 + (amplitude / 100) * 0.25;
   const audioTimeMs = audioRef.current ? audioRef.current.currentTime * 1000 : 0;
   const levelStartDelay = 0;
   const effectiveTime = Math.max(0, audioTimeMs - levelStartDelay);
@@ -205,7 +235,7 @@ export const gameLoop = (
   }
   // Ensure timedTextEventsRef.current is an array
   const timedEvents = Array.isArray(timedTextEventsRef.current) ? timedTextEventsRef.current : [];
-  
+
   // Now safely iterate through the events
   timedEvents.forEach(event => {
     if (!event.triggered && audioTime >= event.timestamp) {
@@ -226,7 +256,7 @@ export const gameLoop = (
   if (detectBeat(amplitude, lastBeatTimeRef)) {
     // Safely access currentLevel ID with a fallback to prevent undefined errors
     const currentLevelId = currentLevelRef?.current?.id || 1;
-    
+
     spawnItemsOnBeat(
       canvas,
       levelTogglesRef.current,
@@ -246,6 +276,7 @@ export const gameLoop = (
       level3ObstacleImagesRef.current,
       level3MushroomImagesRef.current,
       level3TrippyImagesRef.current,
+      audioTime
     );
   }
   updateAndCheckTrashCollisions(
@@ -272,10 +303,87 @@ export const gameLoop = (
     gameLoopRef,
     animationFrameIdRef
   );
-  createSwimParticles(gameStateRef.current.particles, gameStateRef.current.player, gameStateRef.current.streak);
+  // Check if in trippy mode (level 3 after timestamp 304)
+  const trippyMode = currentLevelRef.current.id === 3 && audioTime >= 304;
+
+  // Create fish trail particles with rainbow colors in trippy mode
+  if (trippyMode) {
+    // Create rainbow particles for trippy mode
+    const rainbowColors = [
+      '#FF0000', // Red
+      '#FF7F00', // Orange
+      '#FFFF00', // Yellow
+      '#00FF00', // Green
+      '#0000FF', // Blue
+      '#4B0082', // Indigo
+      '#9400D3'  // Violet
+    ];
+    const colorIndex = Math.floor(Date.now() / 100) % rainbowColors.length;
+    createSwimParticles(gameStateRef.current.particles, gameStateRef.current.player, gameStateRef.current.streak, rainbowColors[colorIndex]);
+  } else {
+    // Default behavior for non-trippy mode
+    createSwimParticles(gameStateRef.current.particles, gameStateRef.current.player, gameStateRef.current.streak);
+  }
   updateAndDrawParticles(ctx, gameStateRef.current.particles, factor);
   updateAndDrawScorePopups(ctx, gameStateRef.current.scorePopups, factor);
   drawPlayer(ctx, gameStateRef.current.player, fishImageRef.current);
+  // Check for storm effect in level 3 (between timestamps 165-210)
+  const stormActive = currentLevelRef.current.id === 3 && levelTogglesRef.current.showStormEffects;
+
+  // Randomly create lightning effect during storm
+  if (stormActive && Math.random() < 0.01) { // 1% chance per frame
+    // Save the current background color
+    const originalBgColor = backgroundColorRef.current;
+
+    // Flash with bright white-blue lightning
+    ctx.save();
+    ctx.fillStyle = 'rgba(200, 220, 255, 0.4)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (currentLevelRef.current.id === 3 && audioTime >= 185 && audioTime < 270) {
+      // Draw lightning bolt
+      const startX = Math.random() * canvas.width;
+      const startY = 0;
+      ctx.strokeStyle = 'rgba(220, 240, 255, 0.9)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+
+      // Create a jagged lightning path
+      let x = startX;
+      let y = startY;
+      const zigzags = 5 + Math.floor(Math.random() * 3);
+      const segmentLength = canvas.height / zigzags;
+
+      for (let i = 0; i < zigzags; i++) {
+        // Add some randomness to the lightning path
+        x += (Math.random() - 0.5) * 150;
+        y += segmentLength;
+        ctx.lineTo(x, y);
+      }
+
+      ctx.stroke();
+
+      // Add a glow effect
+      ctx.shadowColor = 'rgba(180, 230, 255, 0.8)';
+      ctx.shadowBlur = 20;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Create a random timeout to revert the flash (between 80-150ms)
+    setTimeout(() => {
+      if (backgroundColorRef.current === originalBgColor) {
+        // Apply a second, fainter flash for realism
+        setTimeout(() => {
+          if (backgroundColorRef.current === originalBgColor) {
+            // Finally revert back completely
+          }
+        }, 50);
+      }
+    }, 80 + Math.random() * 70);
+  }
+
   const caveActive = currentLevelRef.current.isCaveMechanic || (currentLevelRef.current.id === 1 && audioTime >= 330 && audioTime < 390);
   if (caveActive) {
     const CAVE_WARNING_DURATION = 3;
