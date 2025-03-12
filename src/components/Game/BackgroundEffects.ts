@@ -12,6 +12,8 @@ export const drawBackground = (
   bgPatternBubblesRef: React.MutableRefObject<Bubble[]>
 ) => {
   if (!ctx.canvas) return;
+
+  amplitudeFactor = 1; // Placeholder for actual amplitude factor
   
   const width = ctx.canvas.width;
   const height = ctx.canvas.height;
