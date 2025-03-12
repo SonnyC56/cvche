@@ -51,12 +51,13 @@ export const drawItem = (
     const isCloud = item.pickupImage.src.includes('clouds');
     const isBus = item.pickupImage.src.includes('bus');
     const isEagle = item.pickupImage.src.includes('eagle');
+    const isGull = item.pickupImage.src.includes('black-headed-gull');
 
     const effectiveWidth = item.width, effectiveHeight = item.height;
     const centerX = item.x + effectiveWidth / 2, centerY = item.y + effectiveHeight / 2;
 
-    // Only rotate if it's not a cloud, bus, or eagle
-    if (!isCloud && !isBus && !isEagle) {
+    // Only rotate if it's not a cloud, bus, eagle, or gull
+    if (!isCloud && !isBus && !isEagle && !isGull) {
       item.rotation = (item.rotation || 0) + 0.0125;
       ctx.translate(centerX, centerY);
       ctx.rotate(item.rotation!);
@@ -417,7 +418,7 @@ export const gameLoop = (
     );
   }
   setScore(gameStateRef.current.score);
-  const streakScale = Math.min(3, 0.5 + (gameStateRef.current.streak / 50) + (amplitudeRef.current / 255) * 0.5);
+  const streakScale = Math.min(1.2, 0.5 + (gameStateRef.current.streak / 50) + (amplitudeRef.current / 255) * 0.5);
   streakDisplayRef.current.scale = streakScale;
   animationFrameIdRef.current = requestAnimationFrame(() => gameLoop(
     canvasRef,

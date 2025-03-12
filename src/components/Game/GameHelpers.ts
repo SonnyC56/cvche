@@ -441,7 +441,8 @@ export const updateLevelToggles = (
         ...levelTogglesRef.current,
         showClouds: true,
         showMushrooms: false,
-        showEagles: true,
+        showGulls: true,
+        showEagles: false,
         showTrippyObjects: false,
         showStormEffects: true
       };
@@ -452,6 +453,7 @@ export const updateLevelToggles = (
         ...levelTogglesRef.current,
         showClouds: true,
         showMushrooms: false,
+        showGulls: false,
         showEagles: true,
         showTrippyObjects: false,
         showStormEffects: true
@@ -643,7 +645,7 @@ export const processLevel3Events = (
   level3TrippyImages: HTMLImageElement[],
   gameState: GameState
 ) => {
-  // Process obstacles (eagles)
+  // Process obstacles (eagles and gulls)
   level3TimedEvents.obstacles.forEach((event) => {
     if (!event.triggered && audioTime >= event.timestamp) {
       event.triggered = true;
@@ -652,15 +654,40 @@ export const processLevel3Events = (
       if (event.type === 'eagle') {
         const eagleImg = level3ObstacleImages.find(img => img.src.includes('eagle'));
         if (eagleImg) {
+          // Generate a random size factor between 0.8 and 1.3
+          const sizeFactor = 0.8 + (Math.random() * 0.5);
+          const baseWidth = 100;
+          const baseHeight = 80;
+          
           gameState.obstacles.push({
             x: canvas.width,
-            y: getSpawnY(canvas, 80),
-            width: 100,
-            height: 80,
+            y: getSpawnY(canvas, baseHeight * sizeFactor),
+            width: baseWidth * sizeFactor,
+            height: baseHeight * sizeFactor,
             type: 'obstacle',
             speed: 2 + Math.random() * 2.5, // Eagles are faster
             rotation: 0,
             pickupImage: eagleImg
+          });
+        }
+      }
+      else if (event.type === 'gull') {
+        const gullImg = level3ObstacleImages.find(img => img.src.includes('black-headed-gull'));
+        if (gullImg) {
+          // Generate a random size factor between 0.8 and 1.3
+          const sizeFactor = 0.8 + (Math.random() * 0.5);
+          const baseWidth = 90;
+          const baseHeight = 70;
+          
+          gameState.obstacles.push({
+            x: canvas.width,
+            y: getSpawnY(canvas, baseHeight * sizeFactor),
+            width: baseWidth * sizeFactor,
+            height: baseHeight * sizeFactor,
+            type: 'obstacle',
+            speed: 2.2 + Math.random() * 2, // Gulls are also fast
+            rotation: 0,
+            pickupImage: gullImg
           });
         }
       }
@@ -1144,7 +1171,7 @@ export const spawnItemsOnBeat = (
 
     //spawn clouds if showClouds is true
     if (levelToggles.showClouds && level3ObstacleImages?.length > 0) {
-      const spawnChance = 0.05 + (audioProgress / 150);
+      const spawnChance = 0.05 + (audioProgress / 350);
       const isStormPeriod = audioTime >= 165 && audioTime < 270;
 
       if (Math.random() < spawnChance) {
@@ -1168,21 +1195,53 @@ export const spawnItemsOnBeat = (
 
     //spawn eagles if showEagles is true
     if (levelToggles.showEagles && level3ObstacleImages?.length > 0) {
-      const spawnChance = 0.1 + (audioProgress / 150);
+      const spawnChance = 0.1;
 
       if (Math.random() < spawnChance) {
         const eagleImg = level3ObstacleImages.find(img => img.src.includes('eagle'));
 
         if (eagleImg) {
+          // Generate a random size factor between 0.8 and 1.3
+          const sizeFactor = 0.8 + (Math.random() * 0.5);
+          const baseWidth = 100;
+          const baseHeight = 80;
+          
           gameState.obstacles.push({
             x: canvas.width,
-            y: getSpawnY(canvas, 80),
-            width: 100,
-            height: 80,
+            y: getSpawnY(canvas, baseHeight * sizeFactor),
+            width: baseWidth * sizeFactor,
+            height: baseHeight * sizeFactor,
             type: 'obstacle',
             speed: 1 + Math.random() * 2,
             rotation: 0,
             pickupImage: eagleImg
+          });
+        }
+      }
+    }
+    
+    //spawn gulls if showGulls is true
+    if (levelToggles.showGulls && level3ObstacleImages?.length > 0) {
+      const spawnChance = 0.1;
+
+      if (Math.random() < spawnChance) {
+        const gullImg = level3ObstacleImages.find(img => img.src.includes('black-headed-gull'));
+
+        if (gullImg) {
+          // Generate a random size factor between 0.8 and 1.3
+          const sizeFactor = 0.8 + (Math.random() * 0.5);
+          const baseWidth = 90;
+          const baseHeight = 70;
+          
+          gameState.obstacles.push({
+            x: canvas.width,
+            y: getSpawnY(canvas, baseHeight * sizeFactor),
+            width: baseWidth * sizeFactor,
+            height: baseHeight * sizeFactor,
+            type: 'obstacle',
+            speed: 1.5 + Math.random() * 2,
+            rotation: 0,
+            pickupImage: gullImg
           });
         }
       }

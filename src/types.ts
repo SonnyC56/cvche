@@ -29,7 +29,7 @@ export interface Level3TimedEvents {
 //Level3TimedEvent
 export interface Level3TimedEvent {
   timestamp: number;
-  type: 'mushroom' | 'cloud' | 'eagle' | 'trippy';
+  type: 'mushroom' | 'cloud' | 'eagle' | 'gull' | 'trippy';
   variant?: string; // For different trippy objects or mushroom types
   triggered: boolean;
 }
@@ -233,6 +233,7 @@ export interface LevelToggles {
   showClouds?: boolean;
   showMushrooms?: boolean;
   showEagles?: boolean;
+  showGulls?: boolean;
   showTrippyObjects?: boolean;
   showStormEffects?: boolean;
 }

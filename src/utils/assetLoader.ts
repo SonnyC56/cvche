@@ -129,6 +129,9 @@ export class AssetLoader {
       this.loadImage('/sprites/level3/obstacles/eagle.webp').then(img => {
         this.eagleImage = img;
         this.level3ObstacleImages.push(img);
+      }),
+      this.loadImage('/sprites/level3/obstacles/black-headed-gull.webp').then(img => {
+        this.level3ObstacleImages.push(img);
       })
     ];
   console.log('Loading level 3 assets... level3ObstacleImages: ',this.level3ObstacleImages);

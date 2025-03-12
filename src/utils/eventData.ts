@@ -99,19 +99,23 @@ export const createLevel3TimedTextEvents = (): TimedTextEvent[] => [
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
   { timestamp: 6, text: "HAVE YOU EVER HAD A FEELING YOU COULD FLY", triggered: false, color: "#FDF200", lifetime: 400 },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
-  { timestamp: 30, text: "GET FLUFFY WITH FLUFFY", triggered: false, color: "#FDF200" },
+  { timestamp: 30, text: "LIKE SO HIGH", triggered: false, color: "#FDF200" },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
-  { timestamp: 71, text: "MMM MUSHROOMS!", triggered: false, color: "#FDF200" },
+  { timestamp: 60, text: "ITS A WHOLE NEW WORLD UP HERE", triggered: false, color: "#FDF200" },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
-  { timestamp: 90, text: "FLUFFY THE FLYING FISH", triggered: false, color: "#020DFF" },
+  { timestamp: 71, text: "MUSHROOMS?! IN THE SKY?!", triggered: false, color: "#FDF200" },
+  // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
+  { timestamp: 76, text: "MMM SKY MUSHROOMS!! ", triggered: false, color: "#FDF200" },
+  // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
+  { timestamp: 90, text: "FLUFFY FEEL FLUFFY", triggered: false, color: "#020DFF" },
   // Blue background (#A0D8EF) -> Complementary color: Orange/Brown (#5F2710)
-  { timestamp: 125, text: "MMM MUSHROOMS!", triggered: false, color: "#5F2710" },
+  { timestamp: 125, text: "SKY MUSHROOMS! YUM YUM GIVE ME SOME.", triggered: false, color: "#5F2710" },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
   { timestamp: 150, text: "FLY FLUFFY FLY!", triggered: false, color: "#020DFF" },
   // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
-  { timestamp: 165, text: "A STORMS A BREWING!", triggered: false, color: "#000000" },
+  { timestamp: 165, text: "UH OH! SORRY. A STORMS A BREWING!", triggered: false, color: "#000000" },
   // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
-  { timestamp: 185, text: "WATCH OUT FOR LIGHTING FLUFF!", triggered: false, color: "#000000" },
+  { timestamp: 185, text: "OH NO! LIGHTING! ", triggered: false, color: "#000000" },
   // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
   { timestamp: 210, text: "BIRDS OF PREY! WTF!", triggered: false, color: "#000000" },
   // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
@@ -133,12 +137,15 @@ export const createLevel3ColorEvents = (): TimedColorEvent[] => [
   //orangehex
 
   { timestamp: 0.01, backgroundColor: "#00009c", waveColor: "rgba(253,242,0,0.4)", triggered: true, transitionDuration: 3 },
-  { timestamp: 125, backgroundColor: "#A0D8EF", waveColor: "rgba(160, 216, 239, 0.4)", triggered: false, transitionDuration: 2 },
-  { timestamp: 150, backgroundColor: "#FF8800", waveColor: "rgba(255,136,0,0.4)", triggered: false, transitionDuration: 2 },
-  // Light purple pastels
-  { timestamp: 160, backgroundColor: "#E6C3E6", waveColor: "rgba(230,195,230,0.4)", triggered: false, transitionDuration: 2 },
+  // yellow
+  { timestamp: 150, backgroundColor: "#FDF200", waveColor: "rgba(230,195,230,0.4)", triggered: false, transitionDuration: 2 },
+  //Light blue pastels 
+  { timestamp: 155, backgroundColor: "#A0D8EF", waveColor: "rgba(253,242,0,0.4)", triggered: false, transitionDuration: 2 },
+  //yellow
+  { timestamp: 160, backgroundColor: "#FDF200", waveColor: "rgba(20,174,239,0.4)", triggered: false, transitionDuration: 2 },
   // Storm colors
   { timestamp: 165, backgroundColor: "#888888", waveColor: "rgba(136,136,136,0.4)", triggered: false, transitionDuration: 2 },
+  //end of storm back to yellow
   { timestamp: 270, backgroundColor: "#FDF200", waveColor: "rgba(253,242,0,0.4)", triggered: false, transitionDuration: 1 },
   // Trippy color transitions - rapidly changing colors for the psychedelic section
   { timestamp: 300, backgroundColor: "#FF00FF", waveColor: "rgba(255,0,255,0.4)", triggered: false, transitionDuration: 1 },
@@ -276,11 +283,14 @@ export const createColorEventsByLevel = (levelId: number): TimedColorEvent[] => 
 // Level 3 timed events for obstacles, pickups, and visuals
 export const createLevel3TimedEvents = (): Level3TimedEvents => ({
   obstacles: [
-    // Eagles as obstacles
-    { timestamp: 210, type: 'eagle', triggered: false },
-    { timestamp: 215, type: 'eagle', triggered: false },
-    { timestamp: 220, type: 'eagle', triggered: false },
-    // More eagles at 230s
+    // Black-headed gulls at 210
+    { timestamp: 210, type: 'gull', triggered: false },
+    { timestamp: 213, type: 'gull', triggered: false },
+    { timestamp: 216, type: 'gull', triggered: false },
+    { timestamp: 219, type: 'gull', triggered: false },
+    { timestamp: 222, type: 'gull', triggered: false },
+    { timestamp: 225, type: 'gull', triggered: false },
+    // Eagles at 230s
     { timestamp: 230, type: 'eagle', triggered: false },
     { timestamp: 235, type: 'eagle', triggered: false },
     { timestamp: 240, type: 'eagle', triggered: false },
@@ -480,6 +490,7 @@ export const getInitialLevelToggles = (): LevelToggles => ({
   showClouds: false,
   showMushrooms: false,
   showEagles: false,
+  showGulls: false,
   showTrippyObjects: false,
   showStormEffects: false
 });
