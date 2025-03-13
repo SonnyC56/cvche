@@ -249,7 +249,10 @@ export const updateLevelToggles = (
         // Level 2 specific obstacle toggles
         showBuses: false,
         showBats: false,
-        showChickens: false
+        showChickens: false,
+        // Add color shift overlay toggle
+        showColorShiftOverlay: false,
+        overlayColor: ''
       };
     }
     else if (audioTime >= 28 && audioTime < 36) {
@@ -257,7 +260,8 @@ export const updateLevelToggles = (
         ...levelTogglesRef.current,
         showBuses: false,
         showBats: false,
-        showChickens: false
+        showChickens: false,
+        showColorShiftOverlay: false
       };
     }
     else if (audioTime >= 36 && audioTime < 49) {
@@ -265,7 +269,8 @@ export const updateLevelToggles = (
         ...levelTogglesRef.current,
         showBuses: false,
         showBats: false,
-        showChickens: false
+        showChickens: false,
+        showColorShiftOverlay: false
       };
     }
     else if (audioTime >= 49 && audioTime < 83) {
@@ -273,7 +278,8 @@ export const updateLevelToggles = (
         ...levelTogglesRef.current,
         showBuses: true,
         showBats: false,
-        showChickens: false
+        showChickens: false,
+        showColorShiftOverlay: false
       };
     }
     else if (audioTime >= 83 && audioTime < 120) {
@@ -281,7 +287,8 @@ export const updateLevelToggles = (
         ...levelTogglesRef.current,
         showBuses: true,
         showChickens: true,
-        showBats: false
+        showBats: false,
+        showColorShiftOverlay: false
       };
     }
     else if (audioTime >= 120 && audioTime < 173) {
@@ -289,15 +296,28 @@ export const updateLevelToggles = (
         ...levelTogglesRef.current,
         showBuses: true,
         showChickens: true,
-        showBats: true
+        showBats: true,
+        showColorShiftOverlay: false
       };
     }
-    else if (audioTime >= 173 && audioTime < 252) {
+    else if (audioTime >= 173 && audioTime < 190) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
         showBuses: true,
         showChickens: true,
         showBats: true,
+        showColorShiftOverlay: false
+      };
+    }
+    else if (audioTime >= 190 && audioTime < 252) {
+      // Add a color shift overlay at the 190-second mark
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showBuses: true,
+        showChickens: true,
+        showBats: true,
+        showColorShiftOverlay: true,
+        overlayColor: 'rgba(62, 247, 0, 0.2)' // Purple-ish overlay with 20% opacity
       };
     }
     else if (audioTime >= 252 && audioTime < 301) {
@@ -309,6 +329,7 @@ export const updateLevelToggles = (
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
+        showColorShiftOverlay: false
       };
     }
     else if (audioTime >= 301) {
@@ -320,6 +341,7 @@ export const updateLevelToggles = (
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
+        showColorShiftOverlay: false
       };
     }
   }
@@ -548,16 +570,16 @@ export const processLevel2Events = (
       let img: HTMLImageElement | null = null;
       let width = 50;
       let height = 50;
-
+      //log level2ObstacleImages
       switch (event.type) {
-        case 'bats':
+        case 'bus':
           img = level2ObstacleImages[0] || null;
-          width = 100;
+          width = 200;
           height = 100;
           break;
-        case 'bus':
+        case 'bats':
           img = level2ObstacleImages[1] || null;
-          width = 200;
+          width = 100;
           height = 100;
           break;
         case 'chicken':
@@ -823,14 +845,7 @@ export const spawnItemsOnBeat = (
   level3TrippyImages: HTMLImageElement[] = [],
   audioTime: number
 ) => {
-  console.log(`[DEBUG] spawnItemsOnBeat called - Level: ${currentLevelId}, LevelToggles:`,
-    JSON.stringify({
-      showBottles: levelToggles.showBottles,
-      showBags: levelToggles.showBags,
-      showOilSplats: levelToggles.showOilSplats,
-      showHooks: levelToggles.showHooks
-    })
-  );
+
 
   //console.log(`[DEBUG] Images loaded - waterBottle: ${!!waterBottleImage}, plasticBag: ${!!plasticBagImage}, obstacle: ${!!oilSplatImage}, fishHook: ${!!fishHookImage}`);
 

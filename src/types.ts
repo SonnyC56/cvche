@@ -236,6 +236,8 @@ export interface LevelToggles {
   showGulls?: boolean;
   showTrippyObjects?: boolean;
   showStormEffects?: boolean;
+  showColorShiftOverlay?: boolean; // For level 3
+  overlayColor?: string; // For level 3 color shift
 }
 
 export interface Props {

@@ -52,12 +52,13 @@ export const drawItem = (
     const isBus = item.pickupImage.src.includes('bus');
     const isEagle = item.pickupImage.src.includes('eagle');
     const isGull = item.pickupImage.src.includes('black-headed-gull');
+    const isBat = item.pickupImage.src.includes('bat');
 
     const effectiveWidth = item.width, effectiveHeight = item.height;
     const centerX = item.x + effectiveWidth / 2, centerY = item.y + effectiveHeight / 2;
 
     // Only rotate if it's not a cloud, bus, eagle, or gull
-    if (!isCloud && !isBus && !isEagle && !isGull) {
+    if (!isCloud && !isBus && !isEagle && !isGull && !isBat) {
       item.rotation = (item.rotation || 0) + 0.0125;
       ctx.translate(centerX, centerY);
       ctx.rotate(item.rotation!);
@@ -230,7 +231,15 @@ export const gameLoop = (
   const levelStartDelay = 0;
   const effectiveTime = Math.max(0, audioTimeMs - levelStartDelay);
   speedMultiplier.current = 1 + ((effectiveTime / 1000) / 120) * 0.5;
-  drawBackground(ctx, amplitude / 100, backgroundColorRef, currentLevelRef.current.id, levelTogglesRef.current.showBackgroundPattern, bgPatternBubblesRef);
+  drawBackground(
+    ctx, 
+    amplitude / 100, 
+    backgroundColorRef, 
+    currentLevelRef.current.id, 
+    levelTogglesRef.current.showBackgroundPattern, 
+    bgPatternBubblesRef,
+    levelTogglesRef.current
+  );
   if (levelTogglesRef.current.showFlora) {
     drawFlora(ctx, floraItemsRef.current, amplitude, factor, speedMultiplier.current, currentLevelRef.current.id);
   }

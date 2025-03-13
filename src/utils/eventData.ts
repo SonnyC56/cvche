@@ -21,7 +21,9 @@ export const createDefaultTimedTextEvents = (): TimedTextEvent[] => [
 
 // Level 2 timed text events
 export const createLevel2TimedTextEvents = (): TimedTextEvent[] => [
-  { timestamp: 6, text: "It's 1981. Endless Love by Diana Ross and Lionel Richie is song of the year.", triggered: false, color: "#FDF200", lifetime: 400 },
+  { timestamp: 6, text: "THE YEAR IS 1981", triggered: false, color: "#FDF200", lifetime: 400 },
+  { timestamp: 6, text: "Endless Love by Diana Ross and Lionel Richie is song of the year.", triggered: false, color: "#FDF200", lifetime: 400 },
+
   { timestamp: 10, text: "But still the world feels unstable.", triggered: false, color: "#FDF200", lifetime: 400 },
   { timestamp: 14, text: "Tina's son Danny was killed in a tragic bus accident.", triggered: false, color: "#FDF200", lifetime: 400 },
   { timestamp: 18, text: "But is Danny really DEAD?", triggered: false, color: "#FDF200" },
@@ -31,7 +33,9 @@ export const createLevel2TimedTextEvents = (): TimedTextEvent[] => [
   { timestamp: 49, text: "Flying Buses WTF!?", triggered: false, color: "#FDF200" },
   { timestamp: 83, text: "Cock block!", triggered: false, color: "#FDF200" },
   { timestamp: 93, text: "COME ON FLUFFY!", triggered: false, color: "#FDF200" },
-  { timestamp: 130, text: "Biological Weapons! You gotta be kidding me.", triggered: false, color: "#FDF200" },
+  { timestamp: 130, text: "Biological Chicken Weapons!", triggered: false, color: "#FDF200" },
+  { timestamp: 133, text: "You gotta be kidding me.", triggered: false, color: "#FDF200" },
+
   { timestamp: 135, text: "COME ON FLUFFY!", triggered: false, color: "#FDF200" },
   { timestamp: 173, text: "OH DANNY BOY!", triggered: false, color: "#FDF200" },
   { timestamp: 190, text: "PUFF. PUFF. GET FLUFFY!", triggered: false, color: "#FDF200" },
@@ -99,37 +103,39 @@ export const createLevel3TimedTextEvents = (): TimedTextEvent[] => [
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
   { timestamp: 6, text: "HAVE YOU EVER HAD A FEELING YOU COULD FLY", triggered: false, color: "#FDF200", lifetime: 400 },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
-  { timestamp: 30, text: "LIKE SO HIGH", triggered: false, color: "#FDF200" },
+  { timestamp: 30, text: "LIKE SO HIGH", triggered: false, color: "#FDF200", lifetime: 400 },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
-  { timestamp: 60, text: "ITS A WHOLE NEW WORLD UP HERE", triggered: false, color: "#FDF200" },
+  { timestamp: 60, text: "ITS A WHOLE NEW WORLD UP HERE", triggered: false, color: "#FDF200", lifetime: 400 },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
-  { timestamp: 71, text: "MUSHROOMS?! IN THE SKY?!", triggered: false, color: "#FDF200" },
+  { timestamp: 71, text: "MUSHROOMS?! IN THE SKY?!", triggered: false, color: "#FDF200", lifetime: 400 },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
-  { timestamp: 76, text: "MMM SKY MUSHROOMS!! ", triggered: false, color: "#FDF200" },
+  { timestamp: 76, text: "MMM SKY MUSHROOMS!! ", triggered: false, color: "#FDF200", lifetime: 400 },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
-  { timestamp: 90, text: "FLUFFY FEEL FLUFFY", triggered: false, color: "#FDF200" },
+  { timestamp: 90, text: "FLUFFY FEEL FLUFFY", triggered: false, color: "#FDF200", lifetime: 400 },
   // Blue background (#A0D8EF) -> Complementary color: Orange/Brown (#5F2710)
-  { timestamp: 125, text: "SKY MUSHROOMS! YUM YUM GIVE ME SOME.", triggered: false, color: "#FDF200" },
+  { timestamp: 125, text: "SKY MUSHROOMS! YUM YUM GIVE ME SOME.", triggered: false, color: "#FDF200", lifetime: 400 },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
-  { timestamp: 150, text: "FLY FLUFFY FLY!", triggered: false, color: "#020DFF" },
+  { timestamp: 150, text: "FLY FLUFFY FLY!", triggered: false, color: "#020DFF", lifetime: 400 },
   // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
-  { timestamp: 165, text: "UH OH! SORRY. A STORMS A BREWING!", triggered: false, color: "#000000" },
+  { timestamp: 165, text: "UH OH! SORRY. A STORMS A BREWING!", triggered: false, color: "#FDF200", lifetime: 400 },
   // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
-  { timestamp: 185, text: "OH NO! LIGHTING! ", triggered: false, color: "#000000" },
+  { timestamp: 170, text: "IT'S SO DARK!", triggered: false, color: "#FDF200", lifetime: 400 },
   // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
-  { timestamp: 210, text: "BIRDS OF PREY! WTF!", triggered: false, color: "#000000" },
+  { timestamp: 185, text: "OH NO! LIGHTING! ", triggered: false, color: "#FDF200", lifetime: 400 },
   // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
-  { timestamp: 230, text: "BALD EAGLES TOO!", triggered: false, color: "#000000" },
+  { timestamp: 210, text: "BIRDS OF PREY! WTF!", triggered: false, color: "#FDF200", lifetime: 400 },
+  // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
+  { timestamp: 230, text: "BALD EAGLES TOO!", triggered: false, color: "#FDF200", lifetime: 400 },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
-  { timestamp: 270, text: "MUSHROOOOOOOOOOOMS!!!", triggered: false, color: "#020DFF" },
+  { timestamp: 270, text: "MUSHROOOOOOOOOOOMS!!!", triggered: false, color: "#020DFF", lifetime: 400 },
   // Magenta background (#FF00FF) -> Complementary color: Green (#00FF00)
-  { timestamp: 304, text: "WOWOWOWOWEEEEWOW! THE COLORS!", triggered: false, color: "#00FF00" },
+  { timestamp: 304, text: "WOWOWOWOWEEEEWOW! THE COLORS!", triggered: false, color: "#00FF00", lifetime: 400 },
   // Cyan background (#00FFFF) -> Complementary color: Red (#FF0000)
-  { timestamp: 340, text: "FLUFFY FLUFF FLUFF! IT'S BEAUTIFUL", triggered: false, color: "#FF0000" },
+  { timestamp: 340, text: "FLUFFY FLUFF FLUFF! IT'S BEAUTIFUL", triggered: false, color: "#FF0000", lifetime: 400 },
   // Orange background (#FF8800) -> Complementary color: Blue (#0077FF)
-  { timestamp: 370, text: "IT'S SOOO BEAUTIFUL", triggered: false, color: "#0077FF" },
+  { timestamp: 370, text: "IT'S SOOO BEAUTIFUL", triggered: false, color: "#0077FF", lifetime: 400 },
   // Light Purple background (#E6C3E6) -> Complementary color: Green (#193C19)
-  { timestamp: 410, text: "HOLY SMOKES! NICE WORK FLUFF!", triggered: false, color: "#193C19" },
+  { timestamp: 410, text: "HOLY SMOKES! NICE WORK FLUFF!", triggered: false, color: "#193C19", lifetime: 400 },
 ];
 
 // Color change events for level 3

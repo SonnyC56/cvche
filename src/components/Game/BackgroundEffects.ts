@@ -1,4 +1,4 @@
-import { Bubble } from '../../types';
+import { Bubble, LevelToggles } from '../../types';
 
 /**
  * Draw the background of the game
@@ -9,10 +9,10 @@ export const drawBackground = (
   backgroundColorRef: React.MutableRefObject<string>,
   currentLevelId: number,
   showBackgroundPattern: boolean,
-  bgPatternBubblesRef: React.MutableRefObject<Bubble[]>
+  bgPatternBubblesRef: React.MutableRefObject<Bubble[]>,
+  levelToggles?: LevelToggles
 ) => {
   if (!ctx.canvas) return;
-
   amplitudeFactor = 1; // Placeholder for actual amplitude factor
   
   const width = ctx.canvas.width;
@@ -21,6 +21,14 @@ export const drawBackground = (
   // Skip drawing background for level 2 (video background)
   if (currentLevelId === 2) {
     ctx.clearRect(0, 0, width, height);
+    
+    // Draw color shift overlay for level 2 if enabled
+    if (levelToggles?.showColorShiftOverlay && levelToggles?.overlayColor) {
+      ctx.save();
+      ctx.fillStyle = levelToggles.overlayColor;
+      ctx.fillRect(0, 0, width, height);
+      ctx.restore();
+    }
     return;
   }
   
