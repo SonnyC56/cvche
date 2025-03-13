@@ -21,7 +21,7 @@ export class FrameAnimator {
       return new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
-        img.onerror = (error) => reject(new Error(`Failed to load frame: ${path}`));
+        img.onerror = () => reject(new Error(`Failed to load frame: ${path}`));
         img.src = path;
       });
     });

@@ -1,5 +1,5 @@
 
-import { GifManager, FrameAnimatorManager } from './GifAnimator';
+import { FrameAnimatorManager } from './GifAnimator';
 
 // Class to handle asset loading with promises
 export class AssetLoader {
