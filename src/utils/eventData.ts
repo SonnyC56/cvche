@@ -107,9 +107,9 @@ export const createLevel3TimedTextEvents = (): TimedTextEvent[] => [
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
   { timestamp: 76, text: "MMM SKY MUSHROOMS!! ", triggered: false, color: "#FDF200" },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
-  { timestamp: 90, text: "FLUFFY FEEL FLUFFY", triggered: false, color: "#020DFF" },
+  { timestamp: 90, text: "FLUFFY FEEL FLUFFY", triggered: false, color: "#FDF200" },
   // Blue background (#A0D8EF) -> Complementary color: Orange/Brown (#5F2710)
-  { timestamp: 125, text: "SKY MUSHROOMS! YUM YUM GIVE ME SOME.", triggered: false, color: "#5F2710" },
+  { timestamp: 125, text: "SKY MUSHROOMS! YUM YUM GIVE ME SOME.", triggered: false, color: "#FDF200" },
   // Yellow background (#FDF200) -> Complementary color: Purple/Blue (#020DFF)
   { timestamp: 150, text: "FLY FLUFFY FLY!", triggered: false, color: "#020DFF" },
   // Gray background (#888888) -> Complementary color: Dark Purple (#777777)
@@ -144,7 +144,7 @@ export const createLevel3ColorEvents = (): TimedColorEvent[] => [
   //yellow
   { timestamp: 160, backgroundColor: "#FDF200", waveColor: "rgba(20,174,239,0.4)", triggered: false, transitionDuration: 2 },
   // Storm colors
-  { timestamp: 165, backgroundColor: "#888888", waveColor: "rgba(136,136,136,0.4)", triggered: false, transitionDuration: 2 },
+  { timestamp: 165, backgroundColor: "#292929", waveColor: "rgba(136,136,136,0.4)", triggered: false, transitionDuration: 2 },
   //end of storm back to yellow
   { timestamp: 270, backgroundColor: "#FDF200", waveColor: "rgba(253,242,0,0.4)", triggered: false, transitionDuration: 1 },
   // Trippy color transitions - rapidly changing colors for the psychedelic section
