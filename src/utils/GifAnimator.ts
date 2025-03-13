@@ -1,79 +1,158 @@
-// Utility class to handle GIF animation in Canvas
-export class GifAnimator {
-  private frames: HTMLCanvasElement[] = [];
-  private frameDelays: number[] = [];
-  private currentFrameIndex: number = 0;
-  private lastFrameTime: number = 0;
-  private width: number = 0;
-  private height: number = 0;
+// Utility class to handle animation in Canvas
+
+// Frame-by-frame animation class
+export class FrameAnimator {
+  private frames: HTMLImageElement[] = [];
   private loaded: boolean = false;
+  private currentFrame: number = 0;
+  private lastFrameTime: number = 0;
+  private frameDelay: number = 100; // Default 100ms between frames (10fps)
 
-  // Constructor accepts a GIF URL
-  constructor(private gifUrl: string) {}
+  constructor(private framePaths: string[], frameDelay?: number) {
+    if (frameDelay) this.frameDelay = frameDelay;
+  }
 
-  // Method to load and parse the GIF
+  // Load all frames
   async load(): Promise<void> {
-    try {
-      // Create a temporary image element to load the GIF
-      const img = document.createElement('img');
-      img.src = this.gifUrl;
-      
-      // Wait for the image to load
-      await new Promise<void>((resolve) => {
-        img.onload = () => {
-          this.width = img.naturalWidth;
-          this.height = img.naturalHeight;
-          resolve();
-        };
+    this.frames = [];
+    
+    // Load all frames in parallel
+    const loadPromises = this.framePaths.map(path => {
+      return new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = (error) => reject(new Error(`Failed to load frame: ${path}`));
+        img.src = path;
       });
-
-      // Create a single frame as fallback
-      const fallbackCanvas = document.createElement('canvas');
-      fallbackCanvas.width = this.width;
-      fallbackCanvas.height = this.height;
-      const fallbackCtx = fallbackCanvas.getContext('2d');
-      if (fallbackCtx) {
-        fallbackCtx.drawImage(img, 0, 0);
-        this.frames.push(fallbackCanvas);
-        this.frameDelays.push(100); // Default 100ms delay
-      }
-
-      // For simplicity, we'll assume 10 frames of animation at 100ms each
-      // In a production system, you'd want to parse the actual GIF frames and delays
-      for (let i = 0; i < 9; i++) {
-        this.frameDelays.push(100);
-      }
-
-      // Mark as loaded
+    });
+    
+    try {
+      this.frames = await Promise.all(loadPromises);
       this.loaded = true;
+      console.log(`Loaded ${this.frames.length} animation frames`);
     } catch (error) {
-      console.error('Error loading GIF:', error);
+      console.error('Error loading animation frames:', error);
+      throw error;
     }
   }
 
-  // Draw the current frame on a provided canvas context
+  // Draw the current frame and advance to the next one based on timing
   draw(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number): void {
-    if (!this.loaded || this.frames.length === 0) {
-      return;
-    }
-
-    // Update the current frame based on time
+    if (!this.loaded || this.frames.length === 0) return;
+    
     const now = performance.now();
-    if (now - this.lastFrameTime > this.frameDelays[this.currentFrameIndex]) {
-      this.currentFrameIndex = (this.currentFrameIndex + 1) % this.frames.length;
+    if (now - this.lastFrameTime > this.frameDelay) {
+      this.currentFrame = (this.currentFrame + 1) % this.frames.length;
       this.lastFrameTime = now;
     }
+    
+    const frame = this.frames[this.currentFrame];
+    ctx.drawImage(frame, x, y, width, height);
+  }
 
-    // Draw the current frame
-    ctx.drawImage(this.frames[this.currentFrameIndex], x, y, width, height);
+  // Get the current frame as an image element
+  getImage(): HTMLImageElement | null {
+    if (!this.loaded || this.frames.length === 0) return null;
+    return this.frames[this.currentFrame];
+  }
+
+  // Check if the animation is loaded
+  isLoaded(): boolean {
+    return this.loaded;
+  }
+
+  // Get the natural width (using the first frame)
+  getNaturalWidth(): number {
+    if (!this.loaded || this.frames.length === 0) return 0;
+    return this.frames[0].naturalWidth;
+  }
+
+  // Get the natural height (using the first frame)
+  getNaturalHeight(): number {
+    if (!this.loaded || this.frames.length === 0) return 0;
+    return this.frames[0].naturalHeight;
+  }
+  
+  // Get the current frame index
+  getCurrentFrameIndex(): number {
+    return this.currentFrame;
+  }
+}
+
+// Helper class that manages all frame-by-frame animations
+export class FrameAnimatorManager {
+  private static instance: FrameAnimatorManager;
+  private frameAnimators: Map<string, FrameAnimator> = new Map();
+
+  // Singleton pattern
+  private constructor() {}
+
+  static getInstance(): FrameAnimatorManager {
+    if (!FrameAnimatorManager.instance) {
+      FrameAnimatorManager.instance = new FrameAnimatorManager();
+    }
+    return FrameAnimatorManager.instance;
+  }
+
+  // Get or create a FrameAnimator for a given key and set of frames
+  async getAnimator(key: string, framePaths: string[], frameDelay?: number): Promise<FrameAnimator> {
+    if (!this.frameAnimators.has(key)) {
+      const animator = new FrameAnimator(framePaths, frameDelay);
+      await animator.load();
+      this.frameAnimators.set(key, animator);
+    }
+    return this.frameAnimators.get(key)!;
+  }
+}
+
+// GIF animation handling class (original implementation)
+export class GifAnimator {
+  private image: HTMLImageElement;
+  private loaded: boolean = false;
+  private width: number = 0;
+  private height: number = 0;
+
+  // Constructor accepts a GIF URL
+  constructor(private gifUrl: string) {
+    this.image = new Image();
+  }
+
+  // Method to load the GIF
+  async load(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.image.onload = () => {
+        this.width = this.image.naturalWidth;
+        this.height = this.image.naturalHeight;
+        this.loaded = true;
+        console.log(`GIF loaded with dimensions ${this.width}x${this.height}`);
+        resolve();
+      };
+      
+      this.image.onerror = (error) => {
+        console.error('Error loading GIF:', error);
+        reject(new Error('Failed to load GIF'));
+      };
+      
+      // Set the source after the handlers to ensure they're registered
+      this.image.src = this.gifUrl;
+    });
+  }
+
+  // Draw the GIF on a provided canvas context
+  // The browser automatically handles GIF animation frames
+  draw(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number): void {
+    if (!this.loaded) {
+      return;
+    }
+    ctx.drawImage(this.image, x, y, width, height);
   }
 
   // Get the current frame as an image element (for compatibility with existing code)
-  getImage(): HTMLCanvasElement | null {
-    if (!this.loaded || this.frames.length === 0) {
+  getImage(): HTMLImageElement | null {
+    if (!this.loaded) {
       return null;
     }
-    return this.frames[this.currentFrameIndex];
+    return this.image;
   }
 
   // Check if the GIF is loaded
@@ -89,6 +168,11 @@ export class GifAnimator {
   // Get the natural height of the GIF
   getNaturalHeight(): number {
     return this.height;
+  }
+  
+  // Get the current frame index for debugging (always returns 0 in this implementation)
+  getCurrentFrameIndex(): number {
+    return 0; // Browser handles GIF animation internally
   }
 }
 

@@ -228,6 +228,10 @@ export interface LevelToggles {
   showHotdogs: boolean;
   showRubberDuckies: boolean;
   // Level 2 specific obstacle toggles
+  showVitaminC?: boolean;
+  showPills?: boolean;
+  showTumeric?: boolean;
+  showGinger?: boolean;
   showBuses?: boolean;
   showBats?: boolean;
   showChickens?: boolean;

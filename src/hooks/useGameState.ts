@@ -201,6 +201,10 @@ export const useGameState = () => {
       setIsLandscape(landscape);
       if (landscape) {
         gameStateRef.current.player.y = window.innerHeight / 2;
+        //call reset render loop 
+
+
+        restartGameLoopRef.current?.();
       }
     };
     window.addEventListener('resize', handleOrientationChange);
@@ -224,11 +228,13 @@ export const useGameState = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const levelParam = params.get("level");
+    console.log("Level param:", levelParam);
     if (levelParam === "2") {
       const level2 = levels.find(l => l.id === 2);
       if (level2) {
         (async () => {
           await selectLevel(level2);
+          restartGameLoopRef.current?.(); // Ensure game loop restarts
         })();
       }
     } else if (levelParam === "3") {
@@ -236,10 +242,12 @@ export const useGameState = () => {
       if (level3) {
         (async () => {
           await selectLevel(level3);
+          restartGameLoopRef.current?.(); // Ensure game loop restarts
+
         })();
       }
     }
-  }, [levels]);
+  }, []);
   
 
   useEffect(() => {
@@ -269,9 +277,8 @@ export const useGameState = () => {
       } else {
         gameLoopRef.current = true;
         // Call the restartGameLoop function from the parent component
-        if (restartGameLoopRef.current) {
-          restartGameLoopRef.current();
-        }
+      //  restartGameLoopRef.current?.(); // Ensure game loop restarts
+
       }
       return newPaused;
     });

@@ -72,8 +72,9 @@ const PauseScreen: React.FC<PauseScreenProps> = ({
         ) : (
           <button
             onClick={() => {
-              togglePause(); // <-- Restart game loop on resume
+              togglePause(); // This already calls restartGameLoop internally
               restartGameLoop(); // <-- Ensure game loop is restarted
+
             }}
             style={{
               padding: '10px 20px',

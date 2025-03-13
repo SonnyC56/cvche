@@ -251,6 +251,10 @@ export const updateLevelToggles = (
         showBuses: false,
         showBats: false,
         showChickens: false,
+        showPills: false,
+        showVitaminC: false,
+        showTumeric: false,
+        showGinger: false,
         // Add color shift overlay toggle
         showColorShiftOverlay: false,
         overlayColor: ''
@@ -262,7 +266,11 @@ export const updateLevelToggles = (
         showBuses: false,
         showBats: false,
         showChickens: false,
-        showColorShiftOverlay: false
+        showColorShiftOverlay: false,
+        showPills: false,
+        showVitaminC: true,
+        showTumeric: false,
+        showGinger: false,
       };
     }
     else if (audioTime >= 36 && audioTime < 49) {
@@ -271,7 +279,12 @@ export const updateLevelToggles = (
         showBuses: false,
         showBats: false,
         showChickens: false,
-        showColorShiftOverlay: false
+        showColorShiftOverlay: false,
+        showPills: true,
+        showVitaminC: true,
+        showTumeric: false,
+        showGinger: false
+        
       };
     }
     else if (audioTime >= 49 && audioTime < 83) {
@@ -280,7 +293,11 @@ export const updateLevelToggles = (
         showBuses: true,
         showBats: false,
         showChickens: false,
-        showColorShiftOverlay: false
+        showColorShiftOverlay: false,
+        showPills: true,
+        showVitaminC: true,
+        showTumeric: true,
+        showGinger: false,
       };
     }
     else if (audioTime >= 83 && audioTime < 120) {
@@ -289,7 +306,11 @@ export const updateLevelToggles = (
         showBuses: true,
         showChickens: true,
         showBats: false,
-        showColorShiftOverlay: false
+        showColorShiftOverlay: false,
+        showPills: true,
+        showVitaminC: true,
+        showTumeric: true,
+        showGinger: false,
       };
     }
     else if (audioTime >= 120 && audioTime < 173) {
@@ -298,7 +319,11 @@ export const updateLevelToggles = (
         showBuses: true,
         showChickens: true,
         showBats: true,
-        showColorShiftOverlay: false
+        showColorShiftOverlay: false,
+        showPills: true,
+        showVitaminC: true,
+        showTumeric: true,
+        showGinger: false,
       };
     }
     else if (audioTime >= 173 && audioTime < 190) {
@@ -307,7 +332,11 @@ export const updateLevelToggles = (
         showBuses: true,
         showChickens: true,
         showBats: true,
-        showColorShiftOverlay: false
+        showColorShiftOverlay: false,
+        showPills: true,
+        showVitaminC: true,
+        showTumeric: true,
+        showGinger: true,
       };
     }
     else if (audioTime >= 190 && audioTime < 252) {
@@ -318,7 +347,11 @@ export const updateLevelToggles = (
         showChickens: true,
         showBats: true,
         showColorShiftOverlay: true,
-        overlayColor: 'rgba(62, 247, 0, 0.2)' // Purple-ish overlay with 20% opacity
+        overlayColor: 'rgba(62, 247, 0, 0.2)', // Purple-ish overlay with 20% opacity
+        showPills: true,
+        showVitaminC: true,
+        showTumeric: true,
+        showGinger: true,
       };
     }
     else if (audioTime >= 252 && audioTime < 301) {
@@ -330,7 +363,11 @@ export const updateLevelToggles = (
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
-        showColorShiftOverlay: false
+        showColorShiftOverlay: false,
+        showPills: true,
+        showVitaminC: true,
+        showTumeric: true,
+        showGinger: true,
       };
     }
     else if (audioTime >= 301) {
@@ -342,7 +379,11 @@ export const updateLevelToggles = (
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
-        showColorShiftOverlay: false
+        showColorShiftOverlay: false,
+        showPills: true,
+        showVitaminC: true,
+        showTumeric: true,
+        showGinger: true,
       };
     }
   }
@@ -599,7 +640,8 @@ export const processLevel2Events = (
           type: 'obstacle',
           speed: 1 + Math.random() * 2,
           rotation: event.type === 'bus' ? 0 : Math.random() * Math.PI * 2,
-          pickupImage: img
+          pickupImage: img,
+          animator: event.type === 'bats' ? window.assetLoaderRef?.current?.batsAnimator : null // Use the bats animator for bat events
         });
       }
     }
@@ -1008,7 +1050,7 @@ export const spawnItemsOnBeat = (
     // • Obstacles: buses, bats, chickens
 
     // Spawn vitaminC pickup from index 0
-    if (levelToggles.showBottles && level2PickupImages.length > 0 && level2PickupImages[0]) {
+    if (levelToggles.showVitaminC && level2PickupImages.length > 0 && level2PickupImages[0]) {
       if (Math.random() < 0.075 + (audioProgress / 200)) {
         gameState.pickups.push({
           x: canvas.width,
@@ -1025,7 +1067,7 @@ export const spawnItemsOnBeat = (
     }
 
     // Spawn ginger pickup from index 3
-    if (levelToggles.showBags && level2PickupImages.length > 3 && level2PickupImages[3]) {
+    if (levelToggles.showGinger && level2PickupImages.length > 3 && level2PickupImages[3]) {
       if (Math.random() < 0.075 + (audioProgress / 200)) {
         gameState.pickups.push({
           x: canvas.width,
@@ -1042,7 +1084,7 @@ export const spawnItemsOnBeat = (
     }
 
     // Spawn tumeric pickup from index 2
-    if (level2PickupImages.length > 2 && level2PickupImages[2]) {
+    if (levelToggles.showTumeric && level2PickupImages.length > 2 && level2PickupImages[2]) {
       if (Math.random() < 0.05 + (audioProgress / 200)) {
         gameState.pickups.push({
           x: canvas.width,
@@ -1057,30 +1099,57 @@ export const spawnItemsOnBeat = (
         gameState.trashStats.totalSpawned++;
       }
     }
+    //pills
+    if (levelToggles.showPills && level2PickupImages.length > 1 && level2PickupImages[1]) {
+      if (Math.random() < 0.05 + (audioProgress / 200)) {
+        gameState.pickups.push({
+          x: canvas.width,
+          y: getSpawnY(canvas, 50),
+          width: 50,
+          height: 70,
+          type: 'trash',
+          speed: 1 + Math.random() * 2,
+          rotation: Math.random() * Math.PI * 2,
+          pickupImage: level2PickupImages[1]
+        });
+        gameState.trashStats.totalSpawned++;
+      }
+    }
 
     // Spawn obstacles: only buses, bats, and chickens
-    if (levelToggles.showOilSplats && level2ObstacleImages.length > 0) {
+    if (level2ObstacleImages.length > 0) {
       const baseProbability = 0.075 + (audioProgress / 200);
-      let availableObstacles: { img: HTMLImageElement, type: string, width: number, height: number }[] = [];
-
+      
       // Bus obstacle (index 0)
       if (levelToggles.showBuses && level2ObstacleImages.length > 0 && level2ObstacleImages[0]) {
-        availableObstacles.push({
-          img: level2ObstacleImages[0],
-          type: 'bus',
-          width: 100,
-          height: 60
-        });
+        if (Math.random() < baseProbability) {
+          gameState.obstacles.push({
+            x: canvas.width,
+            y: getSpawnY(canvas, 60),
+            width: 200,
+            height: 100,
+            type: 'obstacle',
+            speed: 1 + Math.random() * 2,
+            rotation: 0, // Buses don't rotate
+            pickupImage: level2ObstacleImages[0]
+          });
+        }
       }
 
       // Chicken obstacle (index 2)
       if (levelToggles.showChickens && level2ObstacleImages.length > 2 && level2ObstacleImages[2]) {
-        availableObstacles.push({
-          img: level2ObstacleImages[2],
-          type: 'chicken',
-          width: 60,
-          height: 60
-        });
+        if (Math.random() < baseProbability) {
+          gameState.obstacles.push({
+            x: canvas.width,
+            y: getSpawnY(canvas, 60),
+            width: 60,
+            height: 60,
+            type: 'obstacle',
+            speed: 1 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: level2ObstacleImages[2]
+          });
+        }
       }
 
       // Bats obstacle (index 1)
@@ -1088,45 +1157,20 @@ export const spawnItemsOnBeat = (
         // Try to get the bats animator from the global AssetLoader instance
         const batsAnimator = window.assetLoaderRef?.current?.batsAnimator;
         
-        if (audioProgress > 301 / 420) {
-          for (let i = 0; i < 3; i++) {
-            if (Math.random() < 0.6) {
-              gameState.obstacles.push({
-                x: canvas.width + (Math.random() * 100),
-                y: getSpawnY(canvas, 100),
-                width: 60,
-                height: 60,
-                type: 'obstacle',
-                speed: 2 + Math.random() * 3,
-                rotation: Math.random() * Math.PI * 2,
-                pickupImage: level2ObstacleImages[1],
-                animator: batsAnimator // Attach the GIF animator
-              });
-            }
-          }
-        } else {
-          availableObstacles.push({
-            img: level2ObstacleImages[1],
-            type: 'bats',
+        if (Math.random() < baseProbability) {
+          // Normal bat spawning early in the song
+          gameState.obstacles.push({
+            x: canvas.width,
+            y: getSpawnY(canvas, 60),
             width: 60,
-            height: 60
+            height: 60,
+            type: 'obstacle',
+            speed: 1 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: level2ObstacleImages[1],
+            animator: batsAnimator // Attach the GIF animator if available
           });
         }
-      }
-
-      if (availableObstacles.length > 0 && Math.random() < baseProbability) {
-        const selectedObstacle = availableObstacles[Math.floor(Math.random() * availableObstacles.length)];
-        gameState.obstacles.push({
-          x: canvas.width,
-          y: getSpawnY(canvas, selectedObstacle.height),
-          width: selectedObstacle.width,
-          height: selectedObstacle.height,
-          type: 'obstacle',
-          speed: 1 + Math.random() * 2,
-          rotation: selectedObstacle.type === 'bus' ? 0 : Math.random() * Math.PI * 2,
-          pickupImage: selectedObstacle.img,
-          animator: selectedObstacle.type === 'bats' ? window.assetLoaderRef?.current?.batsAnimator : null // Attach the GIF animator if available
-        });
       }
     }
   } else if (currentLevelId === 3) {

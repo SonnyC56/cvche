@@ -1,5 +1,5 @@
 
-import { GifManager } from './GifAnimator';
+import { GifManager, FrameAnimatorManager } from './GifAnimator';
 
 // Class to handle asset loading with promises
 export class AssetLoader {
@@ -17,7 +17,8 @@ export class AssetLoader {
   // Level 2 specific assets
   busImage: HTMLImageElement | null = null;
   batsImage: HTMLImageElement | null = null;
-  batsAnimator: any = null; // Will store the GIF animator
+  batsFrames: HTMLImageElement[] = [];
+  batsAnimator: any = null; // Will store the frame animator instead of GIF animator
   chickenImage: HTMLImageElement | null = null;
   vitaminCImage: HTMLImageElement | null = null;
   pillImage: HTMLImageElement | null = null;
@@ -81,29 +82,42 @@ export class AssetLoader {
 
   // Load level 2 specific assets
   async loadLevel2Assets(): Promise<void> {
-    const obstaclePromises = [
-      this.loadImage('/sprites/level2/obstacles/bus.webp').then(img => {
-        this.busImage = img;
-        this.level2ObstacleImages.push(img);
-        
-        // Load both the static image and setup the GIF animator
-        this.loadImage('/sprites/level2/obstacles/bats.gif').then(img => {
-          this.batsImage = img;
-          this.level2ObstacleImages.push(img);
-          
-          // Setup the GIF animator
-          GifManager.getInstance().getAnimator('/sprites/level2/obstacles/bats.gif').then(animator => {
-            this.batsAnimator = animator;
-            console.log("Bats GIF animator initialized");
-          });
-        }),
-          
-        this.loadImage('/sprites/level2/obstacles/chicken.webp').then(img => {
-          this.chickenImage = img;
-          this.level2ObstacleImages.push(img);
-        })
-      }),
-    ];
+    // Load each obstacle image independently with separate promises
+    const busPromise = this.loadImage('/sprites/level2/obstacles/bus.webp').then(img => {
+      this.busImage = img;
+      // Add to array in a specific order to ensure consistent indexing
+      this.level2ObstacleImages[0] = img;
+    });
+    
+    // Load static bat image
+    const batsImagePromise = this.loadImage('/sprites/level2/obstacles/bats.png').then(img => {
+      this.batsImage = img;
+      // Add to array at index 1
+      this.level2ObstacleImages[1] = img;
+    });
+    
+    // Setup the frame animator with individual bat frames (0-12)
+    const batsFramePaths: string[] = [];
+    for (let i = 0; i <= 12; i++) {
+      batsFramePaths.push(`/sprites/level2/obstacles/bats_frames-${i}.png`);
+    }
+    
+    const batsAnimatorPromise = FrameAnimatorManager.getInstance()
+      .getAnimator('bats', batsFramePaths, 70) // ~14fps animation
+      .then(animator => {
+        this.batsAnimator = animator;
+        console.log("Bats frame animator initialized");
+      });
+    
+    // Load chicken image
+    const chickenPromise = this.loadImage('/sprites/level2/obstacles/chicken.webp').then(img => {
+      this.chickenImage = img;
+      // Add to array at index 2
+      this.level2ObstacleImages[2] = img;
+    });
+
+    // Group obstacle promises
+    const obstaclePromises = [busPromise, batsImagePromise, batsAnimatorPromise, chickenPromise];
 
     const pickupPromises = [
       this.loadImage('/sprites/level2/pickups/vitaminC.webp').then(img => {
