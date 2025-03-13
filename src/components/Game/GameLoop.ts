@@ -57,8 +57,14 @@ export const drawItem = (
     const effectiveWidth = item.width, effectiveHeight = item.height;
     const centerX = item.x + effectiveWidth / 2, centerY = item.y + effectiveHeight / 2;
 
+    // Handle animated bats GIF specially
+    if (isBat && item.animator) {
+      ctx.translate(centerX, centerY);
+      // Use the GIF animator to draw the animated bat
+      item.animator.draw(ctx, -effectiveWidth / 2, -effectiveHeight / 2, effectiveWidth, effectiveHeight);
+    }
     // Only rotate if it's not a cloud, bus, eagle, or gull
-    if (!isCloud && !isBus && !isEagle && !isGull && !isBat) {
+    else if (!isCloud && !isBus && !isEagle && !isGull && !isBat) {
       item.rotation = (item.rotation || 0) + 0.0125;
       ctx.translate(centerX, centerY);
       ctx.rotate(item.rotation!);

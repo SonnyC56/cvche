@@ -40,6 +40,7 @@ const LevelCompleteScreen: React.FC<LevelCompleteScreenProps> = ({
       selectLevel(nextLevel);
       setLevelEnded(false);
       setGameStarted(true);
+
       // Restart the game loop to ensure rendering continues
       restartGameLoop();
     }

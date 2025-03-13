@@ -260,7 +260,6 @@ export const useGameState = () => {
   const togglePause = useCallback(() => {
     setIsPaused(prev => {
       const newPaused = !prev;
-      gameStateRef.current.player.x = 100;
       if (newPaused) {
         gameLoopRef.current = false;
         if (animationFrameIdRef.current) {

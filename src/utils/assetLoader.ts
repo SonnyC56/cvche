@@ -1,4 +1,6 @@
 
+import { GifManager } from './GifAnimator';
+
 // Class to handle asset loading with promises
 export class AssetLoader {
   // Main game assets
@@ -15,6 +17,7 @@ export class AssetLoader {
   // Level 2 specific assets
   busImage: HTMLImageElement | null = null;
   batsImage: HTMLImageElement | null = null;
+  batsAnimator: any = null; // Will store the GIF animator
   chickenImage: HTMLImageElement | null = null;
   vitaminCImage: HTMLImageElement | null = null;
   pillImage: HTMLImageElement | null = null;
@@ -82,14 +85,23 @@ export class AssetLoader {
       this.loadImage('/sprites/level2/obstacles/bus.webp').then(img => {
         this.busImage = img;
         this.level2ObstacleImages.push(img);
+        
+        // Load both the static image and setup the GIF animator
         this.loadImage('/sprites/level2/obstacles/bats.gif').then(img => {
           this.batsImage = img;
           this.level2ObstacleImages.push(img);
+          
+          // Setup the GIF animator
+          GifManager.getInstance().getAnimator('/sprites/level2/obstacles/bats.gif').then(animator => {
+            this.batsAnimator = animator;
+            console.log("Bats GIF animator initialized");
+          });
         }),
-          this.loadImage('/sprites/level2/obstacles/chicken.webp').then(img => {
-            this.chickenImage = img;
-            this.level2ObstacleImages.push(img);
-          })
+          
+        this.loadImage('/sprites/level2/obstacles/chicken.webp').then(img => {
+          this.chickenImage = img;
+          this.level2ObstacleImages.push(img);
+        })
       }),
     ];
 

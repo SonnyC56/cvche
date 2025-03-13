@@ -36,6 +36,8 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
 
   // Asset loader
   const assetLoader = useRef<AssetLoader>(new AssetLoader());
+  // Make assetLoader available globally for animated GIFs
+  window.assetLoaderRef = assetLoader;
   gameState.pickupSoundRef = useRef<HTMLAudioElement>(null!);
   gameState.hitSoundRef = useRef<HTMLAudioElement>(null!);
 
@@ -108,6 +110,8 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
   // Define the restartGameLoop function first so we can register it with useGameState
   const restartGameLoop = useCallback(() => {
     gameState.gameLoopRef.current = true;
+    gameState.gameStateRef.current.player.x = 100;
+
     gameState.animationFrameIdRef.current = requestAnimationFrame(() =>
       gameLoop(
         canvasRef,

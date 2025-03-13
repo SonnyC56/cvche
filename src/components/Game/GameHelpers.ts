@@ -8,6 +8,7 @@ declare global {
   interface Window {
     waterBottleRef?: React.MutableRefObject<HTMLImageElement | null>;
     plasticBagRef?: React.MutableRefObject<HTMLImageElement | null>;
+    assetLoaderRef?: React.MutableRefObject<any>; // Reference to the AssetLoader instance
   }
 }
 
@@ -1084,6 +1085,9 @@ export const spawnItemsOnBeat = (
 
       // Bats obstacle (index 1)
       if (levelToggles.showBats && level2ObstacleImages.length > 1 && level2ObstacleImages[1]) {
+        // Try to get the bats animator from the global AssetLoader instance
+        const batsAnimator = window.assetLoaderRef?.current?.batsAnimator;
+        
         if (audioProgress > 301 / 420) {
           for (let i = 0; i < 3; i++) {
             if (Math.random() < 0.6) {
@@ -1095,7 +1099,8 @@ export const spawnItemsOnBeat = (
                 type: 'obstacle',
                 speed: 2 + Math.random() * 3,
                 rotation: Math.random() * Math.PI * 2,
-                pickupImage: level2ObstacleImages[1]
+                pickupImage: level2ObstacleImages[1],
+                animator: batsAnimator // Attach the GIF animator
               });
             }
           }
@@ -1119,7 +1124,8 @@ export const spawnItemsOnBeat = (
           type: 'obstacle',
           speed: 1 + Math.random() * 2,
           rotation: selectedObstacle.type === 'bus' ? 0 : Math.random() * Math.PI * 2,
-          pickupImage: selectedObstacle.img
+          pickupImage: selectedObstacle.img,
+          animator: selectedObstacle.type === 'bats' ? window.assetLoaderRef?.current?.batsAnimator : null // Attach the GIF animator if available
         });
       }
     }

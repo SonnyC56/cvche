@@ -127,6 +127,8 @@ export interface GameItem {
   warpFactor?: number;
   warpSpeed?: number;
   warpOffset?: number;
+  // For animated GIFs
+  animator?: any;
 }
 
 export interface ExtendedHTMLAudioElement extends HTMLAudioElement {
