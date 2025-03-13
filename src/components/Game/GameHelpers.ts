@@ -1118,7 +1118,7 @@ export const spawnItemsOnBeat = (
 
     // Spawn obstacles: only buses, bats, and chickens
     if (level2ObstacleImages.length > 0) {
-      const baseProbability = 0.075 + (audioProgress / 200);
+      const baseProbability = 0.075 + (audioProgress / 1000);
       
       // Bus obstacle (index 0)
       if (levelToggles.showBuses && level2ObstacleImages.length > 0 && level2ObstacleImages[0]) {
