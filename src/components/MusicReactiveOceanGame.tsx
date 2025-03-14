@@ -20,6 +20,7 @@ import WelcomeScreen from './GameUI/WelcomeScreen';
 
 import { GameProps } from '../types';
 
+// Add loading state for level 2 video
 const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.ReactElement => {
   // Load game state from custom hook
   const gameState = useGameState();
@@ -27,12 +28,14 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
   // Asset loading states
   const [floraLoaded, setFloraLoaded] = useState(false);
   const [level2AssetsLoaded, setLevel2AssetsLoaded] = useState(false);
+  const [level2VideoLoaded, setLevel2VideoLoaded] = useState(false); // New state for video loading
   const [level3AssetsLoaded, setLevel3AssetsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // General loading indicator
 
   // Canvas refs - using non-null assertion for canvasRef to fix type issues
   const canvasRef = useRef<HTMLCanvasElement>(null!);
   const starsCanvasRef = useRef<HTMLCanvasElement>(null);
- // const portraitCanvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null); // Reference to the level 2 video element
 
   // Asset loader
   const assetLoader = useRef<AssetLoader>(new AssetLoader());
@@ -235,16 +238,42 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
   // Load level 2 assets when needed
   useEffect(() => {
     if (gameState.currentLevel.id === 2 && !level2AssetsLoaded) {
+      setIsLoading(true);
       const loadLevel2 = async () => {
         await assetLoader.current.loadLevel2Assets();
         // Update level 2 asset refs
         gameState.level2ObstacleImagesRef.current = assetLoader.current.level2ObstacleImages;
         gameState.level2PickupImagesRef.current = assetLoader.current.level2PickupImages;
         setLevel2AssetsLoaded(true);
+        
+        // Also preload the video
+        if (!level2VideoLoaded && videoRef.current) {
+          videoRef.current.load();
+        }
+        
+        setIsLoading(false);
       };
       loadLevel2();
     }
   }, [gameState.currentLevel.id, level2AssetsLoaded]);
+
+  // Detect when level 2 video is loaded
+  useEffect(() => {
+    if (gameState.currentLevel.id === 2 && videoRef.current) {
+      const handleVideoLoaded = () => {
+        console.log('Level 2 background video loaded');
+        setLevel2VideoLoaded(true);
+      };
+      
+      videoRef.current.addEventListener('loadeddata', handleVideoLoaded);
+      
+      return () => {
+        if (videoRef.current) {
+          videoRef.current.removeEventListener('loadeddata', handleVideoLoaded);
+        }
+      };
+    }
+  }, [gameState.currentLevel.id, videoRef.current]);
 
   // Load level 3 assets when needed
   useEffect(() => {
@@ -309,20 +338,50 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     if (gameState.currentLevel.id === 2 && gameState.containerRef.current) {
       gameState.containerRef.current.style.background = "transparent";
       // Make sure level 2 assets are loaded before starting
+      setIsLoading(true);
       if (gameState.level2ObstacleImagesRef.current.length === 0 ||
-        gameState.level2PickupImagesRef.current.length === 0) {
+        gameState.level2PickupImagesRef.current.length === 0 ||
+        !level2VideoLoaded) {
         const loadLevel2 = async () => {
           await assetLoader.current.loadLevel2Assets();
           // Update level 2 asset refs
           gameState.level2ObstacleImagesRef.current = assetLoader.current.level2ObstacleImages;
           gameState.level2PickupImagesRef.current = assetLoader.current.level2PickupImages;
-          startAudioAndGameLoop();
+          setLevel2AssetsLoaded(true);
+          
+          // Wait for video to load if not already loaded
+          if (!level2VideoLoaded && videoRef.current) {
+            return new Promise<void>((resolve) => {
+              const handleVideoLoaded = () => {
+                console.log('Level 2 background video loaded');
+                setLevel2VideoLoaded(true);
+                videoRef.current?.removeEventListener('loadeddata', handleVideoLoaded);
+                resolve();
+              };
+              
+              videoRef.current?.addEventListener('loadeddata', handleVideoLoaded);
+              videoRef.current?.load();
+              
+              // Add a timeout to prevent infinite waiting
+              setTimeout(() => {
+                if (!level2VideoLoaded) {
+                  console.warn('Video loading timed out - continuing anyway');
+                  resolve();
+                }
+              }, 5000);
+            });
+          }
         };
-        loadLevel2();
+        
+        loadLevel2().then(() => {
+          setIsLoading(false);
+          startAudioAndGameLoop();
+        });
       } else {
+        setIsLoading(false);
         startAudioAndGameLoop();
       }
-    } else if (gameState.currentLevel.id === 3 && gameState.containerRef.current) {
+    }  else if (gameState.currentLevel.id === 3 && gameState.containerRef.current) {
       // Make sure level 3 assets are loaded before starting
       if (gameState.level3ObstacleImagesRef.current.length === 0 ||
         gameState.level3MushroomImagesRef.current.length === 0 ||
@@ -480,7 +539,8 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     getAverageAmplitude,
     detectBeat,
     inputRef,
-    audioRef
+    audioRef,
+    level2VideoLoaded
   ]);
 
   return (
@@ -495,18 +555,47 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
       }}
     >
       {gameState.currentLevel.id === 2 && (
-        <video autoPlay loop muted style={{
+        <video 
+          ref={videoRef}
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          onLoadedData={() => setLevel2VideoLoaded(true)}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: -1
+          }}
+          preload="auto"
+        >
+          <source src="/videos/level2background-compressed.mp4" type="video/mp4" />
+        </video>
+      )}
+
+      {/* Loading indicator */}
+      {isLoading && (
+        <div style={{
           position: 'absolute',
           top: 0,
           left: 0,
           width: '100%',
           height: '100%',
-          objectFit: 'cover',
-          zIndex: -1
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          zIndex: 1000,
+          color: 'white',
+          fontFamily: 'Orbitron, sans-serif',
+          fontSize: '24px'
         }}>
-          <source src="/videos/level2background-compressed.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
+          Loading assets...
+        </div>
       )}
 
       <canvas

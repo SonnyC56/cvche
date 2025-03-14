@@ -1,4 +1,3 @@
-
 import { FrameAnimatorManager } from './GifAnimator';
 
 // Class to handle asset loading with promises
@@ -47,6 +46,8 @@ export class AssetLoader {
   level2VideoLoaded = false;
   level3AssetsLoaded = false;
 
+  // Video element for level 2
+  level2Video: HTMLVideoElement | null = null;
 
   constructor() { }
 
@@ -82,6 +83,7 @@ export class AssetLoader {
 
   // Load level 2 specific assets
   async loadLevel2Assets(): Promise<void> {
+    console.log('Loading level 2 assets...');
     // Load each obstacle image independently with separate promises
     const busPromise = this.loadImage('/sprites/level2/obstacles/bus.webp').then(img => {
       this.busImage = img;
@@ -119,53 +121,69 @@ export class AssetLoader {
     // Group obstacle promises
     const obstaclePromises = [busPromise, batsImagePromise, batsAnimatorPromise, chickenPromise];
 
-    const pickupPromises = [
-      this.loadImage('/sprites/level2/pickups/vitaminC.webp').then(img => {
-        this.vitaminCImage = img;
-        this.level2PickupImages.push(img);
-        this.loadImage('/sprites/level2/pickups/pill.webp').then(img => {
-          this.pillImage = img;
-          this.level2PickupImages.push(img);
-          this.loadImage('/sprites/level2/pickups/tumeric.webp').then(img => {
-            this.tumericImage = img;
-            this.level2PickupImages.push(img);
-            this.loadImage('/sprites/level2/pickups/ginger.webp').then(img => {
-              this.gingerImage = img;
-              this.level2PickupImages.push(img);
-            })
-          })
-        })
-      }),
+    // Pickup promises in parallel
+    const vitaminCPromise = this.loadImage('/sprites/level2/pickups/vitaminC.webp').then(img => {
+      this.vitaminCImage = img;
+      this.level2PickupImages.push(img);
+    });
+    
+    const pillPromise = this.loadImage('/sprites/level2/pickups/pill.webp').then(img => {
+      this.pillImage = img;
+      this.level2PickupImages.push(img);
+    });
+    
+    const tumericPromise = this.loadImage('/sprites/level2/pickups/tumeric.webp').then(img => {
+      this.tumericImage = img;
+      this.level2PickupImages.push(img);
+    });
+    
+    const gingerPromise = this.loadImage('/sprites/level2/pickups/ginger.webp').then(img => {
+      this.gingerImage = img;
+      this.level2PickupImages.push(img);
+    });
+    
+    const pickupPromises = [vitaminCPromise, pillPromise, tumericPromise, gingerPromise];
 
-
-
-    ];
-
+    // Preload the video
     const videoPromise = this.preloadVideo('/videos/level2background-compressed.mp4');
 
-    await Promise.all([...obstaclePromises, ...pickupPromises, videoPromise]);
-    this.level2AssetsLoaded = true;
+    console.log('Waiting for all level 2 assets to load...');
+    try {
+      // Wait for all assets to load
+      await Promise.all([
+        ...obstaclePromises, 
+        ...pickupPromises, 
+        videoPromise
+      ]);
+      
+      console.log('All level 2 assets loaded successfully');
+      this.level2AssetsLoaded = true;
+    } catch (error) {
+      console.error('Error loading level 2 assets:', error);
+      throw error;
+    }
   }
 
   // Load level 3 specific assets
   async loadLevel3Assets(): Promise<void> {
+    console.log('Loading level 3 assets...');
     // Load obstacle images
-    const obstaclePromises = [
-      this.loadImage('/sprites/level3/obstacles/clouds.webp').then(img => {
-        this.cloudImage = img;
-        this.level3ObstacleImages.push(img);
-        this.loadImage('/sprites/level3/obstacles/eagle.webp').then(img => {
-          this.eagleImage = img;
-          this.level3ObstacleImages.push(img);
-          this.loadImage('/sprites/level3/obstacles/black-headed-gull.webp').then(img => {
-            this.level3ObstacleImages.push(img);
-          })
-        })
-      }),
+    const cloudPromise = this.loadImage('/sprites/level3/obstacles/clouds.webp').then(img => {
+      this.cloudImage = img;
+      this.level3ObstacleImages.push(img);
+    });
+      
+    const eaglePromise = this.loadImage('/sprites/level3/obstacles/eagle.webp').then(img => {
+      this.eagleImage = img;
+      this.level3ObstacleImages.push(img);
+    });
+      
+    const gullPromise = this.loadImage('/sprites/level3/obstacles/black-headed-gull.webp').then(img => {
+      this.level3ObstacleImages.push(img);
+    });
 
-
-    ];
-    console.log('Loading level 3 assets... level3ObstacleImages: ', this.level3ObstacleImages);
+    const obstaclePromises = [cloudPromise, eaglePromise, gullPromise];
+    
     // Load mushroom images
     const mushroomPromises = [];
     for (let i = 1; i <= 9; i++) {
@@ -183,20 +201,31 @@ export class AssetLoader {
     ];
 
     const trippyPromises = trippyTypes.map(type => {
-      return this.loadImage(`/sprites/level3/trippyPickups/${type}.${'webp'}`).then(img => {
+      const ext = type === 'blueMan' ? 'jpg' : 'webp';
+      return this.loadImage(`/sprites/level3/trippyPickups/${type}.${ext}`).then(img => {
         this.level3TrippyImages.push(img);
       });
     });
-
-    await Promise.all([...obstaclePromises, ...mushroomPromises, ...trippyPromises]);
-    this.level3AssetsLoaded = true;
+    
+    try {
+      await Promise.all([...obstaclePromises, ...mushroomPromises, ...trippyPromises]);
+      console.log('All level 3 assets loaded successfully');
+      this.level3AssetsLoaded = true;
+    } catch (error) {
+      console.error('Error loading level 3 assets:', error);
+      throw error;
+    }
   }
 
   // Helper method to load an image
   private loadImage(src: string): Promise<HTMLImageElement> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
+      img.onerror = (e) => {
+        console.error(`Failed to load image: ${src}`, e);
+        reject(new Error(`Failed to load image: ${src}`));
+      };
       img.src = src;
     });
   }
@@ -208,22 +237,58 @@ export class AssetLoader {
       audio.volume = volume;
       audio.addEventListener('canplaythrough', () => resolve(audio), { once: true });
       audio.load();
+      
+      // Add a timeout to prevent hanging if audio loading is slow
+      setTimeout(() => {
+        if (!audio.readyState) {
+          console.warn(`Audio loading taking too long: ${src}, resolving anyway`);
+          resolve(audio);
+        }
+      }, 5000);
     });
   }
 
   // Preload video for level 2
   private preloadVideo(src: string): Promise<void> {
+    console.log(`Preloading video: ${src}`);
     return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.src = src;
+      // Create a new video element if we don't already have one
+      if (!this.level2Video) {
+        this.level2Video = document.createElement('video');
+      }
+      
+      const video = this.level2Video;
       video.muted = true;
       video.playsInline = true; // Important for iOS
       video.preload = 'auto';
-      video.onloadeddata = () => {
+      
+      // Set up event listeners
+      const onLoaded = () => {
+        console.log(`Video preloaded: ${src}`);
         this.level2VideoLoaded = true;
+        video.removeEventListener('loadeddata', onLoaded);
         resolve();
       };
+      
+      video.addEventListener('loadeddata', onLoaded);
+      
+      // Handle errors
+      video.addEventListener('error', () => {
+        console.warn(`Error loading video: ${src}, resolving anyway`);
+        resolve();
+      }, { once: true });
+      
+      // Set source and begin loading
+      video.src = src;
       video.load();
+      
+      // Add a timeout to prevent hanging on video loading
+      setTimeout(() => {
+        if (!this.level2VideoLoaded) {
+          console.warn(`Video loading taking too long: ${src}, resolving anyway`);
+          resolve();
+        }
+      }, 8000);
     });
   }
 }

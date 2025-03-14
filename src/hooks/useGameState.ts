@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { GameState, Level, LevelToggles, ActiveTimedText, ActiveColor, CaveState, Bubble, Flora, StreakDisplay, TimedTextEvent, TimedColorEvent, Level2TimedEvents, Level3TimedEvents, Particle } from '../types';
 import { getDefaultLevels, createDefaultTimedTextEvents, createLevel2TimedTextEvents, createLevel3TimedTextEvents, createColorEventsByLevel, createLevel2TimedEvents, createLevel3TimedEvents, getInitialLevelToggles } from '../utils/eventData';
 import { AssetLoader } from '../utils/assetLoader';
+import { gameConfig } from '../config/gameConfig';
 
 // Add a reference to the restartGameLoop function
 export const useGameState = () => {
@@ -29,10 +30,19 @@ export const useGameState = () => {
   const [levels, setLevels] = useState<Level[]>(() => {
     const savedLevels = localStorage.getItem('gameLevels');
     const defaultLevels = getDefaultLevels();
+    
+    // Apply level availability from config
+    const filteredLevels = defaultLevels.filter((level) => {
+      if (level.id === 1) return gameConfig.levels.level1;
+      if (level.id === 2) return gameConfig.levels.level2;
+      if (level.id === 3) return gameConfig.levels.level3;
+      return true; // Allow any other levels
+    });
+    
     if (savedLevels) {
       try {
         const parsedLevels = JSON.parse(savedLevels);
-        return defaultLevels.map(defaultLevel => {
+        return filteredLevels.map(defaultLevel => {
           const savedLevel = parsedLevels.find((level: Level) => level.id === defaultLevel.id);
           if (savedLevel) {
             return {
@@ -45,10 +55,10 @@ export const useGameState = () => {
         });
       } catch (e) {
         console.error("Error parsing saved levels:", e);
-        return defaultLevels;
+        return filteredLevels;
       }
     }
-    return defaultLevels;
+    return filteredLevels;
   });
 
   // Current level state
