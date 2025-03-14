@@ -462,7 +462,7 @@ export const getDefaultLevels = (): Level[] => {
     },
     {
       id: 3,
-      title: "Fluffy the Flying Fish",
+      title: "Get Fluffy",
       songFile: "sounds/GetFluffy.mp3",
       initialBackground: "#FDF200",
       initialWaveColor: "rgba(253,242,0,0.4)",

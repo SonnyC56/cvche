@@ -46,6 +46,18 @@ const LevelCompleteScreen: React.FC<LevelCompleteScreenProps> = ({
     }
   };
   
+  // Determine the collection text based on the current level
+  const getCollectionText = () => {
+    switch (currentLevel.id) {
+      case 2:
+        return "Vitamin C Collected";
+      case 3:
+        return "Mushrooms Collected";
+      default:
+        return "Trash Collected";
+    }
+  };
+  
   return (
     <div 
       style={{ 
@@ -77,7 +89,7 @@ const LevelCompleteScreen: React.FC<LevelCompleteScreenProps> = ({
       </div>
       
       <div style={{ fontSize: '24px', marginBottom: '20px' }}>
-        Trash Collected: {gameState.trashStats.collected} / {gameState.trashStats.totalSpawned} (
+        {getCollectionText()}: {gameState.trashStats.collected} / {gameState.trashStats.totalSpawned} (
         {gameState.trashStats.totalSpawned > 0
           ? Math.round((gameState.trashStats.collected / gameState.trashStats.totalSpawned) * 100)
           : 0}%
