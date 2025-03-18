@@ -210,12 +210,7 @@ export const useGameState = () => {
       const landscape = window.innerWidth > window.innerHeight;
       setIsLandscape(landscape);
       if (landscape) {
-        gameStateRef.current.player.y = window.innerHeight / 2;
-        //call reset render loop 
-
-
-        restartGameLoopRef.current?.();
-      }
+        gameStateRef.current.player.y = window.innerHeight / 2;      }
     };
     window.addEventListener('resize', handleOrientationChange);
     return () => window.removeEventListener('resize', handleOrientationChange);
@@ -223,6 +218,7 @@ export const useGameState = () => {
 
   useEffect(() => {
     if (!isLandscape && gameStarted && !isPaused) {
+      console.log("Pausing game due to orientation change");
       togglePause();
       setPausedByOrientation(true);
     }
@@ -230,8 +226,10 @@ export const useGameState = () => {
 
   useEffect(() => {
     if (isLandscape && pausedByOrientation && gameStarted && isPaused) {
+      console.log("Resuming game from orientation change");
       togglePause();
       setPausedByOrientation(false);
+      restartGameLoopRef.current?.();
     }
   }, [isLandscape, pausedByOrientation, gameStarted, isPaused]);
 
