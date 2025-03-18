@@ -235,6 +235,11 @@ export interface LevelToggles {
   showBuses?: boolean;
   showBats?: boolean;
   showChickens?: boolean;
+  showChickens3?: boolean;
+  showChickens4?: boolean;
+  showChickens5?: boolean;
+  showChickens6?: boolean;
+  showChickens7?: boolean;
   // Level 3 specific toggles
   showClouds?: boolean;
   showMushrooms?: boolean;

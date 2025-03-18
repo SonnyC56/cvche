@@ -407,11 +407,12 @@ export const gameLoop = (
   const caveActive = currentLevelRef.current.isCaveMechanic || (currentLevelRef.current.id === 1 && audioTime >= 330 && audioTime < 390) || (currentLevelRef.current.id === 2 && audioTime >= 252 && audioTime < 286);
   if (caveActive) {
     const CAVE_WARNING_DURATION = 3;
-    const isWarningPeriod = (currentLevelRef.current.id === 1 && audioTime < 330 + CAVE_WARNING_DURATION) || (currentLevelRef.current.id === 2 && audioTime < 286 + CAVE_WARNING_DURATION);
+    const isWarningPeriod = (currentLevelRef.current.id === 1 && audioTime < 330 + CAVE_WARNING_DURATION) || (currentLevelRef.current.id === 2 && audioTime < 252 + CAVE_WARNING_DURATION);
     // Normalize amplitude for cave mode
     const normalizedAmplitude = amplitude / 100;
     updateCaveBoundaries(canvas, caveRef.current, normalizedAmplitude, inputRef.current.isDesktop);
-    drawCaveEffect(ctx, caveRef.current, normalizedAmplitude, isWarningPeriod);
+    // Pass the current level ID to drawCaveEffect
+    drawCaveEffect(ctx, caveRef.current, normalizedAmplitude, isWarningPeriod, currentLevelRef.current.id);
     calculateCaveProximityScore(
       gameStateRef.current.player,
       caveRef.current,

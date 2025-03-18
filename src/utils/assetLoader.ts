@@ -112,14 +112,23 @@ export class AssetLoader {
       });
     
     // Load chicken image
-    const chickenPromise = this.loadImage('/sprites/level2/obstacles/chicken.webp').then(img => {
+    const chickenPromise = this.loadImage('/sprites/level2/obstacles/chicken_2.webp').then(img => {
       this.chickenImage = img;
       // Add to array at index 2
       this.level2ObstacleImages[2] = img;
     });
 
+    //load chicken_3-7 images
+    const chickenPromises: Promise<void>[] = [];
+    for (let i = 3; i <= 7; i++) {
+      const chickenPromise = this.loadImage(`/sprites/level2/obstacles/chicken_${i}.webp`).then(img => {
+      this.level2ObstacleImages[i] = img;
+      });
+      chickenPromises.push(chickenPromise);
+    }
+
     // Group obstacle promises
-    const obstaclePromises = [busPromise, batsImagePromise, batsAnimatorPromise, chickenPromise];
+    const obstaclePromises = [busPromise, batsImagePromise, batsAnimatorPromise, chickenPromise, ...chickenPromises];
 
     // Pickup promises in parallel
     const vitaminCPromise = this.loadImage('/sprites/level2/pickups/vitaminC.webp').then(img => {

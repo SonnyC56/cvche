@@ -21,28 +21,27 @@ export const createDefaultTimedTextEvents = (): TimedTextEvent[] => [
 
 // Level 2 timed text events
 export const createLevel2TimedTextEvents = (): TimedTextEvent[] => [
-  { timestamp: 6, text: "THE YEAR IS 1981", triggered: false, color: "#FDF200", lifetime: 400 },
-  { timestamp: 6, text: "Endless Love by Diana Ross and Lionel Richie is song of the year.", triggered: false, color: "#FDF200", lifetime: 400 },
-
-  { timestamp: 10, text: "But still the world feels unstable.", triggered: false, color: "#FDF200", lifetime: 400 },
-  { timestamp: 14, text: "Tina's son Danny was killed in a tragic bus accident.", triggered: false, color: "#FDF200", lifetime: 400 },
-  { timestamp: 18, text: "But is Danny really DEAD?", triggered: false, color: "#FDF200" },
-  { timestamp: 22, text: "HELP TINA SAVE DANNY!", triggered: false, color: "#FDF200" },
-  { timestamp: 26, text: "COME ON FLUFFY!", triggered: false, color: "#FDF200" },
-  { timestamp: 36, text: "MMM Vitamin C!", triggered: false, color: "#FDF200" },
-  { timestamp: 49, text: "Flying Buses WTF!?", triggered: false, color: "#FDF200" },
-  { timestamp: 83, text: "Cock block!", triggered: false, color: "#FDF200" },
-  { timestamp: 93, text: "COME ON FLUFFY!", triggered: false, color: "#FDF200" },
-  { timestamp: 130, text: "Biological Chicken Weapons!", triggered: false, color: "#FDF200" },
-  { timestamp: 133, text: "You gotta be kidding me.", triggered: false, color: "#FDF200" },
-
-  { timestamp: 135, text: "COME ON FLUFFY!", triggered: false, color: "#FDF200" },
-  { timestamp: 173, text: "OH DANNY BOY!", triggered: false, color: "#FDF200" },
-  { timestamp: 190, text: "PUFF. PUFF. GET FLUFFY!", triggered: false, color: "#FDF200" },
-  { timestamp: 252, text: "HOLY SCHNIKEYS!", triggered: false, color: "#FDF200" },
-  { timestamp: 286, text: "DANNY HERE WE COME!", triggered: false, color: "#FDF200" },
-  { timestamp: 301, text: "DAAAAAAAAAAAAANNNNNNNNNNYYYYYYYY!!!", triggered: false, color: "#FDF200" },
-  { timestamp: 328, text: "GREAT WORK FLUFFY!!! YOU SAVED DANNY!", triggered: false, color: "#FDF200" },
+  { timestamp: 6, text: "THE YEAR IS 1981", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 8, text: "Endless Love by Diana Ross and Lionel Richie is song of the year.", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 12, text: "But still the world feels unstable.", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 14, text: "Tina's son Danny was killed in a tragic bus accident.", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 18, text: "But is Danny really DEAD?", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 22, text: "HELP TINA SAVE DANNY!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 26, text: "COME ON FLUFFY!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 32, text: "STAY HEALTHY!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 36, text: "MMM Vitamin C!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 49, text: "Flying Buses WTF!?", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 83, text: "Cock block!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 93, text: "Grab Your Healthy Pills!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 130, text: "Biological Chicken Weapons!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 133, text: "You gotta be kidding me.", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 135, text: "COME ON FLUFFY!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 173, text: "OH DANNY BOY!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 190, text: "PUFF. PUFF. GET FLUFFY!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 252, text: "HOLY SCHNIKEYS!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 286, text: "DANNY HERE WE COME!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 301, text: "DAAAAAAAAAAAAANNNNNNNNNNYYYYYYYY!!!", triggered: false, color: "#FDF200", lifetime: 500 },
+  { timestamp: 328, text: "GREAT WORK FLUFFY!!! YOU SAVED DANNY!", triggered: false, color: "#FDF200", lifetime: 500 },
 ];
 
 // Color change events for level 1
@@ -413,9 +412,9 @@ export const createLevel2TimedEvents = (): Level2TimedEvents => ({
     { timestamp: 44, type: 'ginger', triggered: false },
 
     // Mix of health items during mid-game
-    { timestamp: 70, type: 'pill', triggered: false },
     { timestamp: 80, type: 'tumeric', triggered: false },
     { timestamp: 90, type: 'vitaminC', triggered: false },
+    { timestamp: 93, type: 'pill', triggered: false },
     { timestamp: 100, type: 'ginger', triggered: false },
     { timestamp: 110, type: 'pill', triggered: false },
 

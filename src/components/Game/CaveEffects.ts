@@ -55,7 +55,8 @@ export const drawCaveEffect = (
   ctx: CanvasRenderingContext2D,
   cave: CaveState,
   amplitude: number,
-  isWarningPeriod: boolean
+  isWarningPeriod: boolean,
+  levelId: number = 1 // Default to level 1 if not specified
 ) => {
   const canvas = ctx.canvas;
   if (!canvas) return;
@@ -67,8 +68,18 @@ export const drawCaveEffect = (
     ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 100))
     : 0.75;
   
+  // Determine if we should show a black strobe flash effect for level 2
+  const isLevel2 = levelId === 2;
+  const shouldStrobeFlash = isLevel2 && Math.random() < 0.05; // 5% chance per frame
+  
+  // Choose color based on level
+  // Hot pink for level 2, black for level 1 or when strobing on level 2
+  const caveColor = isLevel2 
+    ? (shouldStrobeFlash ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 105, 180, 0.9)') 
+    : `rgba(26, 26, 26, ${caveFillOpacity})`;
+  
   // Draw upper cave wall
-  ctx.fillStyle = `rgba(26, 26, 26, ${caveFillOpacity})`;
+  ctx.fillStyle = caveColor;
   ctx.beginPath();
   ctx.moveTo(0, 0);
   cave.upper.points.forEach(point => {
@@ -86,30 +97,33 @@ export const drawCaveEffect = (
   ctx.lineTo(canvas.width, canvas.height);
   ctx.fill();
   
-  // Draw center line with glow effect
-  ctx.beginPath();
-  const caveStrokeOpacity = isWarningPeriod
-    ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 100))
-    : 0.3 + (amplitude / 255) * 0.7;
-  
-  // Draw center line connecting upper and lower cave points
-  cave.upper.points.forEach((point, i) => {
-    const lowerPoint = cave.lower.points[i];
-    const centerY = (point.y + lowerPoint.y) / 2;
-    if (i === 0) {
-      ctx.moveTo(point.x, centerY);
-    } else {
-      ctx.lineTo(point.x, centerY);
-    }
-  });
-  
-  // Give it a nice glow effect
-  const hue = 120; // Green hue for center line
-  ctx.strokeStyle = `hsla(${hue}, 100%, 50%, ${caveStrokeOpacity})`;
-  ctx.lineWidth = 4 + (amplitude / 255) * 6;
-  ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-  ctx.shadowBlur = amplitude / 10;
-  ctx.stroke();
+  // Only draw center line for level 1
+  if (!isLevel2) {
+    // Draw center line with glow effect
+    ctx.beginPath();
+    const caveStrokeOpacity = isWarningPeriod
+      ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 100))
+      : 0.3 + (amplitude / 255) * 0.7;
+    
+    // Draw center line connecting upper and lower cave points
+    cave.upper.points.forEach((point, i) => {
+      const lowerPoint = cave.lower.points[i];
+      const centerY = (point.y + lowerPoint.y) / 2;
+      if (i === 0) {
+        ctx.moveTo(point.x, centerY);
+      } else {
+        ctx.lineTo(point.x, centerY);
+      }
+    });
+    
+    // Give it a nice glow effect
+    const hue = 120; // Green hue for center line
+    ctx.strokeStyle = `hsla(${hue}, 100%, 50%, ${caveStrokeOpacity})`;
+    ctx.lineWidth = 4 + (amplitude / 255) * 6;
+    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+    ctx.shadowBlur = amplitude / 10;
+    ctx.stroke();
+  }
   
   ctx.restore();
 };

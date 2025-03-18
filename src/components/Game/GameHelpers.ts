@@ -241,7 +241,7 @@ export const updateLevelToggles = (
         showOilSplats: false,
         showHooks: false,
         showVisualizer: true,
-        showBubbles: true,
+        showBubbles: false,
         showBackgroundPattern: false,
         showFlipFlops: false,
         showToothbrushes: false,
@@ -260,7 +260,7 @@ export const updateLevelToggles = (
         overlayColor: ''
       };
     }
-    else if (audioTime >= 28 && audioTime < 36) {
+    else if (audioTime >= 32 && audioTime < 49) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
         showBuses: false,
@@ -273,20 +273,6 @@ export const updateLevelToggles = (
         showGinger: false,
       };
     }
-    else if (audioTime >= 36 && audioTime < 49) {
-      levelTogglesRef.current = {
-        ...levelTogglesRef.current,
-        showBuses: false,
-        showBats: false,
-        showChickens: false,
-        showColorShiftOverlay: false,
-        showPills: true,
-        showVitaminC: true,
-        showTumeric: false,
-        showGinger: false
-        
-      };
-    }
     else if (audioTime >= 49 && audioTime < 83) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
@@ -294,18 +280,31 @@ export const updateLevelToggles = (
         showBats: false,
         showChickens: false,
         showColorShiftOverlay: false,
-        showPills: true,
+        showPills: false,
         showVitaminC: true,
         showTumeric: true,
         showGinger: false,
       };
     }
-    else if (audioTime >= 83 && audioTime < 120) {
+    else if (audioTime >= 83 && audioTime < 93) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
         showBuses: true,
         showChickens: true,
         showBats: false,
+        showColorShiftOverlay: false,
+        showPills: false,
+        showVitaminC: true,
+        showTumeric: true,
+        showGinger: false,
+      };
+    }
+    else if (audioTime >= 93 && audioTime < 130) {
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showBuses: true,
+        showChickens: true,
+        showBats: true,
         showColorShiftOverlay: false,
         showPills: true,
         showVitaminC: true,
@@ -313,11 +312,16 @@ export const updateLevelToggles = (
         showGinger: false,
       };
     }
-    else if (audioTime >= 120 && audioTime < 173) {
+    else if (audioTime >= 130 && audioTime < 173) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
-        showBuses: true,
+        showBuses: false,
         showChickens: true,
+        showChickens3: true,
+        showChickens4: true,
+        showChickens5: false,
+        showChickens6: false,
+        showChickens7: false,
         showBats: true,
         showColorShiftOverlay: false,
         showPills: true,
@@ -331,6 +335,11 @@ export const updateLevelToggles = (
         ...levelTogglesRef.current,
         showBuses: true,
         showChickens: true,
+        showChickens3: true,
+        showChickens4: true,
+        showChickens5: true,
+        showChickens6: true,
+        showChickens7: false,     
         showBats: true,
         showColorShiftOverlay: false,
         showPills: true,
@@ -339,31 +348,82 @@ export const updateLevelToggles = (
         showGinger: true,
       };
     }
-    else if (audioTime >= 190 && audioTime < 252) {
+    else if (audioTime >= 190 && audioTime < 232) {
       // Add a color shift overlay at the 190-second mark
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
         showBuses: true,
         showChickens: true,
+        showChickens3: true,
+        showChickens4: true,
+        showChickens5: true,
+        showChickens6: true,
+        showChickens7: false,     
         showBats: true,
         showColorShiftOverlay: true,
-        overlayColor: 'rgba(62, 247, 0, 0.2)', // Purple-ish overlay with 20% opacity
+        overlayColor: 'rgba(0, 247, 210, 0.32)', // cyan-ish overlay with 20% opacity
+        showPills: true,
+        showVitaminC: true,
+        showTumeric: true,
+        showGinger: true,
+       };
+    }
+    else if (audioTime >= 232 && audioTime < 252) {
+      // Add a color shift overlay at the 190-second mark
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showBuses: true,
+        showChickens: true,
+        showChickens3: true,
+        showChickens4: true,
+        showChickens5: true,
+        showChickens6: true,
+        showChickens7: false,   
+        showBats: true,
+        showColorShiftOverlay: true,
+        overlayColor: 'rgba(210, 0, 247, 0.32)', // Purple-ish overlay with 20% opacity
         showPills: true,
         showVitaminC: true,
         showTumeric: true,
         showGinger: true,
       };
     }
-    else if (audioTime >= 252 && audioTime < 301) {
+    else if (audioTime >= 252 && audioTime < 286) {
+      levelTogglesRef.current = {
+        ...levelTogglesRef.current,
+        showBuses: false,
+        showChickens: true,
+        showChickens3: true,
+        showChickens4: true,
+        showChickens5: true,
+        showChickens6: true,
+        showChickens7: true,   
+        showBats: true,
+        showColorShiftOverlay: true,
+        overlayColor: 'rgba(0, 247, 210, 0.32)', // cyan-ish overlay with 20% opacity
+        showVisualizer: true,
+        showBackgroundPattern: true,
+        showPills: false,
+        showVitaminC: false,
+        showTumeric: false,
+        showGinger: false,
+      };
+    }
+    else if (audioTime >= 286 && audioTime < 301) {
       levelTogglesRef.current = {
         ...levelTogglesRef.current,
         showBuses: true,
         showChickens: true,
+        showChickens3: true,
+        showChickens4: true,
+        showChickens5: true,
+        showChickens6: true,
+        showChickens7: true,   
         showBats: true,
+        showColorShiftOverlay: true,
+        overlayColor: 'rgba(210, 0, 247, 0.32)', // Purple-ish overlay with 20% opacity
         showVisualizer: true,
-        showBubbles: true,
         showBackgroundPattern: true,
-        showColorShiftOverlay: false,
         showPills: true,
         showVitaminC: true,
         showTumeric: true,
@@ -376,10 +436,11 @@ export const updateLevelToggles = (
         showBuses: true,
         showChickens: true,
         showBats: true,
+        showColorShiftOverlay: true,
+        overlayColor: 'rgba(0, 247, 210, 0.32)', // cyan-ish overlay with 20% opacity
         showVisualizer: true,
         showBubbles: true,
         showBackgroundPattern: true,
-        showColorShiftOverlay: false,
         showPills: true,
         showVitaminC: true,
         showTumeric: true,
@@ -723,7 +784,7 @@ export const processLevel3Events = (
           const sizeFactor = 0.8 + (Math.random() * 0.5);
           const baseWidth = 100;
           const baseHeight = 80;
-          
+
           gameState.obstacles.push({
             x: canvas.width,
             y: getSpawnY(canvas, baseHeight * sizeFactor),
@@ -743,7 +804,7 @@ export const processLevel3Events = (
           const sizeFactor = 0.8 + (Math.random() * 0.5);
           const baseWidth = 90;
           const baseHeight = 70;
-          
+
           gameState.obstacles.push({
             x: canvas.width,
             y: getSpawnY(canvas, baseHeight * sizeFactor),
@@ -761,7 +822,7 @@ export const processLevel3Events = (
         if (cloudImg) {
           // Check if this is during the storm (between 165-210 seconds)
           const isStormPeriod = audioTime >= 165 && audioTime < 270;
-          
+
           // For rising clouds at beginning
           if (audioTime < 10) {
             gameState.obstacles.push({
@@ -1119,7 +1180,7 @@ export const spawnItemsOnBeat = (
     // Spawn obstacles: only buses, bats, and chickens
     if (level2ObstacleImages.length > 0) {
       const baseProbability = 0.075 + (audioProgress / 1000);
-      
+
       // Bus obstacle (index 0)
       if (levelToggles.showBuses && level2ObstacleImages.length > 0 && level2ObstacleImages[0]) {
         if (Math.random() < baseProbability) {
@@ -1136,18 +1197,43 @@ export const spawnItemsOnBeat = (
         }
       }
 
-      // Chicken obstacle (index 2)
-      if (levelToggles.showChickens && level2ObstacleImages.length > 2 && level2ObstacleImages[2]) {
+      // Build the available indices pool starting with index 2
+      const availableIndices = [2];
+
+      if (levelToggles.showChickens3) {
+        availableIndices.push(3);
+      }
+      if (levelToggles.showChickens4) {
+        availableIndices.push(4);
+      }
+      if (levelToggles.showChickens5) {
+        availableIndices.push(5);
+      }
+      if (levelToggles.showChickens6) {
+        availableIndices.push(6);
+      }
+      if (levelToggles.showChickens7) {
+        availableIndices.push(7);
+      }
+
+      // Randomly select an index from the available pool
+      const chickenImageIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+
+      console.log(chickenImageIndex);
+
+
+      // Chicken obstacle (index 2-7)
+      if (levelToggles.showChickens && level2ObstacleImages.length > 2 && level2ObstacleImages[chickenImageIndex]) {
         if (Math.random() < baseProbability) {
           gameState.obstacles.push({
             x: canvas.width,
             y: getSpawnY(canvas, 60),
-            width: 60,
-            height: 60,
+            width: 100,
+            height: 100,
             type: 'obstacle',
             speed: 1 + Math.random() * 2,
             rotation: Math.random() * Math.PI * 2,
-            pickupImage: level2ObstacleImages[2]
+            pickupImage: level2ObstacleImages[chickenImageIndex]
           });
         }
       }
@@ -1156,14 +1242,14 @@ export const spawnItemsOnBeat = (
       if (levelToggles.showBats && level2ObstacleImages.length > 1 && level2ObstacleImages[1]) {
         // Try to get the bats animator from the global AssetLoader instance
         const batsAnimator = window.assetLoaderRef?.current?.batsAnimator;
-        
+
         if (Math.random() < baseProbability) {
           // Normal bat spawning early in the song
           gameState.obstacles.push({
             x: canvas.width,
             y: getSpawnY(canvas, 60),
-            width: 60,
-            height: 60,
+            width: 100,
+            height: 100,
             type: 'obstacle',
             speed: 1 + Math.random() * 2,
             rotation: Math.random() * Math.PI * 2,
@@ -1214,20 +1300,20 @@ export const spawnItemsOnBeat = (
           // Random size for trippy effect
           const size = 50 + Math.random() * 100;
 
-            // Add warping property to trippy pickups (with reduced intensity)
-            gameState.pickups.push({
-              x: canvas.width,
-              y: Math.random() * (canvas.height - 100) + 50, // Anywhere on screen
-              width: size,
-              height: size,
-              type: 'trash',
-              speed: 0.5 + Math.random() * 2,
-              rotation: Math.random() * Math.PI * 2,
-              pickupImage: trippyImg,
-              // Add custom properties for warping effect with reduced intensity
-              warpFactor: 0.05 + Math.random() * 0.01, // Much smaller factor (max 30% size change)
-              warpSpeed: 0.05 + Math.random() * 0.01, // Slower warping
-              warpOffset: Math.random() * Math.PI * 2
+          // Add warping property to trippy pickups (with reduced intensity)
+          gameState.pickups.push({
+            x: canvas.width,
+            y: Math.random() * (canvas.height - 100) + 50, // Anywhere on screen
+            width: size,
+            height: size,
+            type: 'trash',
+            speed: 0.5 + Math.random() * 2,
+            rotation: Math.random() * Math.PI * 2,
+            pickupImage: trippyImg,
+            // Add custom properties for warping effect with reduced intensity
+            warpFactor: 0.05 + Math.random() * 0.01, // Much smaller factor (max 30% size change)
+            warpSpeed: 0.05 + Math.random() * 0.01, // Slower warping
+            warpOffset: Math.random() * Math.PI * 2
           });
           gameState.trashStats.totalSpawned++;
         }
@@ -1270,7 +1356,7 @@ export const spawnItemsOnBeat = (
           const sizeFactor = 0.8 + (Math.random() * 0.5);
           const baseWidth = 100;
           const baseHeight = 80;
-          
+
           gameState.obstacles.push({
             x: canvas.width,
             y: getSpawnY(canvas, baseHeight * sizeFactor),
@@ -1284,7 +1370,7 @@ export const spawnItemsOnBeat = (
         }
       }
     }
-    
+
     //spawn gulls if showGulls is true
     if (levelToggles.showGulls && level3ObstacleImages?.length > 0) {
       const spawnChance = 0.1;
@@ -1297,7 +1383,7 @@ export const spawnItemsOnBeat = (
           const sizeFactor = 0.8 + (Math.random() * 0.5);
           const baseWidth = 90;
           const baseHeight = 70;
-          
+
           gameState.obstacles.push({
             x: canvas.width,
             y: getSpawnY(canvas, baseHeight * sizeFactor),
@@ -1377,14 +1463,14 @@ export const updateAndCheckTrashCollisions = (
 
     // Update position
     item.x -= item.speed * speedMultiplier * factor;
-    
+
     // Apply warping effect for trippy items in level 3
     if (item.warpFactor && item.warpSpeed) {
       // Calculate a warping scale based on time
       const time = Date.now() / 1000; // Convert to seconds
       const warpOffset = item.warpOffset || 0;
       const warpScale = 1 + item.warpFactor * Math.sin((time * item.warpSpeed) + warpOffset);
-      
+
       // Apply the warping scale to the item's dimensions
       item.width = item.width * warpScale;
       item.height = item.height * warpScale;
