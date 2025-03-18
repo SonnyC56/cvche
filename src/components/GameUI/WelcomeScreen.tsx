@@ -37,7 +37,7 @@ useEffect(() => {
   
   // Import the same fish image used in the game
   const fishImage = new Image();
-  fishImage.src = '/sprites/cvcheFish.webp';
+  fishImage.src = '/sprites/cvcheFish.png';
   
   // Recreate the same particles as in-game
   const particles: {

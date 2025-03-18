@@ -54,7 +54,7 @@ export class AssetLoader {
   // Load basic game assets
   async loadBasicAssets(): Promise<void> {
     const assetPromises = [
-      await this.loadImage('/sprites/cvcheFish.webp').then(img => this.fishImage = img),
+      await this.loadImage('/sprites/cvcheFish.png').then(img => this.fishImage = img),
       await this.loadImage('/sprites/waterBottle.webp').then(img => this.waterBottleImage = img),
       await this.loadImage('/sprites/plasticBag.webp').then(img => this.plasticBagImage = img),
       await this.loadImage('/sprites/oilSplat.webp').then(img => this.oilSplatImage = img),
