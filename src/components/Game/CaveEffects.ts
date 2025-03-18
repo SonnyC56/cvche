@@ -63,20 +63,27 @@ export const drawCaveEffect = (
   
   ctx.save();
   
-  // Set opacity based on warning period
-  const caveFillOpacity = isWarningPeriod
-    ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 100))
-    : 0.75;
-  
-  // Determine if we should show a black strobe flash effect for level 2
   const isLevel2 = levelId === 2;
-  const shouldStrobeFlash = isLevel2 && Math.random() < 0.05; // 5% chance per frame
   
-  // Choose color based on level
-  // Hot pink for level 2, black for level 1 or when strobing on level 2
+  // For level 2, only apply animation during warning period
+  // For level 1, keep the existing behavior
+  let caveFillOpacity;
+  
+  if (isLevel2) {
+    caveFillOpacity = isWarningPeriod
+      ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 100)) // Only animate during warning
+      : 0.9; // Fixed opacity for level 2 outside warning period
+  } else {
+    // Original behavior for level 1
+    caveFillOpacity = isWarningPeriod
+      ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 100))
+      : 0.75;
+  }
+  
+  // Choose color based on level - fixed colors with no animation except during warning
   const caveColor = isLevel2 
-    ? (shouldStrobeFlash ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 105, 180, 0.9)') 
-    : `rgba(26, 26, 26, ${caveFillOpacity})`;
+    ? `rgba(255, 105, 180, ${caveFillOpacity})` // Hot pink for level 2
+    : `rgba(26, 26, 26, ${caveFillOpacity})`; // Black for level 1
   
   // Draw upper cave wall
   ctx.fillStyle = caveColor;
