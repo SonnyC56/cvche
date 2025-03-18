@@ -210,7 +210,7 @@ export class AssetLoader {
     ];
 
     const trippyPromises = trippyTypes.map(type => {
-      const ext = type === 'webp';
+      const ext  = 'webp';
       return this.loadImage(`/sprites/level3/trippyPickups/${type}.${ext}`).then(img => {
         this.level3TrippyImages.push(img);
       });
