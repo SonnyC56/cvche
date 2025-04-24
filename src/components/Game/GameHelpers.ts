@@ -1528,13 +1528,17 @@ export const updateAndCheckTrashCollisions = (
       if (item.pickupImage &&
         (item.pickupImage === window.waterBottleRef?.current ||
           item.pickupImage === window.plasticBagRef?.current)) {
-        createParticles(gameState.particles, item.x, item.y, '#FFC0CB', 20, 'heart');
-        createParticles(gameState.particles, item.x, item.y, '#1489CF', 20, 'heart');
+        // Reduced particle count from 20 to 8
+        createParticles(gameState.particles, item.x, item.y, '#FFC0CB', 8, 'heart');
+        createParticles(gameState.particles, item.x, item.y, '#1489CF', 8, 'heart');
       } else {
-        createParticles(gameState.particles, item.x, item.y, getParticleColorFromStreak(streak), 20);
+        // Reduced particle count from 20 to 8
+        createParticles(gameState.particles, item.x, item.y, getParticleColorFromStreak(streak), 8);
       }
 
-      gameState.pickups.splice(i, 1);
+      // Optimized removal using swap-and-pop
+      gameState.pickups[i] = gameState.pickups[gameState.pickups.length - 1];
+      gameState.pickups.pop();
 
       setHealth(prev => Math.min(100, prev + 1));
 
@@ -1608,7 +1612,9 @@ export const updateAndCheckObstacleCollisions = (
           animationFrameIdRef
         );
 
-        gameState.obstacles.splice(i, 1);
+        // Optimized removal using swap-and-pop
+        gameState.obstacles[i] = gameState.obstacles[gameState.obstacles.length - 1];
+        gameState.obstacles.pop();
         continue;
       } else {
         drawItem(ctx, item, 1);
@@ -1631,7 +1637,9 @@ export const updateAndCheckObstacleCollisions = (
           animationFrameIdRef
         );
 
-        gameState.obstacles.splice(i, 1);
+        // Optimized removal using swap-and-pop
+        gameState.obstacles[i] = gameState.obstacles[gameState.obstacles.length - 1];
+        gameState.obstacles.pop();
         continue;
       } else {
         drawItem(ctx, item, 1);
@@ -1670,7 +1678,8 @@ export const handleObstacleCollision = (
   });
 
   const particleColor = '#000000';
-  createParticles(gameState.particles, item.x, item.y, particleColor, 20);
+  // Reduced particle count from 20 to 8
+  createParticles(gameState.particles, item.x, item.y, particleColor, 8);
 
   // Check if sound is properly initialized before playing
   if (hitSound && hitSound.readyState >= 2) {

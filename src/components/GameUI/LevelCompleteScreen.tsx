@@ -76,24 +76,26 @@ const LevelCompleteScreen: React.FC<LevelCompleteScreenProps> = ({
         fontFamily: 'Orbitron, sans-serif' 
       }}
     >
-      <h1 style={{ marginTop: 0, fontSize: '48px', marginBottom: '20px' }}>
+      <h1 style={{ marginTop: 0, fontSize: '40px', marginBottom: '20px' }}>
         {isGameOver ? 'Game Over!' : 'Level Complete!'}
       </h1>
       
-      <div style={{ fontSize: '24px', marginBottom: '10px' }}>
-        Final Score: {score}
-      </div>
-      
-      <div style={{ fontSize: '24px', marginBottom: '10px' }}>
-        Highest Streak: {gameState.highestStreak}
-      </div>
-      
-      <div style={{ fontSize: '24px', marginBottom: '20px' }}>
-        {getCollectionText()}: {gameState.trashStats.collected} / {gameState.trashStats.totalSpawned} (
-        {gameState.trashStats.totalSpawned > 0
-          ? Math.round((gameState.trashStats.collected / gameState.trashStats.totalSpawned) * 100)
-          : 0}%
-        )
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        width: '80%', 
+        fontSize: '18px', 
+        marginBottom: '20px' 
+      }}>
+        <div>Final Score: {score}</div>
+        <div>Highest Streak: {gameState.highestStreak}</div>
+        <div>
+          {getCollectionText()}: {gameState.trashStats.collected} / {gameState.trashStats.totalSpawned} (
+          {gameState.trashStats.totalSpawned > 0
+            ? Math.round((gameState.trashStats.collected / gameState.trashStats.totalSpawned) * 100)
+            : 0}%
+          )
+        </div>
       </div>
       
       <div style={{ marginBottom: '20px' }}>

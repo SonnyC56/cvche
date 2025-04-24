@@ -100,11 +100,13 @@ export const updateAndDrawParticles = (ctx: CanvasRenderingContext2D, particles:
     // Update life and opacity
     p.life -= 0.02 * factor;
     p.opacity *= 0.97;
-    
-    // Remove dead particles
-    if (p.life <= 0) { 
-      particles.splice(i, 1); 
-      continue; 
+    // Remove dead particles using swap-and-pop for efficiency
+    if (p.life <= 0) {
+      // Swap the dead particle with the last particle
+      particles[i] = particles[particles.length - 1];
+      // Remove the last particle (which is now the dead one or a duplicate)
+      particles.pop();
+      continue; // Skip drawing this particle as it's now replaced or removed
     }
     
     // Draw based on shape

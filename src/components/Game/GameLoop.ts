@@ -192,8 +192,9 @@ export const gameLoop = (
   // Calculate factor using capped delta time
   const factor = deltaTime * 120;
   const canvas = canvasRef.current;
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  // Removed canvas dimension setting from game loop - will be handled by resize listener
+  // canvas.width = window.innerWidth;
+  // canvas.height = window.innerHeight;
   const audioTime = audioRef.current?.currentTime || 0;
   const songDuration = audioRef.current?.duration || 1;
   updateLevelToggles(audioTime, currentLevelRef.current.id, levelTogglesRef);

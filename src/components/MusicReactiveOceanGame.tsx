@@ -295,17 +295,27 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     }
   }, [gameState.currentLevel.id, level3AssetsLoaded]);
 
-  // Reset canvas on resize
+  // Effect to handle canvas resizing
   useEffect(() => {
     const handleResize = () => {
+      // Ensure canvasRef.current exists before accessing properties
       if (canvasRef.current) {
         canvasRef.current.width = window.innerWidth;
         canvasRef.current.height = window.innerHeight;
+        // Optionally, re-initialize flora or other size-dependent elements here if needed
+        // Example: gameState.floraItemsRef.current = initializeFlora(canvasRef.current, assetLoader.current.floraImages);
       }
     };
+
+    // Set initial size
+    handleResize();
+
+    // Add resize event listener
     window.addEventListener('resize', handleResize);
+
+    // Cleanup function to remove event listener
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   // Portrait animation function
   const animatePortrait = useCallback((ctx: CanvasRenderingContext2D) => {
