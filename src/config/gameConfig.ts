@@ -11,7 +11,7 @@ export const gameConfig = {
   levels: {
     level1: true,
     level2: true,
-    level3: false  // Level 3 is toggled off as requested
+    level3: true  // Level 3 is toggled off as requested
   },
 
   /**
