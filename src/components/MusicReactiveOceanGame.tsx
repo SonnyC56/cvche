@@ -20,17 +20,13 @@ import WelcomeScreen from './GameUI/WelcomeScreen';
 
 import { GameProps } from '../types';
 
-// Add loading state for level 2 video
+// Remove local loading states
 const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.ReactElement => {
   // Load game state from custom hook
   const gameState = useGameState();
 
-  // Asset loading states
-  const [floraLoaded, setFloraLoaded] = useState(false);
-  const [level2AssetsLoaded, setLevel2AssetsLoaded] = useState(false);
-  const [level2VideoLoaded, setLevel2VideoLoaded] = useState(false); // New state for video loading
-  const [level3AssetsLoaded, setLevel3AssetsLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // General loading indicator
+  // Remove local loading states: floraLoaded, level2AssetsLoaded, level2VideoLoaded, level3AssetsLoaded, isLoading
+  const [floraLoaded, setFloraLoaded] = useState(false); // Keep floraLoaded for WelcomeScreen for now
 
   // Canvas refs - using non-null assertion for canvasRef to fix type issues
   const canvasRef = useRef<HTMLCanvasElement>(null!);
@@ -63,6 +59,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
   } = useAudio(
     gameState.gameStarted,
     gameState.isPaused,
+    gameState.isLoadingAssets,
     gameState.setAudioProgress,
     gameState.setCurrentTime,
     gameState.setDuration,
@@ -84,30 +81,35 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     if (audioRef.current) {
       audioRefNonNull.current = audioRef.current;
     }
-  }, [audioRef.current]);
+  }, [audioRef]); // Use audioRef directly
 
+  // Effect to handle audio source changes when level or game starts
   useEffect(() => {
+    // This effect should only run when the game starts or the level changes,
+    // not when the pause state changes. The useAudio hook handles pause/resume.
     if (!gameState.gameStarted) return;
-    // Stop current audio
+
+    console.log('Setting up audio for level:', gameState.currentLevel.id);
+
     if (audioRef.current) {
+      // Pause and reset audio only when the level changes, not on pause/play toggle
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
-    }
-    // Set the new audio source based on the current level
-    if (audioRef.current) {
+
+      // Set the new audio source based on the current level
       audioRef.current.src = gameState.currentLevel.songFile;
-      audioRef.current.load(); // NEW: Ensure the new source is loaded
+      audioRef.current.load(); // Ensure the new source is loaded
+
       // Reset audio-related state
       gameState.setAudioProgress(0);
       gameState.setCurrentTime(0);
       gameState.setDuration(0);
-      // If not paused, start playing the new level's audio
-      if (!gameState.isPaused) {
-        console.log("Starting new audio, currentLevel:", gameState.currentLevel, audioRef.current.src);
-        audioRef.current.play().catch(console.error);
-      }
+
+      // The useAudio hook will handle playing the audio when isPaused is false
+      // and isLoadingAssets is false.
     }
-  }, [gameState.currentLevel.id, gameState.gameStarted]);
+  }, [gameState.currentLevel.id, gameState.gameStarted, gameState.setAudioProgress, gameState.setCurrentTime, gameState.setDuration, audioRef, gameState.currentLevel.songFile]);
+
   const { inputRef } = useInputHandlers(canvasRef);
 
   // Define the restartGameLoop function first so we can register it with useGameState
@@ -115,6 +117,12 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     gameState.gameLoopRef.current = true;
     gameState.gameStateRef.current.player.x = 100;
 
+    // Cancel any existing animation frame
+    if (gameState.animationFrameIdRef.current) {
+      cancelAnimationFrame(gameState.animationFrameIdRef.current);
+    }
+
+    // Restart the game loop
     gameState.animationFrameIdRef.current = requestAnimationFrame(() =>
       gameLoop(
         canvasRef,
@@ -168,6 +176,8 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         gameState.hitSoundRef as React.RefObject<HTMLAudioElement>
       )
     );
+
+
   }, [
     canvasRef,
     gameState,
@@ -175,9 +185,6 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     getAverageAmplitude,
     detectBeat,
     inputRef,
-    gameState.setScore,
-    gameState.setHealth,
-    gameState.setLevelEnded
   ]);
 
   // Register the restartGameLoop function with useGameState
@@ -185,115 +192,98 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     if (gameState.setRestartGameLoopRef) {
       gameState.setRestartGameLoopRef(restartGameLoop);
     }
-  }, [restartGameLoop, gameState.setRestartGameLoopRef]);
+  }, [restartGameLoop, gameState.setRestartGameLoopRef, gameState]); // Added gameState
 
   // Load basic assets on component mount
   useEffect(() => {
     const loader = assetLoader.current;
     const loadAssets = async () => {
-      await loader.loadBasicAssets();
-      // Update refs with loaded assets
-      if (loader.fishImage) {
-        fishImageRef.current = loader.fishImage;
-      }
-      if (loader.waterBottleImage) {
-        waterBottleRef.current = loader.waterBottleImage;
-        window.waterBottleRef = waterBottleRef;
-      }
-      if (loader.plasticBagImage) {
-        plasticBagRef.current = loader.plasticBagImage;
-        window.plasticBagRef = plasticBagRef;
-      }
-      if (loader.oilSplatImage) {
-        oilSplatImageRef.current = loader.oilSplatImage;
-      }
-      if (loader.fishHookImage) {
-        fishHookRef.current = loader.fishHookImage;
-      }
-      if (loader.flipflopImage) {
-        flipflopRef.current = loader.flipflopImage;
-      }
-      if (loader.toothbrushImage) {
-        toothbrushRef.current = loader.toothbrushImage;
-      }
-      if (loader.hotdogImage) {
-        hotdogRef.current = loader.hotdogImage;
-      }
-      if (loader.rubberDuckyImage) {
-        rubberDuckyRef.current = loader.rubberDuckyImage;
-      }
-      gameState.pickupSoundRef.current = loader.pickupSound;
-      gameState.hitSoundRef.current = loader.hitSound;
-      // Load flora assets
-      await loader.loadFloraAssets();
-      // Initialize flora once loaded
-      if (canvasRef.current) {
-        gameState.floraItemsRef.current = initializeFlora(canvasRef.current, loader.floraImages);
-      }
-      setFloraLoaded(true);
-    };
-    loadAssets();
-  }, []);
-
-  // Load level 2 assets when needed
-  useEffect(() => {
-    if (gameState.currentLevel.id === 2 && !level2AssetsLoaded) {
-      setIsLoading(true);
-      const loadLevel2 = async () => {
-        await assetLoader.current.loadLevel2Assets();
-        // Update level 2 asset refs
-        gameState.level2ObstacleImagesRef.current = assetLoader.current.level2ObstacleImages;
-        gameState.level2PickupImagesRef.current = assetLoader.current.level2PickupImages;
-        setLevel2AssetsLoaded(true);
+      try {
+        console.log('Starting to load initial assets...');
+        // Start the loading process for basic assets
+        gameState.setIsLoadingAssets(true);
+        gameState.setLoadingProgress(0);
         
-        // Also preload the video
-        if (!level2VideoLoaded && videoRef.current) {
-          videoRef.current.load();
-        }
-        
-        setIsLoading(false);
-      };
-      loadLevel2();
-    }
-  }, [gameState.currentLevel.id, level2AssetsLoaded]);
-
-  // Detect when level 2 video is loaded
-  useEffect(() => {
-    if (gameState.currentLevel.id === 2 && videoRef.current) {
-      const handleVideoLoaded = () => {
-        console.log('Level 2 background video loaded');
-        setLevel2VideoLoaded(true);
-      };
-      
-      videoRef.current.addEventListener('loadeddata', handleVideoLoaded);
-      
-      return () => {
-        if (videoRef.current) {
-          videoRef.current.removeEventListener('loadeddata', handleVideoLoaded);
-        }
-      };
-    }
-  }, [gameState.currentLevel.id, videoRef.current]);
-
-  // Load level 3 assets when needed
-  useEffect(() => {
-    if (gameState.currentLevel.id === 3 && !level3AssetsLoaded) {
-      const loadLevel3 = async () => {
-        await assetLoader.current.loadLevel3Assets();
-        // Update level 3 asset refs
-        gameState.level3ObstacleImagesRef.current = assetLoader.current.level3ObstacleImages;
-        gameState.level3MushroomImagesRef.current = assetLoader.current.level3MushroomImages;
-        gameState.level3TrippyImagesRef.current = assetLoader.current.level3TrippyImages;
-        setLevel3AssetsLoaded(true);
-        console.log('Level 3 assets loaded:', {
-          obstacles: gameState.level3ObstacleImagesRef.current.length,
-          mushrooms: gameState.level3MushroomImagesRef.current.length,
-          trippyImages: gameState.level3TrippyImagesRef.current.length
+        console.log('Loading basic assets...');
+        // Load basic game assets with progress tracking
+        await loader.loadBasicAssets((loaded, total) => {
+          const basicProgress = Math.round((loaded / total) * 50); // Basic assets are 50% of initial loading
+          console.log(`Basic assets progress: ${basicProgress}% (${loaded}/${total})`);
+          gameState.setLoadingProgress(basicProgress);
         });
-      };
-      loadLevel3();
+        
+        // Update refs with loaded assets
+        if (loader.fishImage) {
+          fishImageRef.current = loader.fishImage;
+        }
+        if (loader.waterBottleImage) {
+          waterBottleRef.current = loader.waterBottleImage;
+          window.waterBottleRef = waterBottleRef;
+        }
+        if (loader.plasticBagImage) {
+          plasticBagRef.current = loader.plasticBagImage;
+          window.plasticBagRef = plasticBagRef;
+        }
+        if (loader.oilSplatImage) {
+          oilSplatImageRef.current = loader.oilSplatImage;
+        }
+        if (loader.fishHookImage) {
+          fishHookRef.current = loader.fishHookImage;
+        }
+        if (loader.flipflopImage) {
+          flipflopRef.current = loader.flipflopImage;
+        }
+        if (loader.toothbrushImage) {
+          toothbrushRef.current = loader.toothbrushImage;
+        }
+        if (loader.hotdogImage) {
+          hotdogRef.current = loader.hotdogImage;
+        }
+        if (loader.rubberDuckyImage) {
+          rubberDuckyRef.current = loader.rubberDuckyImage;
+        }
+        gameState.pickupSoundRef.current = loader.pickupSound;
+        gameState.hitSoundRef.current = loader.hitSound;
+        
+        console.log('Loading flora assets...');
+        // Load flora assets with progress tracking
+        await loader.loadFloraAssets((loaded, total) => {
+          // Flora assets are another 50% of initial loading (50-100%)
+          const floraProgress = 50 + Math.round((loaded / total) * 50);
+          console.log(`Flora progress: ${floraProgress}% (${loaded}/${total})`);
+          gameState.setLoadingProgress(floraProgress);
+        });
+        
+        // Initialize flora once loaded
+        if (canvasRef.current) {
+          gameState.floraItemsRef.current = initializeFlora(canvasRef.current, loader.floraImages);
+        }
+        
+        // Complete loading
+        console.log('All initial assets loaded successfully!');
+        gameState.setLoadingProgress(100);
+        setTimeout(() => {
+          setFloraLoaded(true);
+          gameState.setIsLoadingAssets(false);
+        }, 500); // Small delay to ensure UI updates properly
+      } catch (error) {
+        console.error('Error loading initial assets:', error);
+        // Force loading to complete even on error
+        setFloraLoaded(true);
+        gameState.setIsLoadingAssets(false);
+      }
+    };
+    
+    // Only load if not already loaded (prevents infinite loading)
+    if (!floraLoaded && gameState.isLoadingAssets) {
+      loadAssets();
+    } else if (!floraLoaded) {
+      loadAssets();
     }
-  }, [gameState.currentLevel.id, level3AssetsLoaded]);
+  }, []); // Run only once on mount, regardless of state changes
+
+  // Remove useEffect hooks for loading level 2 and level 3 assets
+  // Remove useEffect hook for detecting level 2 video load
 
   // Effect to handle canvas resizing
   useEffect(() => {
@@ -333,94 +323,36 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     }
     // Update and draw particles
     updateAndDrawParticles(ctx, gameState.portraitParticlesRef.current, 1);
-  }, [gameState.portraitFishPositionRef, gameState.portraitParticlesRef, gameState.currentLevel.initialBackground]);
+  }, [gameState.portraitFishPositionRef, gameState.portraitParticlesRef]); // Removed gameState.currentLevel.initialBackground dependency
 
-  // startGame callback (unchanged)
+  // startGame callback - Simplified: Asset loading is handled by selectLevel
   const startGame = useCallback(() => {
     if (gameState.gameStarted) return;
+    
+    // Don't start game if assets are still loading
+    if (gameState.isLoadingAssets) {
+      console.log("Cannot start game while assets are loading");
+      return;
+    }
+    
     // Center the player horizontally before starting
     gameState.gameStateRef.current.player.y = window.innerHeight / 2;
     gameState.gameStateRef.current.player.x = 100;
     gameState.setGameStarted(true);
     gameState.setHealth(100);
     onGameStart?.();
-    // Set up container background based on level
+
+    // Set up container background based on level (already handled in selectLevel, but good to ensure)
     if (gameState.currentLevel.id === 2 && gameState.containerRef.current) {
       gameState.containerRef.current.style.background = "transparent";
-      // Make sure level 2 assets are loaded before starting
-      setIsLoading(true);
-      if (gameState.level2ObstacleImagesRef.current.length === 0 ||
-        gameState.level2PickupImagesRef.current.length === 0 ||
-        !level2VideoLoaded) {
-        const loadLevel2 = async () => {
-          await assetLoader.current.loadLevel2Assets();
-          // Update level 2 asset refs
-          gameState.level2ObstacleImagesRef.current = assetLoader.current.level2ObstacleImages;
-          gameState.level2PickupImagesRef.current = assetLoader.current.level2PickupImages;
-          setLevel2AssetsLoaded(true);
-          
-          // Wait for video to load if not already loaded
-          if (!level2VideoLoaded && videoRef.current) {
-            return new Promise<void>((resolve) => {
-              const handleVideoLoaded = () => {
-                console.log('Level 2 background video loaded');
-                setLevel2VideoLoaded(true);
-                videoRef.current?.removeEventListener('loadeddata', handleVideoLoaded);
-                resolve();
-              };
-              
-              videoRef.current?.addEventListener('loadeddata', handleVideoLoaded);
-              videoRef.current?.load();
-              
-              // Add a timeout to prevent infinite waiting
-              setTimeout(() => {
-                if (!level2VideoLoaded) {
-                  console.warn('Video loading timed out - continuing anyway');
-                  resolve();
-                }
-              }, 5000);
-            });
-          }
-        };
-        
-        loadLevel2().then(() => {
-          setIsLoading(false);
-          startAudioAndGameLoop();
-        });
-      } else {
-        setIsLoading(false);
-        startAudioAndGameLoop();
-      }
-    }  else if (gameState.currentLevel.id === 3 && gameState.containerRef.current) {
-      // Make sure level 3 assets are loaded before starting
-      if (gameState.level3ObstacleImagesRef.current.length === 0 ||
-        gameState.level3MushroomImagesRef.current.length === 0 ||
-        gameState.level3TrippyImagesRef.current.length === 0) {
-        const loadLevel3 = async () => {
-          await assetLoader.current.loadLevel3Assets();
-          // Update level 3 asset refs
-          gameState.level3ObstacleImagesRef.current = assetLoader.current.level3ObstacleImages;
-          gameState.level3MushroomImagesRef.current = assetLoader.current.level3MushroomImages;
-          gameState.level3TrippyImagesRef.current = assetLoader.current.level3TrippyImages;
-          console.log('Level 3 assets loaded in startGame:', {
-            obstacles: gameState.level3ObstacleImagesRef.current.length,
-            mushrooms: gameState.level3MushroomImagesRef.current.length,
-            trippyImages: gameState.level3TrippyImagesRef.current.length
-          });
-          startAudioAndGameLoop();
-        };
-        loadLevel3();
-      } else {
-        startAudioAndGameLoop();
-      }
-    } else {
-      gameState.backgroundColorRef.current = gameState.currentLevel.initialBackground;
-      gameState.waveColorRef.current = gameState.currentLevel.initialWaveColor;
-      if (gameState.containerRef.current) {
-        gameState.containerRef.current.style.background = gameState.currentLevel.initialBackground;
-      }
-      startAudioAndGameLoop();
+    } else if (gameState.currentLevel.id === 3 && gameState.containerRef.current) {
+      gameState.containerRef.current.style.background = "transparent"; // Assuming level 3 also has a video or special bg
+    } else if (gameState.containerRef.current) {
+      gameState.containerRef.current.style.background = gameState.currentLevel.initialBackground;
     }
+
+    // Start audio and game loop
+    startAudioAndGameLoop();
     
     function startAudioAndGameLoop() {
       // Reset color events
@@ -429,11 +361,11 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
       });
       // Reset color transition
       gameState.activeColorTransitionRef.current = {
-        backgroundColor: "#1a1a2e",
-        waveColor: "rgba(0,102,255,0.4)",
+        backgroundColor: gameState.currentLevel.initialBackground || "#1a1a2e",
+        waveColor: gameState.currentLevel.initialWaveColor || "rgba(0,102,255,0.4)",
         progress: 1,
-        targetBackgroundColor: "#1a1a2e",
-        targetWaveColor: "rgba(0,102,255,0.4)",
+        targetBackgroundColor: gameState.currentLevel.initialBackground || "#1a1a2e",
+        targetWaveColor: gameState.currentLevel.initialWaveColor || "rgba(0,102,255,0.4)",
         transitionDuration: 3
       };
       // Start audio and game loop with proper error handling
@@ -550,7 +482,8 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     detectBeat,
     inputRef,
     audioRef,
-    level2VideoLoaded
+    canvasRef, // Added canvasRef
+    audioRefNonNull // Added audioRefNonNull
   ]);
 
   return (
@@ -571,7 +504,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
           loop 
           muted 
           playsInline
-          onLoadedData={() => setLevel2VideoLoaded(true)}
+          // Remove onLoadedData - loading handled by AssetLoader
           style={{
             position: 'absolute',
             top: 0,
@@ -587,24 +520,43 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         </video>
       )}
 
-      {/* Loading indicator */}
-      {isLoading && (
+      {/* Loading indicator - only show for levels 2 and 3 */}
+      {gameState.isLoadingAssets && gameState.currentLevel.id > 1 && (
         <div style={{
-          position: 'absolute',
+          position: 'fixed',
           top: 0,
           left: 0,
           width: '100%',
           height: '100%',
           display: 'flex',
+          flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
           zIndex: 1000,
           color: 'white',
           fontFamily: 'Orbitron, sans-serif',
-          fontSize: '24px'
+          fontSize: '24px',
+          textAlign: 'center'
         }}>
-          Loading assets...
+          <p>Loading Assets...</p>
+          <div style={{
+            width: '80%',
+            maxWidth: '400px',
+            height: '20px',
+            backgroundColor: '#555',
+            borderRadius: '10px',
+            overflow: 'hidden',
+            marginTop: '10px'
+          }}>
+            <div style={{
+              width: `${gameState.loadingProgress}%`,
+              height: '100%',
+              backgroundColor: '#4CAF50',
+              transition: 'width 0.3s ease-in-out'
+            }} />
+          </div>
+          <p>{gameState.loadingProgress}%</p>
         </div>
       )}
 
@@ -645,7 +597,9 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
       <WelcomeScreen
         gameStarted={gameState.gameStarted}
         isLandscape={gameState.isLandscape}
-        floraLoaded={floraLoaded}
+        floraLoaded={floraLoaded} // Keep passing floraLoaded for now
+        isLoading={gameState.isLoadingAssets} // Pass loading state
+        loadingProgress={gameState.loadingProgress} // Pass loading progress
         startGame={startGame}
         setShowAboutModal={gameState.setShowAboutModal}
       />

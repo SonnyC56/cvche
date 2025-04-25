@@ -1,4 +1,7 @@
-import { FrameAnimatorManager } from './GifAnimator';
+import { FrameAnimatorManager, FrameAnimator } from './GifAnimator';
+
+// Define the callback type for progress updates
+type ProgressCallback = (loaded: number, total: number) => void;
 
 // Class to handle asset loading with promises
 export class AssetLoader {
@@ -17,7 +20,7 @@ export class AssetLoader {
   busImage: HTMLImageElement | null = null;
   batsImage: HTMLImageElement | null = null;
   batsFrames: HTMLImageElement[] = [];
-  batsAnimator: any = null; // Will store the frame animator instead of GIF animator
+  batsAnimator: FrameAnimator | null = null; // Use the correct type
   chickenImage: HTMLImageElement | null = null;
   vitaminCImage: HTMLImageElement | null = null;
   pillImage: HTMLImageElement | null = null;
@@ -52,177 +55,283 @@ export class AssetLoader {
   constructor() { }
 
   // Load basic game assets
-  async loadBasicAssets(): Promise<void> {
-    const assetPromises = [
-      await this.loadImage('/sprites/cvcheFish.png').then(img => this.fishImage = img),
-      await this.loadImage('/sprites/waterBottle.webp').then(img => this.waterBottleImage = img),
-      await this.loadImage('/sprites/plasticBag.webp').then(img => this.plasticBagImage = img),
-      await this.loadImage('/sprites/oilSplat.webp').then(img => this.oilSplatImage = img),
-      await this.loadImage('/sprites/fishHook.webp').then(img => this.fishHookImage = img),
-      await this.loadImage('/sprites/flipflop.webp').then(img => this.flipflopImage = img),
-      await this.loadImage('/sprites/toothbrush.webp').then(img => this.toothbrushImage = img),
-      await this.loadImage('/sprites/hotdog.webp').then(img => this.hotdogImage = img),
-      await this.loadImage('/sprites/rubberDucky.webp').then(img => this.rubberDuckyImage = img),
-      await this.loadAudio('/sounds/pickup.mp3', 0.3).then(audio => this.pickupSound = audio),
-      await this.loadAudio('/sounds/hit.mp3', 0.3).then(audio => this.hitSound = audio)
+  async loadBasicAssets(onProgress?: ProgressCallback): Promise<void> {
+    console.log('Loading basic game assets...');
+    let loadedCount = 0;
+    const totalAssets = 11; // 9 images + 2 sounds
+    
+    const updateProgress = () => {
+      loadedCount++;
+      onProgress?.(loadedCount, totalAssets);
+    };
+
+    const imagePromises = [
+      this.loadImage('/sprites/cvcheFish.png').then(img => {
+        this.fishImage = img;
+        updateProgress();
+      }),
+      this.loadImage('/sprites/waterBottle.webp').then(img => {
+        this.waterBottleImage = img;
+        updateProgress();
+      }),
+      this.loadImage('/sprites/plasticBag.webp').then(img => {
+        this.plasticBagImage = img;
+        updateProgress();
+      }),
+      this.loadImage('/sprites/oilSplat.webp').then(img => {
+        this.oilSplatImage = img;
+        updateProgress();
+      }),
+      this.loadImage('/sprites/fishHook.webp').then(img => {
+        this.fishHookImage = img;
+        updateProgress();
+      }),
+      this.loadImage('/sprites/flipflop.webp').then(img => {
+        this.flipflopImage = img;
+        updateProgress();
+      }),
+      this.loadImage('/sprites/toothbrush.webp').then(img => {
+        this.toothbrushImage = img;
+        updateProgress();
+      }),
+      this.loadImage('/sprites/hotdog.webp').then(img => {
+        this.hotdogImage = img;
+        updateProgress();
+      }),
+      this.loadImage('/sprites/rubberDucky.webp').then(img => {
+        this.rubberDuckyImage = img;
+        updateProgress();
+      }),
+      this.loadAudio('/sounds/pickup.mp3', 0.3).then(audio => {
+        this.pickupSound = audio;
+        updateProgress();
+      }),
+      this.loadAudio('/sounds/hit.mp3', 0.3).then(audio => {
+        this.hitSound = audio;
+        updateProgress();
+      })
     ];
 
-    await Promise.all(assetPromises);
+    try {
+      await Promise.all(imagePromises);
+      console.log('All basic assets loaded successfully');
+      onProgress?.(totalAssets, totalAssets); // Ensure 100% is reported
+    } catch (error) {
+      console.error('Error loading basic assets:', error);
+      onProgress?.(totalAssets, totalAssets); // Report completion even on error
+      throw error; // Re-throw error
+    }
   }
 
   // Load flora images
-  async loadFloraAssets(): Promise<void> {
+  async loadFloraAssets(onProgress?: ProgressCallback): Promise<void> {
+    console.log('Loading flora assets...');
     const floraFileNames = ['1 (1).webp', ...Array.from({ length: 20 }, (_, i) => `1 (${i + 16}).webp`)];
+    const totalAssets = floraFileNames.length;
+    let loadedCount = 0;
+    
+    const updateProgress = () => {
+      loadedCount++;
+      onProgress?.(loadedCount, totalAssets);
+    };
+    
     const floraPromises = floraFileNames.map(fileName =>
-      this.loadImage(`/sprites/flora/${fileName}`).then(img => this.floraImages.push(img))
+      this.loadImage(`/sprites/flora/${fileName}`).then(img => {
+        this.floraImages.push(img);
+        updateProgress();
+      })
     );
 
-    await Promise.all(floraPromises);
-    this.floraLoaded = true;
+    try {
+      await Promise.all(floraPromises);
+      this.floraLoaded = true;
+      console.log('All flora assets loaded successfully');
+      onProgress?.(totalAssets, totalAssets); // Ensure 100% is reported
+    } catch (error) {
+      console.error('Error loading flora assets:', error);
+      onProgress?.(totalAssets, totalAssets); // Report completion even on error
+      throw error; // Re-throw error
+    }
   }
 
-  // Load level 2 specific assets
-  async loadLevel2Assets(): Promise<void> {
+  // Load level 2 specific assets with progress reporting
+  async loadLevel2Assets(onProgress?: ProgressCallback): Promise<void> {
     console.log('Loading level 2 assets...');
-    // Load each obstacle image independently with separate promises
+    let loadedCount = 0;
+    // Total assets: bus(1) + bats_static(1) + bats_animator(1) + chicken2(1) + chicken3-7(5) + pickups(4) + video(1) = 14
+    const totalAssets = 14;
+
+    const updateProgress = () => {
+      loadedCount++;
+      onProgress?.(loadedCount, totalAssets);
+    };
+
+    // --- Create all individual promises ---
+
     const busPromise = this.loadImage('/sprites/level2/obstacles/bus.webp').then(img => {
       this.busImage = img;
-      // Add to array in a specific order to ensure consistent indexing
-      this.level2ObstacleImages[0] = img;
+      this.level2ObstacleImages[0] = img; // Assign to specific index
+      updateProgress(); // Track progress
     });
-    
-    // Load static bat image
+
     const batsImagePromise = this.loadImage('/sprites/level2/obstacles/bats.png').then(img => {
       this.batsImage = img;
-      // Add to array at index 1
-      this.level2ObstacleImages[1] = img;
+      this.level2ObstacleImages[1] = img; // Assign to specific index
+      updateProgress(); // Track progress
     });
-    
-    // Setup the frame animator with individual bat frames (0-12)
-    const batsFramePaths: string[] = [];
-    for (let i = 0; i <= 12; i++) {
-      batsFramePaths.push(`/sprites/level2/obstacles/bats_frames-${i}.png`);
-    }
-    
+
+    const batsFramePaths: string[] = Array.from({ length: 13 }, (_, i) => `/sprites/level2/obstacles/bats_frames-${i}.png`);
     const batsAnimatorPromise = FrameAnimatorManager.getInstance()
-      .getAnimator('bats', batsFramePaths, 70) // ~14fps animation
+      .getAnimator('bats', batsFramePaths, 70) // Treat animator init as one asset load
       .then(animator => {
         this.batsAnimator = animator;
         console.log("Bats frame animator initialized");
+        updateProgress(); // Track progress
       });
-    
-    // Load chicken image
-    const chickenPromise = this.loadImage('/sprites/level2/obstacles/chicken_2.webp').then(img => {
+
+    const chicken2Promise = this.loadImage('/sprites/level2/obstacles/chicken_2.webp').then(img => {
       this.chickenImage = img;
-      // Add to array at index 2
-      this.level2ObstacleImages[2] = img;
+      this.level2ObstacleImages[2] = img; // Assign to specific index
+      updateProgress(); // Track progress
     });
 
-    //load chicken_3-7 images
     const chickenPromises: Promise<void>[] = [];
     for (let i = 3; i <= 7; i++) {
-      const chickenPromise = this.loadImage(`/sprites/level2/obstacles/chicken_${i}.webp`).then(img => {
-      this.level2ObstacleImages[i] = img;
+      const index = i; // Capture index for closure
+      const promise = this.loadImage(`/sprites/level2/obstacles/chicken_${index}.webp`).then(img => {
+        this.level2ObstacleImages[index] = img; // Assign to specific index
+        updateProgress(); // Track progress
       });
-      chickenPromises.push(chickenPromise);
+      chickenPromises.push(promise);
     }
 
-    // Group obstacle promises
-    const obstaclePromises = [busPromise, batsImagePromise, batsAnimatorPromise, chickenPromise, ...chickenPromises];
-
-    // Pickup promises in parallel
     const vitaminCPromise = this.loadImage('/sprites/level2/pickups/vitaminC.webp').then(img => {
       this.vitaminCImage = img;
       this.level2PickupImages.push(img);
+      updateProgress(); // Track progress
     });
-    
+
     const pillPromise = this.loadImage('/sprites/level2/pickups/pill.webp').then(img => {
       this.pillImage = img;
       this.level2PickupImages.push(img);
+      updateProgress(); // Track progress
     });
-    
+
     const tumericPromise = this.loadImage('/sprites/level2/pickups/tumeric.webp').then(img => {
       this.tumericImage = img;
       this.level2PickupImages.push(img);
+      updateProgress(); // Track progress
     });
-    
+
     const gingerPromise = this.loadImage('/sprites/level2/pickups/ginger.webp').then(img => {
       this.gingerImage = img;
       this.level2PickupImages.push(img);
+      updateProgress(); // Track progress
     });
-    
-    const pickupPromises = [vitaminCPromise, pillPromise, tumericPromise, gingerPromise];
 
-    // Preload the video
-    const videoPromise = this.preloadVideo('/videos/level2background-compressed.mp4');
+    const videoPromise = this.preloadVideo('/videos/level2background-compressed.mp4').then(() => {
+      updateProgress(); // Track progress
+    });
 
-    console.log('Waiting for all level 2 assets to load...');
+    // --- Group all promises ---
+    const allPromises = [
+      busPromise,
+      batsImagePromise,
+      batsAnimatorPromise,
+      chicken2Promise,
+      ...chickenPromises,
+      vitaminCPromise,
+      pillPromise,
+      tumericPromise,
+      gingerPromise,
+      videoPromise
+    ];
+
+    console.log(`Waiting for ${totalAssets} level 2 assets to load...`);
     try {
-      // Wait for all assets to load
-      await Promise.all([
-        ...obstaclePromises, 
-        ...pickupPromises, 
-        videoPromise
-      ]);
-      
+      await Promise.all(allPromises);
       console.log('All level 2 assets loaded successfully');
       this.level2AssetsLoaded = true;
+      onProgress?.(totalAssets, totalAssets); // Ensure 100% is reported
     } catch (error) {
       console.error('Error loading level 2 assets:', error);
-      throw error;
+      // Optionally report completion even on error, or handle differently
+      onProgress?.(totalAssets, totalAssets);
+      throw error; // Re-throw error after reporting progress
     }
   }
 
-  // Load level 3 specific assets
-  async loadLevel3Assets(): Promise<void> {
+  // Load level 3 specific assets with progress reporting
+  async loadLevel3Assets(onProgress?: ProgressCallback): Promise<void> {
     console.log('Loading level 3 assets...');
-    // Load obstacle images
+    let loadedCount = 0;
+    // Total assets: obstacles(3) + mushrooms(9) + trippy(9) = 21
+    const totalAssets = 21;
+
+    const updateProgress = () => {
+      loadedCount++;
+      onProgress?.(loadedCount, totalAssets);
+    };
+
+    // --- Create all individual promises ---
+
     const cloudPromise = this.loadImage('/sprites/level3/obstacles/clouds.webp').then(img => {
       this.cloudImage = img;
       this.level3ObstacleImages.push(img);
+      updateProgress();
     });
-      
+
     const eaglePromise = this.loadImage('/sprites/level3/obstacles/eagle.webp').then(img => {
       this.eagleImage = img;
       this.level3ObstacleImages.push(img);
+      updateProgress();
     });
-      
+
     const gullPromise = this.loadImage('/sprites/level3/obstacles/black-headed-gull.webp').then(img => {
       this.level3ObstacleImages.push(img);
+      updateProgress();
     });
 
-    const obstaclePromises = [cloudPromise, eaglePromise, gullPromise];
-    
-    // Load mushroom images
-    const mushroomPromises = [];
+    const mushroomPromises: Promise<void>[] = [];
     for (let i = 1; i <= 9; i++) {
-      mushroomPromises.push(
-        this.loadImage(`/sprites/level3/mushrooms/mushroom (${i}).webp`).then(img => {
-          this.level3MushroomImages.push(img);
-        })
-      );
+      const promise = this.loadImage(`/sprites/level3/mushrooms/mushroom (${i}).webp`).then(img => {
+        this.level3MushroomImages.push(img);
+        updateProgress();
+      });
+      mushroomPromises.push(promise);
     }
 
-    // Load trippy images
     const trippyTypes = [
       'baby', 'baby2', 'blueMan', 'gummyWorm', 'kitten',
       'magicRabbit', 'pomeranian', 'squirtToy', 'woman'
     ];
-
-    const trippyPromises = trippyTypes.map(type => {
-      const ext  = 'webp';
+    const trippyPromises: Promise<void>[] = trippyTypes.map(type => {
+      const ext = 'webp';
       return this.loadImage(`/sprites/level3/trippyPickups/${type}.${ext}`).then(img => {
         this.level3TrippyImages.push(img);
+        updateProgress();
       });
     });
-    
+
+    // --- Group all promises ---
+    const allPromises = [
+      cloudPromise,
+      eaglePromise,
+      gullPromise,
+      ...mushroomPromises,
+      ...trippyPromises
+    ];
+
+    console.log(`Waiting for ${totalAssets} level 3 assets to load...`);
     try {
-      await Promise.all([...obstaclePromises, ...mushroomPromises, ...trippyPromises]);
+      await Promise.all(allPromises);
       console.log('All level 3 assets loaded successfully');
       this.level3AssetsLoaded = true;
+      onProgress?.(totalAssets, totalAssets); // Ensure 100% is reported
     } catch (error) {
       console.error('Error loading level 3 assets:', error);
-      throw error;
+      onProgress?.(totalAssets, totalAssets); // Report completion even on error
+      throw error; // Re-throw error
     }
   }
 

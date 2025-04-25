@@ -5,6 +5,7 @@ import { ExtendedHTMLAudioElement } from '../types';
 export const useAudio = (
   gameStarted: boolean,
   isPaused: boolean,
+  isLoadingAssets: boolean,
   setAudioProgress: (progress: number) => void,
   setCurrentTime: (time: number) => void,
   setDuration: (duration: number) => void,
@@ -30,7 +31,10 @@ export const useAudio = (
     //  console.log('[DEBUG] Fallback beat generated');
     }, interval);
   };
+  // Effect to set up audio context and analyser
   useEffect(() => {
+    // This effect should only run when the game starts or the level changes,
+    // not when the pause state changes.
     if (!gameStarted) return;
     const audioEl = audioRef.current as ExtendedHTMLAudioElement;
     if (!audioEl) return;
@@ -51,24 +55,19 @@ export const useAudio = (
         analyserRef.current = analyser;
         const bufferLength = analyser.frequencyBinCount;
         dataArrayRef.current = new Uint8Array(bufferLength);
-  
+
         if (!audioEl._mediaElementSource) {
-      //    console.log('[DEBUG] Creating new media element source');
           const source = audioCtx.createMediaElementSource(audioEl);
           audioEl._mediaElementSource = source;
         } else {
-        //  console.log('[DEBUG] Reusing existing media element source');
           audioEl._mediaElementSource.disconnect();
         }
         audioEl._mediaElementSource.connect(analyser);
         analyser.connect(audioCtx.destination);
-  
+
         if (audioCtx.state !== 'running') {
-       //   console.log('[DEBUG] Resuming AudioContext...');
           await audioCtx.resume();
-          //console.log('[DEBUG] AudioContext state after resume:', audioCtx.state);
         }
-      //  console.log('[DEBUG] Audio setup complete - Analyzer created with bufferLength:', bufferLength);
         setTimeout(() => {
           if (analyserRef.current && dataArrayRef.current) {
             analyserRef.current.getByteFrequencyData(dataArrayRef.current);
@@ -76,9 +75,7 @@ export const useAudio = (
             for (let i = 0; i < dataArrayRef.current.length; i++) {
               sum += dataArrayRef.current[i];
             }
-          //  console.log('[DEBUG] Initial audio data test:', sum > 0 ? 'RECEIVING DATA ✅' : 'NO DATA ❌');
             if (sum === 0) {
-          //    console.log('[DEBUG] No audio data detected, activating fallback beat generation');
               startFallbackBeatGeneration();
             }
           }
@@ -88,7 +85,7 @@ export const useAudio = (
         startFallbackBeatGeneration();
       }
     };
-  
+
     const handlePlay = () => {
       setupAudio();
     };
@@ -97,9 +94,8 @@ export const useAudio = (
       if (audioEl._audioCtx && audioEl._audioCtx.state !== 'running') {
         try {
           await audioEl._audioCtx.resume();
-     //     console.log('[DEBUG] AudioContext resumed from user interaction');
         } catch (error) {
-       //   console.error('[DEBUG] Error resuming AudioContext:', error);
+          console.error("Error resuming AudioContext:", error); // Log the error
         }
       }
     };
@@ -116,7 +112,7 @@ export const useAudio = (
         fallbackTimerRef.current = null;
       }
     };
-  }, [gameStarted, currentLevelId, isPaused]);
+  }, [gameStarted, currentLevelId]); // Removed isPaused from dependencies
   
   useEffect(() => {
     if (!gameStarted) return;
@@ -143,26 +139,32 @@ export const useAudio = (
     return () => clearInterval(intervalId);
   }, [gameStarted, setAudioProgress, setCurrentTime, setDuration, setLevelEnded, gameLoopRef, animationFrameIdRef]);
 
+  // Effect to handle audio play/pause based on game state and loading status
   useEffect(() => {
     if (!audioRef.current || !gameStarted) return;
-    if (isPaused) {
+
+    // Only attempt to play if not paused AND not currently loading assets
+    if (isPaused || isLoadingAssets) {
       audioRef.current.pause();
       if (fallbackTimerRef.current) {
         clearInterval(fallbackTimerRef.current);
         fallbackTimerRef.current = null;
       }
     } else {
+      // Attempt to play audio
       audioRef.current.play().catch(error => {
-        if (error.name === 'AbortError') return;
+        if (error.name === 'AbortError') return; // Ignore expected AbortError
         console.error("Error playing audio:", error);
+        // If playback fails and no audio data is detected, start fallback beat generation
         if (!fallbackTimerRef.current) {
-          const BPM = 120;
-          const interval = 60000 / BPM;
-          fallbackTimerRef.current = window.setInterval(() => {}, interval);
+           // Note: Fallback beat generation is handled by the setupAudio effect
+           // This catch block primarily logs errors and could potentially
+           // trigger fallback if setupAudio didn't for some reason, but
+           // the main trigger is in setupAudio based on initial data check.
         }
       });
     }
-  }, [isPaused, gameStarted]);
+  }, [isPaused, gameStarted, isLoadingAssets]); // Added isLoadingAssets to dependencies
 
   const getAverageAmplitude = (): number => {
     const analyser = analyserRef.current;
@@ -186,7 +188,7 @@ export const useAudio = (
       }
       return avg;
     } catch (error) {
-     // console.error("[DEBUG] Error getting amplitude:", error);
+      console.error("[DEBUG] Error getting amplitude:", error); // Log the error
       return 0;
     }
   };

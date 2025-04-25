@@ -20,6 +20,10 @@ export const useGameState = () => {
   const [pendingLevel, setPendingLevel] = useState<Level | null>(null);
   const [pausedByOrientation, setPausedByOrientation] = useState(false);
 
+  // Loading state
+  const [isLoadingAssets, setIsLoadingAssets] = useState(false); // Default to false instead of true
+  const [loadingProgress, setLoadingProgress] = useState(0); // Percentage 0-100
+
   // Store the restartGameLoop function reference
   const restartGameLoopRef = useRef<(() => void) | null>(null);
 
@@ -178,93 +182,6 @@ export const useGameState = () => {
   const portraitAnimationFrameRef = useRef<number | null>(null);
   const portraitFishPositionRef = useRef({ x: 0, y: 0, rotation: 0 });
 
-  useEffect(() => {
-    currentLevelRef.current = currentLevel;
-  }, [currentLevel]);
-
-  useEffect(() => {
-    audioProgressRef.current = audioProgress;
-  }, [audioProgress]);
-
-  useEffect(() => {
-    setLevels(prev => {
-      const newLevels = prev.map(level => {
-        if (level.id === currentLevel.id) {
-          const newHighScore = Math.max(level.highScore || 0, score);
-          const newHighestStreak = Math.max(level.highestStreak || 0, gameStateRef.current.highestStreak);
-          return { ...level, highScore: newHighScore, highestStreak: newHighestStreak };
-        }
-        return level;
-      });
-      localStorage.setItem('gameLevels', JSON.stringify(newLevels));
-      const updatedCurrent = newLevels.find(l => l.id === currentLevel.id);
-      if (updatedCurrent) {
-        setCurrentLevel(updatedCurrent);
-      }
-      return newLevels;
-    });
-  }, [score, currentLevel.id]);
-
-  useEffect(() => {
-    const handleOrientationChange = () => {
-      const landscape = window.innerWidth > window.innerHeight;
-      setIsLandscape(landscape);
-      if (landscape) {
-        gameStateRef.current.player.y = window.innerHeight / 2;      }
-    };
-    window.addEventListener('resize', handleOrientationChange);
-    return () => window.removeEventListener('resize', handleOrientationChange);
-  }, []);
-
-  useEffect(() => {
-    if (!isLandscape && gameStarted && !isPaused) {
-      console.log("Pausing game due to orientation change");
-      togglePause();
-      setPausedByOrientation(true);
-    }
-  }, [isLandscape, gameStarted, isPaused]);
-
-  useEffect(() => {
-    if (isLandscape && pausedByOrientation && gameStarted && isPaused) {
-      console.log("Resuming game from orientation change");
-      togglePause();
-      setPausedByOrientation(false);
-      restartGameLoopRef.current?.();
-    }
-  }, [isLandscape, pausedByOrientation, gameStarted, isPaused]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const levelParam = params.get("level");
-    console.log("Level param:", levelParam);
-    if (levelParam === "2") {
-      const level2 = levels.find(l => l.id === 2);
-      if (level2) {
-        (async () => {
-          await selectLevel(level2);
-          restartGameLoopRef.current?.(); // Ensure game loop restarts
-        })();
-      }
-    } else if (levelParam === "3") {
-      const level3 = levels.find(l => l.id === 3);
-      if (level3) {
-        (async () => {
-          await selectLevel(level3);
-          restartGameLoopRef.current?.(); // Ensure game loop restarts
-
-        })();
-      }
-    }
-  }, []);
-  
-
-  useEffect(() => {
-    const font = new FontFace('Orbitron', 'url(/fonts/Orbitron/Orbitron-VariableFont_wght.ttf)');
-    font.load().then(() => {
-      document.fonts.add(font);
-    });
-  }, []);
-
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const level2ObstacleImagesRef = useRef<HTMLImageElement[]>([]);
@@ -273,6 +190,7 @@ export const useGameState = () => {
   const level3MushroomImagesRef = useRef<HTMLImageElement[]>([]);
   const level3TrippyImagesRef = useRef<HTMLImageElement[]>([]);
 
+  // --- Moved Callbacks --- 
   const togglePause = useCallback(() => {
     setIsPaused(prev => {
       const newPaused = !prev;
@@ -292,16 +210,30 @@ export const useGameState = () => {
     });
   }, []);
 
+  // Callback for asset loading progress
+  const handleLoadingProgress = useCallback((loaded: number, total: number) => {
+    const percentage = total > 0 ? Math.round((loaded / total) * 100) : 0;
+    setLoadingProgress(percentage);
+    // console.log(`Loading progress: ${percentage}% (${loaded}/${total})`); // Optional logging
+  }, []);
+
   const selectLevel = useCallback(async (level: Level) => {
     if (!level.unlocked) return;
-    gameLoopRef.current = false;
-    if (animationFrameIdRef.current) {
-      cancelAnimationFrame(animationFrameIdRef.current);
-      animationFrameIdRef.current = null;
-    }
-    gameStateRef.current = {
-      player: {
-        x: (window.innerWidth / 2) - 25,
+
+    setIsLoadingAssets(true); // Start loading
+    setLoadingProgress(0);    // Reset progress
+
+    try {
+      gameLoopRef.current = false; // Stop game loop if running
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+        animationFrameIdRef.current = null;
+      }
+
+      // Reset core game state for the new level
+      gameStateRef.current = {
+        player: {
+          x: (window.innerWidth / 2) - 25,
         y: window.innerHeight / 2,
         width: 50,
         height: 30,
@@ -364,83 +296,150 @@ export const useGameState = () => {
       ...event,
       triggered: event.timestamp === 0
     }));
-    setCurrentLevel(level);
-  
+    setCurrentLevel(level); // Update the current level state
+
+    // --- Load Assets Based on Level ---
+    const assetLoader = new AssetLoader(); // Instantiate loader
+
     if (level.id === 2) {
       if (containerRef.current) {
-        containerRef.current.style.background = "transparent";
+        containerRef.current.style.background = "transparent"; // Specific background handling
       }
-      timedTextEventsRef.current = createLevel2TimedTextEvents();
-      const loadLevel2Assets = async () => {
-        if (gameStateRef.current.gameStarted) {
-          setIsPaused(true);
-        }
-        const assetLoader = new AssetLoader();
-        await assetLoader.loadLevel2Assets();
-        level2ObstacleImagesRef.current = assetLoader.level2ObstacleImages;
-        level2PickupImagesRef.current = assetLoader.level2PickupImages;
-        setLevelEnded(false);
-        setHealth(100);
-        if (gameStateRef.current.gameStarted) {
-          setIsPaused(false);
-          // When unpausing after level change, make sure the game loop restarts
-          gameLoopRef.current = true;
-          // Call the restartGameLoop function if it exists
-          if (restartGameLoopRef.current) {
-            restartGameLoopRef.current();
-          }
-        }
-      };
-      // Await the level‑2 assets to ensure they're fully loaded before continuing
-      await loadLevel2Assets();
+      timedTextEventsRef.current = createLevel2TimedTextEvents(); // Set level-specific events
+      await assetLoader.loadLevel2Assets(handleLoadingProgress); // Load assets with progress
+      level2ObstacleImagesRef.current = assetLoader.level2ObstacleImages; // Update refs
+      level2PickupImagesRef.current = assetLoader.level2PickupImages;
     } else if (level.id === 3) {
       if (containerRef.current) {
-        containerRef.current.style.background = "transparent";
+        containerRef.current.style.background = "transparent"; // Specific background handling
       }
-      timedTextEventsRef.current = createLevel3TimedTextEvents();
-      const loadLevel3Assets = async () => {
-        if (gameStateRef.current.gameStarted) {
-          setIsPaused(true);
-        }
-        const assetLoader = new AssetLoader();
-        await assetLoader.loadLevel3Assets();
-        level3ObstacleImagesRef.current = assetLoader.level3ObstacleImages;
-        level3MushroomImagesRef.current = assetLoader.level3MushroomImages;
-        level3TrippyImagesRef.current = assetLoader.level3TrippyImages;
-        setLevelEnded(false);
-        setHealth(100);
-        if (gameStateRef.current.gameStarted) {
-          setIsPaused(false);
-          // When unpausing after level change, make sure the game loop restarts
-          gameLoopRef.current = true;
-          // Call the restartGameLoop function if it exists
-          if (restartGameLoopRef.current) {
-            restartGameLoopRef.current();
-          }
-        }
-      };
-      // Await the level‑3 assets to ensure they're fully loaded before continuing
-      await loadLevel3Assets();
+      timedTextEventsRef.current = createLevel3TimedTextEvents(); // Set level-specific events
+      await assetLoader.loadLevel3Assets(handleLoadingProgress); // Load assets with progress
+      level3ObstacleImagesRef.current = assetLoader.level3ObstacleImages; // Update refs
+      level3MushroomImagesRef.current = assetLoader.level3MushroomImages;
+      level3TrippyImagesRef.current = assetLoader.level3TrippyImages;
     } else {
+      // Handle Level 1 or other default levels
       backgroundColorRef.current = level.initialBackground;
       waveColorRef.current = level.initialWaveColor;
       if (containerRef.current) {
         containerRef.current.style.background = level.initialBackground;
       }
       timedTextEventsRef.current = createDefaultTimedTextEvents();
-      setLevelEnded(false);
-      setHealth(100);
-      
-      // For level 1 or any other level, make sure the game loop restarts if game has started
-      if (gameStateRef.current.gameStarted) {
-        gameLoopRef.current = true;
-        // Call the restartGameLoop function if it exists
-        if (restartGameLoopRef.current) {
-          restartGameLoopRef.current();
+      // Optionally load basic assets here if needed, potentially with progress
+      // await assetLoader.loadBasicAssets(handleLoadingProgress); // Example
+    }
+
+    // Reset common level state after assets are loaded
+    setLevelEnded(false);
+    setHealth(100);
+
+    // If the game was already started (e.g., changing levels mid-game), restart the loop
+    if (gameStateRef.current.gameStarted) {
+      gameLoopRef.current = true;
+      restartGameLoopRef.current?.();
+    }
+
+    } catch (error) {
+      console.error("Error during level selection or asset loading:", error);
+      // Handle error appropriately, maybe show an error message to the user
+    } finally {
+      setIsLoadingAssets(false); // Stop loading, regardless of success or error
+    }
+  }, [setLevelEnded, setHealth, handleLoadingProgress, setCurrentLevel]);
+
+  // --- Effects --- 
+  useEffect(() => {
+    currentLevelRef.current = currentLevel;
+  }, [currentLevel]);
+
+  useEffect(() => {
+    audioProgressRef.current = audioProgress;
+  }, [audioProgress]);
+
+  useEffect(() => {
+    setLevels(prev => {
+      const newLevels = prev.map(level => {
+        if (level.id === currentLevel.id) {
+          const newHighScore = Math.max(level.highScore || 0, score);
+          const newHighestStreak = Math.max(level.highestStreak || 0, gameStateRef.current.highestStreak);
+          return { ...level, highScore: newHighScore, highestStreak: newHighestStreak };
         }
+        return level;
+      });
+      localStorage.setItem('gameLevels', JSON.stringify(newLevels));
+      const updatedCurrent = newLevels.find(l => l.id === currentLevel.id);
+      if (updatedCurrent) {
+        setCurrentLevel(updatedCurrent);
+      }
+      return newLevels;
+    });
+  }, [score, currentLevel.id]);
+
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      const landscape = window.innerWidth > window.innerHeight;
+      setIsLandscape(landscape);
+      if (landscape) {
+        gameStateRef.current.player.y = window.innerHeight / 2;      }
+    };
+    window.addEventListener('resize', handleOrientationChange);
+    return () => window.removeEventListener('resize', handleOrientationChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isLandscape && gameStarted && !isPaused) {
+      console.log("Pausing game due to orientation change");
+      togglePause();
+      setPausedByOrientation(true);
+    }
+  }, [isLandscape, gameStarted, isPaused, togglePause]); // Added togglePause
+
+  useEffect(() => {
+    if (isLandscape && pausedByOrientation && gameStarted && isPaused) {
+      console.log("Resuming game from orientation change");
+      togglePause();
+      setPausedByOrientation(false);
+      restartGameLoopRef.current?.();
+    }
+  }, [isLandscape, pausedByOrientation, gameStarted, isPaused, togglePause]); // Added togglePause
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const levelParam = params.get("level");
+    console.log("Level param:", levelParam);
+    if (levelParam === "2") {
+      const level2 = levels.find(l => l.id === 2);
+      if (level2) {
+        (async () => {
+          await selectLevel(level2);
+          restartGameLoopRef.current?.(); // Ensure game loop restarts
+        })();
+      }
+    } else if (levelParam === "3") {
+      const level3 = levels.find(l => l.id === 3);
+      if (level3) {
+        (async () => {
+          await selectLevel(level3);
+          restartGameLoopRef.current?.(); // Ensure game loop restarts
+
+        })();
       }
     }
-  }, [levels, setIsPaused, setLevelEnded, setHealth]);
+  }, [levels, selectLevel]); // Added levels and selectLevel
+  
+
+  useEffect(() => {
+    const font = new FontFace('Orbitron', 'url(/fonts/Orbitron/Orbitron-VariableFont_wght.ttf)');
+    font.load().then(() => {
+      document.fonts.add(font);
+    });
+  }, []);
+
+  // --- Removed Callbacks (moved earlier) ---
+  // const togglePause = useCallback(...);
+  // const handleLoadingProgress = useCallback(...);
+  // const selectLevel = useCallback(...);
   
   // Function to set the restart game loop reference
   const setRestartGameLoopRef = useCallback((fn: () => void) => {
@@ -516,6 +515,11 @@ export const useGameState = () => {
     togglePause,
     selectLevel,
     // Game loop integration
-    setRestartGameLoopRef
+    setRestartGameLoopRef,
+    // Add new state for loading
+    isLoadingAssets,
+    loadingProgress,
+    setIsLoadingAssets,
+    setLoadingProgress
   };
 };

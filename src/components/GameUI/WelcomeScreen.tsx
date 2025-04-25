@@ -4,6 +4,8 @@ interface WelcomeScreenProps {
   gameStarted: boolean;
   isLandscape: boolean;
   floraLoaded: boolean;
+  isLoading?: boolean; // Add new prop for loading state
+  loadingProgress?: number; // Add new prop for loading progress
   startGame: () => void;
   setShowAboutModal: (show: boolean) => void;
 }
@@ -12,6 +14,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   gameStarted,
   isLandscape,
   floraLoaded,
+  isLoading = false, // Default to false
+  loadingProgress = 0, // Default to 0
   startGame,
   setShowAboutModal
 }) => {
@@ -239,7 +243,33 @@ useEffect(() => {
             About
           </span>
         </nav>
-        {!floraLoaded ? (
+        {isLoading ? (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            padding: '20px', 
+            color: '#000' 
+          }}>
+            <div style={{ fontSize: '24px', marginBottom: '10px' }}>
+              Loading...{Math.round(loadingProgress)}%
+            </div>
+            <div style={{
+              width: '240px',
+              height: '10px',
+              backgroundColor: '#ddd',
+              borderRadius: '5px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                width: `${loadingProgress}%`,
+                height: '100%',
+                backgroundColor: '#0066FF',
+                transition: 'width 0.3s ease-in-out'
+              }}></div>
+            </div>
+          </div>
+        ) : !floraLoaded ? (
           <div style={{ padding: '20px 60px', fontSize: '24px', color: '#000' }}>
             Loading...
           </div>
