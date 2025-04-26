@@ -79,11 +79,12 @@ export const updatePlayerPosition = (
     const dy = targetPlayerY - currentY;
     
     // Apply smoothing to movement
-    player.vy = player.vy * 0.9 + dy * 0.1 * factor;
+    player.vy = player.vy * 0.9 + dy * 0.1 ;
     player.y += player.vy * 0.1 * factor;
     
-    // Reduce rotation interpolation for smoother movement
-    const targetRotation = Math.atan2(player.vy * 0.1 * factor, 2) * 0.25;
+    // Calculate rotation based on vy without the extra factor multiplication
+    // This prevents exaggerated tilting when frame rate drops (e.g., during low battery)
+    const targetRotation = Math.atan2(player.vy * 0.1, 2) * 0.25;
     player.rotation = targetRotation;
   } else {
     // Gradually slow down when no input
@@ -99,8 +100,8 @@ export const updatePlayerPosition = (
     }
   }
   
-  // Reset tiny rotations to zero
-  if (Math.abs(player.rotation) < 0.01) {
+  // Reset tiny rotations to zero (only if not actively receiving input)
+  if (Math.abs(player.rotation) < 0.01 && !isInputActive) {
     player.rotation = 0;
   }
 };
