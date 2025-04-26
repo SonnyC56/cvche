@@ -18,7 +18,7 @@ import PortraitScreen from './GameUI/PortraitScreen';
 import StreakDisplay from './GameUI/StreakDisplay';
 import WelcomeScreen from './GameUI/WelcomeScreen';
 
-import { GameProps } from '../types';
+import { GameProps, ExtendedHTMLAudioElement } from '../types';
 
 // Remove local loading states
 const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.ReactElement => {
@@ -69,8 +69,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     gameState.analyserRef,
     gameState.dataArrayRef,
     gameState.lastBeatTimeRef,
-    gameState.currentLevel.id // <-- pass the current level id here
-
+    gameState.currentLevel.id, // <-- pass the current level id here
   );
 
   // Create non-null audio ref for the game loop
@@ -284,6 +283,18 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
 
   // Remove useEffect hooks for loading level 2 and level 3 assets
   // Remove useEffect hook for detecting level 2 video load
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+const debounce = (func: (...args: any[]) => void, delay: number) => {
+  let timeoutId: number | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (...args: any[]) => {
+    clearTimeout(timeoutId);
+    timeoutId = window.setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+};
 
   // Effect to handle canvas resizing
   useEffect(() => {
@@ -297,14 +308,17 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
       }
     };
 
+    // Debounce the resize handler
+    const debouncedHandleResize = debounce(handleResize, 200); // 200ms delay
+
     // Set initial size
-    handleResize();
+    handleResize(); // Still call immediately on mount
 
     // Add resize event listener
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', debouncedHandleResize);
 
     // Cleanup function to remove event listener
-    return () => window.removeEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', debouncedHandleResize);
   }, []); // Empty dependency array ensures this runs only once on mount
 
   // Portrait animation function
@@ -354,7 +368,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     // Start audio and game loop
     startAudioAndGameLoop();
     
-    function startAudioAndGameLoop() {
+    async function startAudioAndGameLoop() {
       // Reset color events
       gameState.colorEventsRef.current.forEach((event, index) => {
         event.triggered = index === 0;
@@ -370,6 +384,16 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
       };
       // Start audio and game loop with proper error handling
       if (audioRef.current) {
+        // Attempt to resume AudioContext on user interaction (important for iOS)
+        const audioEl = audioRef.current as ExtendedHTMLAudioElement;
+        if (audioEl._audioCtx && audioEl._audioCtx.state !== 'running') {
+          try {
+            await audioEl._audioCtx.resume();
+            console.log("AudioContext resumed successfully on startGame.");
+          } catch (error) {
+            console.error("Error resuming AudioContext on startGame:", error);
+          }
+        }
         // Reset any previous state
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
@@ -384,95 +408,68 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         }
         // Ensure audio is properly loaded before playing
         audioRef.current.load();
-        // Create a flag to prevent multiple initializations
-        let initialized = false;
-        // Handle canplaythrough event
-        const handleCanPlay = () => {
-          if (initialized || !audioRef.current) return;
-          initialized = true;
-          audioRef.current.currentTime = 0;
-          // Start the game loop even if audio fails
-          startGameLoop();
-          // Try to play audio, but don't block the game if it fails
-          audioRef.current.play().catch(error => {
-            console.log("Audio play error:", error.message);
-          });
-        };
         
-        // Set up the event listener
-        audioRef.current.addEventListener('canplaythrough', handleCanPlay, { once: true });
-        // Start game loop function to avoid code duplication
-        const startGameLoop = () => {
-          gameState.gameLoopRef.current = true;
-          gameState.animationFrameIdRef.current = requestAnimationFrame(() =>
-            gameLoop(
-              canvasRef,
-              gameState.gameStateRef,
-              gameState.lastFrameTimeRef,
-              gameState.gameLoopRef,
-              gameState.animationFrameIdRef,
-              audioRefNonNull,
-              gameState.audioProgressRef,
-              getAverageAmplitude,
-              detectBeat,
-              gameState.lastBeatTimeRef,
-              inputRef,
-              gameState.backgroundColorRef,
-              gameState.waveColorRef,
-              gameState.activeColorTransitionRef,
-              gameState.bgPatternBubblesRef,
-              gameState.levelTogglesRef,
-              gameState.bubblesRef,
-              gameState.amplitudeRef,
-              gameState.activeTimedTextsRef,
-              gameState.floraItemsRef,
-              gameState.streakDisplayRef,
-              fishImageRef,
-              waterBottleRef,
-              plasticBagRef,
-              oilSplatImageRef,
-              fishHookRef,
-              flipflopRef,
-              toothbrushRef,
-              hotdogRef,
-              rubberDuckyRef,
-              gameState.level2ObstacleImagesRef,
-              gameState.level2PickupImagesRef,
-              gameState.level3ObstacleImagesRef,
-              gameState.level3MushroomImagesRef,
-              gameState.level3TrippyImagesRef,
-              gameState.currentLevelRef,
-              gameState.timedTextEventsRef,
-              gameState.colorEventsRef,
-              gameState.level2TimedEventsRef,
-              gameState.level3TimedEventsRef,
-              gameState.caveRef,
-              gameState.speedMultiplier,
-              gameState.setScore,
-              gameState.setHealth,
-              gameState.setLevelEnded,
-              gameState.lastCollisionTimeRef,
-              gameState.lastProximityScoreTimeRef,
-              gameState.pickupSoundRef as React.RefObject<HTMLAudioElement>,
-              gameState.hitSoundRef as React.RefObject<HTMLAudioElement>
-            )
-          );
-        };
-        // Fallback in case oncanplaythrough doesn't fire
-        const timeoutId = setTimeout(() => {
-          if (!initialized && audioRef.current) {
-            console.log("Starting game loop via timeout fallback");
-            audioRef.current.removeEventListener('canplaythrough', handleCanPlay);
-            handleCanPlay();
-          }
-        }, 3000);
-        // Cleanup function to prevent memory leaks
-        return () => {
-          if (audioRef.current) {
-            audioRef.current.removeEventListener('canplaythrough', handleCanPlay);
-          }
-          clearTimeout(timeoutId);
-        };
+        // Start game loop directly - no need to wait for canplaythrough
+        // since the useAudio hook now handles audio setup directly
+        console.log("Starting game loop directly");
+        
+        // Start the game loop
+        gameState.gameLoopRef.current = true;
+        gameState.animationFrameIdRef.current = requestAnimationFrame(() =>
+          gameLoop(
+            canvasRef,
+            gameState.gameStateRef,
+            gameState.lastFrameTimeRef,
+            gameState.gameLoopRef,
+            gameState.animationFrameIdRef,
+            audioRefNonNull,
+            gameState.audioProgressRef,
+            getAverageAmplitude,
+            detectBeat,
+            gameState.lastBeatTimeRef,
+            inputRef,
+            gameState.backgroundColorRef,
+            gameState.waveColorRef,
+            gameState.activeColorTransitionRef,
+            gameState.bgPatternBubblesRef,
+            gameState.levelTogglesRef,
+            gameState.bubblesRef,
+            gameState.amplitudeRef,
+            gameState.activeTimedTextsRef,
+            gameState.floraItemsRef,
+            gameState.streakDisplayRef,
+            fishImageRef,
+            waterBottleRef,
+            plasticBagRef,
+            oilSplatImageRef,
+            fishHookRef,
+            flipflopRef,
+            toothbrushRef,
+            hotdogRef,
+            rubberDuckyRef,
+            gameState.level2ObstacleImagesRef,
+            gameState.level2PickupImagesRef,
+            gameState.level3ObstacleImagesRef,
+            gameState.level3MushroomImagesRef,
+            gameState.level3TrippyImagesRef,
+            gameState.currentLevelRef,
+            gameState.timedTextEventsRef,
+            gameState.colorEventsRef,
+            gameState.level2TimedEventsRef,
+            gameState.level3TimedEventsRef,
+            gameState.caveRef,
+            gameState.speedMultiplier,
+            gameState.setScore,
+            gameState.setHealth,
+            gameState.setLevelEnded,
+            gameState.lastCollisionTimeRef,
+            gameState.lastProximityScoreTimeRef,
+            gameState.pickupSoundRef as React.RefObject<HTMLAudioElement>,
+            gameState.hitSoundRef as React.RefObject<HTMLAudioElement>
+          )
+        );
+        
+        // No cleanup function needed since we're not adding event listeners
       }
     }
   }, [

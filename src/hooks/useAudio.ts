@@ -1,5 +1,5 @@
 // src/hooks/useAudio.ts
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react'; // Import useState
 import { ExtendedHTMLAudioElement } from '../types';
 
 export const useAudio = (
@@ -19,6 +19,7 @@ export const useAudio = (
 ) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fallbackTimerRef = useRef<number | null>(null);
+  const [isAudioReady, setIsAudioReady] = useState(false); // Add state for audio readiness
 
   // When no audio data is detected, update the last beat time every 500ms.
   const startFallbackBeatGeneration = () => {
@@ -35,14 +36,25 @@ export const useAudio = (
   useEffect(() => {
     // This effect should only run when the game starts or the level changes,
     // not when the pause state changes.
-    if (!gameStarted) return;
+    if (!gameStarted) {
+      setIsAudioReady(false); // Reset when game stops
+      return;
+    }
+    
+    console.log(`Setting up audio context for level ${currentLevelId}`);
+    setIsAudioReady(false); // Reset ready state on level change/game start
+    
     const audioEl = audioRef.current as ExtendedHTMLAudioElement;
     if (!audioEl) return;
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    
+    // Use a type assertion that works with the WebkitAudioContext
+    const AudioContextClass = window.AudioContext || ((window as unknown) as {webkitAudioContext: typeof AudioContext}).webkitAudioContext;
     if (!AudioContextClass) {
       console.error("Web Audio API not supported.");
       return;
     }
+    
+    // Setup audio directly when the effect runs, instead of waiting for 'play' event
     const setupAudio = async () => {
       try {
         const audioCtx = audioEl._audioCtx || new AudioContextClass();
@@ -66,8 +78,23 @@ export const useAudio = (
         analyser.connect(audioCtx.destination);
 
         if (audioCtx.state !== 'running') {
-          await audioCtx.resume();
+          console.log("AudioContext state is not 'running', attempting to resume...");
+          await audioCtx.resume(); // Await completion
+          console.log(`AudioContext resumed. New state: ${audioCtx.state}`);
+        } else {
+          console.log("AudioContext state is already 'running'.");
         }
+
+        // Check state again after attempting resume
+        if (audioCtx.state === 'running') {
+          setIsAudioReady(true); // Set ready state only AFTER successful resume
+          console.log("Audio setup complete, isAudioReady set to true.");
+        } else {
+          console.warn(`AudioContext did not resume successfully. State: ${audioCtx.state}. Audio might not play.`);
+          setIsAudioReady(false); // Explicitly false if resume failed
+          startFallbackBeatGeneration(); // Start fallback if context isn't running
+        }
+        
         setTimeout(() => {
           if (analyserRef.current && dataArrayRef.current) {
             analyserRef.current.getByteFrequencyData(dataArrayRef.current);
@@ -82,28 +109,31 @@ export const useAudio = (
         }, 1000);
       } catch (error) {
         console.error("Error setting up audio:", error);
+        setIsAudioReady(false); // Ensure it's false on error
         startFallbackBeatGeneration();
       }
     };
 
-    const handlePlay = () => {
-      setupAudio();
-    };
-    audioEl.addEventListener('play', handlePlay);
+    // Call setupAudio directly instead of waiting for 'play' event
+    setupAudio();
+    
+    // Keep the user interaction listeners to ensure AudioContext can be resumed
     const resumeAudioCtx = async () => {
       if (audioEl._audioCtx && audioEl._audioCtx.state !== 'running') {
         try {
           await audioEl._audioCtx.resume();
+          console.log("AudioContext resumed from user interaction");
         } catch (error) {
-          console.error("Error resuming AudioContext:", error); // Log the error
+          console.error("Error resuming AudioContext:", error);
         }
       }
     };
+    
     document.body.addEventListener('touchstart', resumeAudioCtx, { once: true });
     document.body.addEventListener('click', resumeAudioCtx, { once: true });
     document.body.addEventListener('keydown', resumeAudioCtx, { once: true });
+    
     return () => {
-      audioEl.removeEventListener('play', handlePlay);
       document.body.removeEventListener('touchstart', resumeAudioCtx);
       document.body.removeEventListener('click', resumeAudioCtx);
       document.body.removeEventListener('keydown', resumeAudioCtx);
@@ -143,8 +173,9 @@ export const useAudio = (
   useEffect(() => {
     if (!audioRef.current || !gameStarted) return;
 
-    // Only attempt to play if not paused AND not currently loading assets
-    if (isPaused || isLoadingAssets) {
+    // Only attempt to play if not paused AND not currently loading assets AND audio is ready
+    if (isPaused || isLoadingAssets || !isAudioReady) {
+      console.log(`Pausing audio (isPaused: ${isPaused}, isLoadingAssets: ${isLoadingAssets}, isAudioReady: ${isAudioReady})`);
       audioRef.current.pause();
       if (fallbackTimerRef.current) {
         clearInterval(fallbackTimerRef.current);
@@ -152,6 +183,7 @@ export const useAudio = (
       }
     } else {
       // Attempt to play audio
+      console.log("Attempting to play audio (Conditions met: !paused, !loading, ready)");
       audioRef.current.play().catch(error => {
         if (error.name === 'AbortError') return; // Ignore expected AbortError
         console.error("Error playing audio:", error);
@@ -164,7 +196,7 @@ export const useAudio = (
         }
       });
     }
-  }, [isPaused, gameStarted, isLoadingAssets]); // Added isLoadingAssets to dependencies
+  }, [isPaused, gameStarted, isLoadingAssets, isAudioReady]); // Added isAudioReady to dependencies
 
   const getAverageAmplitude = (): number => {
     const analyser = analyserRef.current;

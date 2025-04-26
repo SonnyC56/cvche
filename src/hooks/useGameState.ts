@@ -320,6 +320,7 @@ export const useGameState = () => {
       level3TrippyImagesRef.current = assetLoader.level3TrippyImages;
     } else {
       // Handle Level 1 or other default levels
+      await assetLoader.loadBasicAssets(handleLoadingProgress); // Load basic assets with progress
       backgroundColorRef.current = level.initialBackground;
       waveColorRef.current = level.initialWaveColor;
       if (containerRef.current) {
@@ -396,13 +397,15 @@ export const useGameState = () => {
   }, [isLandscape, gameStarted, isPaused, togglePause]); // Added togglePause
 
   useEffect(() => {
-    if (isLandscape && pausedByOrientation && gameStarted && isPaused) {
-      console.log("Resuming game from orientation change");
-      togglePause();
+    // When returning to landscape, reset the flag indicating pause was due to orientation.
+    // We no longer automatically resume here; user must manually unpause.
+    if (isLandscape && pausedByOrientation) {
+       console.log("Resetting pausedByOrientation flag.");
       setPausedByOrientation(false);
-      restartGameLoopRef.current?.();
+      // Note: We removed togglePause() and restartGameLoopRef.current?.()
     }
-  }, [isLandscape, pausedByOrientation, gameStarted, isPaused, togglePause]); // Added togglePause
+    // Keep dependencies that might influence the condition, but the action is simpler.
+  }, [isLandscape, pausedByOrientation]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
