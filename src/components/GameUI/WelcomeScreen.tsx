@@ -242,6 +242,18 @@ useEffect(() => {
           >
             About
           </span>
+          <a 
+            href="https://heycvche.printful.me/"
+            style={{ textDecoration: 'underline', cursor: 'pointer', color: '#000' }}
+          >
+            Merch
+          </a>
+          <a 
+            href="https://urnowhere.notion.site/FLUFFY-MEME-COIN-LAUNCH-1ed92b5e7a6e808a9f6dd6b8d40640f6?pvs=4" 
+            style={{ textDecoration: 'underline', cursor: 'pointer', color: '#000' }}
+          >
+          $fluffy
+          </a>
         </nav>
         {isLoading ? (
           <div style={{ 

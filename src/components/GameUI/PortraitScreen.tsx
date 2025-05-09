@@ -106,14 +106,14 @@ const PortraitScreen: React.FC<PortraitScreenProps> = ({
       </div>
       
       <nav style={{ 
-        marginTop: '2rem', 
+        margin: '20px', 
         display: 'flex', 
         flexDirection: 'column', 
         gap: '2rem', 
         fontSize: '1.2rem', 
         zIndex: 101 
       }}>
-        <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', flexWrap: 'wrap' }}>
           <a 
             href="https://vyd.co/WelcomeToCvche" 
             target="_blank" 
@@ -141,6 +141,18 @@ const PortraitScreen: React.FC<PortraitScreenProps> = ({
           >
             About
           </button>
+                    <a 
+            href="https://heycvche.printful.me/"
+            style={{ color: '#FDEE03' }}
+          >
+            Merch
+          </a>
+          <a 
+            href="https://urnowhere.notion.site/FLUFFY-MEME-COIN-LAUNCH-1ed92b5e7a6e808a9f6dd6b8d40640f6?pvs=4" 
+            style={{ color: '#FDEE03' }}
+          >
+          $fluffy
+          </a>
         </div>
       </nav>
     </div>
