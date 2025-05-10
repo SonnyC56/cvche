@@ -35,6 +35,7 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
 
   // Asset loader
   const assetLoader = useRef<AssetLoader>(new AssetLoader());
+  const hasInitiatedInitialAssetLoad = useRef(false); // Prevents double loading in StrictMode
   // Make assetLoader available globally for animated GIFs
   window.assetLoaderRef = assetLoader;
   gameState.pickupSoundRef = useRef<HTMLAudioElement>(null!);
@@ -55,7 +56,9 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
   const {
     audioRef,
     getAverageAmplitude,
-    detectBeat
+    detectBeat,
+    isMainSongBuffered,
+    isAudioContextReady
   } = useAudio(
     gameState.gameStarted,
     gameState.isPaused,
@@ -195,6 +198,12 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
 
   // Load basic assets on component mount
   useEffect(() => {
+    // Prevent re-running asset loading logic due to React StrictMode's double invocation in development
+    if (hasInitiatedInitialAssetLoad.current) {
+      return;
+    }
+    hasInitiatedInitialAssetLoad.current = true;
+
     const loader = assetLoader.current;
     const loadAssets = async () => {
       try {
@@ -263,7 +272,9 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
         gameState.setLoadingProgress(100);
         setTimeout(() => {
           setFloraLoaded(true);
-          gameState.setIsLoadingAssets(false);
+          gameState.setIsLoadingAssets(false); // will be handled by a new useEffect based on all loading conditions
+          // For now, asset loading part is done.
+          console.log('Initial asset loading part complete. Waiting for audio buffering if game starts.');
         }, 500); // Small delay to ensure UI updates properly
       } catch (error) {
         console.error('Error loading initial assets:', error);
@@ -273,12 +284,8 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
       }
     };
     
-    // Only load if not already loaded (prevents infinite loading)
-    if (!floraLoaded && gameState.isLoadingAssets) {
-      loadAssets();
-    } else if (!floraLoaded) {
-      loadAssets();
-    }
+    // Call the asset loading function. The guard at the top of useEffect ensures it's only called once.
+    loadAssets();
   }, []); // Run only once on mount, regardless of state changes
 
   // Remove useEffect hooks for loading level 2 and level 3 assets
@@ -343,12 +350,18 @@ const debounce = (func: (...args: any[]) => void, delay: number) => {
   const startGame = useCallback(() => {
     if (gameState.gameStarted) return;
     
-    // Don't start game if assets are still loading
+    // Don't start game if assets are still loading OR main song isn't buffered OR audio context isn't ready
+    // Note: isMainSongBuffered and isAudioContextReady are relevant once gameStarted is true and audioRef has a src.
+    // At the initial startGame call from WelcomeScreen, these audio states might not yet be relevant
+    // if the audio source hasn't been set or processed by useAudio yet.
+    // The critical check is before audioRef.current.play()
     if (gameState.isLoadingAssets) {
-      console.log("Cannot start game while assets are loading");
+      console.log("[Game] Cannot start game (assets still loading)");
       return;
     }
-    
+    // Defer audio-specific checks to startAudioAndGameLoop, as audioRef might not be set up yet.
+
+    console.log("[Game] startGame called. Initializing game state.");
     // Center the player horizontally before starting
     gameState.gameStateRef.current.player.y = window.innerHeight / 2;
     gameState.gameStateRef.current.player.x = 100;
@@ -384,19 +397,23 @@ const debounce = (func: (...args: any[]) => void, delay: number) => {
       };
       // Start audio and game loop with proper error handling
       if (audioRef.current) {
-        // Attempt to resume AudioContext on user interaction (important for iOS)
         const audioEl = audioRef.current as ExtendedHTMLAudioElement;
+        
+        // Attempt to resume AudioContext on user interaction (important for iOS)
+        // This is also handled in useAudio, but can be an early attempt here.
         if (audioEl._audioCtx && audioEl._audioCtx.state !== 'running') {
           try {
             await audioEl._audioCtx.resume();
-            console.log("AudioContext resumed successfully on startGame.");
+            console.log("[Game] AudioContext resumed successfully on startGame.");
           } catch (error) {
-            console.error("Error resuming AudioContext on startGame:", error);
+            console.error("[Game] Error resuming AudioContext on startGame:", error);
           }
         }
-        // Reset any previous state
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+
+        // Reset any previous state (src will be set by the useEffect hook for level changes)
+        // audioRef.current.pause(); // useAudio handles pause based on its state
+        // audioRef.current.currentTime = 0; // Reset by src change or level change logic
+
         // Check if the browser can play the audio type
         const canPlayType = audioRef.current.canPlayType(
           gameState.currentLevel.songFile.endsWith('.mp3') ? 'audio/mpeg' :
@@ -404,14 +421,13 @@ const debounce = (func: (...args: any[]) => void, delay: number) => {
               gameState.currentLevel.songFile.endsWith('.ogg') ? 'audio/ogg' : ''
         );
         if (canPlayType === '') {
-          console.warn(`Browser might not support the audio format: ${gameState.currentLevel.songFile}`);
+          console.warn(`[Game] Browser might not support the audio format: ${gameState.currentLevel.songFile}`);
         }
-        // Ensure audio is properly loaded before playing
-        audioRef.current.load();
         
-        // Start game loop directly - no need to wait for canplaythrough
-        // since the useAudio hook now handles audio setup directly
-        console.log("Starting game loop directly");
+        // audioRef.current.load() is called in the useEffect that sets the src.
+        // The useAudio hook now waits for isMainSongBuffered and isAudioContextReady before playing.
+        
+        console.log("[Game] Starting game loop. Audio playback will be handled by useAudio hook based on its readiness states.");
         
         // Start the game loop
         gameState.gameLoopRef.current = true;
@@ -483,6 +499,30 @@ const debounce = (func: (...args: any[]) => void, delay: number) => {
     audioRefNonNull // Added audioRefNonNull
   ]);
 
+  // Derived state for overall loading status
+  const isActuallyLoading = gameState.gameStarted ?
+    (gameState.isLoadingAssets || !isMainSongBuffered || !isAudioContextReady) :
+    gameState.isLoadingAssets;
+
+  // Effect to manage the global isLoadingAssets based on all conditions
+  useEffect(() => {
+    if (gameState.gameStarted) {
+      // If game has started, all conditions must be met to stop loading
+      if (!gameState.isLoadingAssets && isMainSongBuffered && isAudioContextReady) {
+        // This condition means assets are loaded AND audio is ready
+        // However, setIsLoadingAssets(false) should be driven by asset loading itself.
+        // The UI display of loading will use `isActuallyLoading`.
+      } else if (gameState.isLoadingAssets || !isMainSongBuffered || !isAudioContextReady) {
+        // If any of these are true, we are effectively still loading from user's perspective.
+        // No need to set setIsLoadingAssets(true) here as it's for assets.
+      }
+    } else {
+      // If game hasn't started, only asset loading matters for setIsLoadingAssets
+      // This is handled by the initial asset loading useEffect and selectLevel.
+    }
+  }, [gameState.gameStarted, gameState.isLoadingAssets, isMainSongBuffered, isAudioContextReady, gameState.setIsLoadingAssets]);
+
+
   return (
     <div
       ref={gameState.containerRef}
@@ -517,8 +557,8 @@ const debounce = (func: (...args: any[]) => void, delay: number) => {
         </video>
       )}
 
-      {/* Loading indicator - only show for levels 2 and 3 */}
-      {gameState.isLoadingAssets && gameState.currentLevel.id > 1 && (
+      {/* Unified Loading indicator */}
+      {isActuallyLoading && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -536,7 +576,12 @@ const debounce = (func: (...args: any[]) => void, delay: number) => {
           fontSize: '24px',
           textAlign: 'center'
         }}>
-          <p>Loading Assets...</p>
+          <p>
+            {gameState.isLoadingAssets && "Loading Assets..."}
+            {gameState.gameStarted && !gameState.isLoadingAssets && !isAudioContextReady && "Initializing Audio..."}
+            {gameState.gameStarted && !gameState.isLoadingAssets && isAudioContextReady && !isMainSongBuffered && "Buffering Music..."}
+            {!gameState.isLoadingAssets && gameState.gameStarted && isAudioContextReady && isMainSongBuffered && "Ready!"}
+          </p>
           <div style={{
             width: '80%',
             maxWidth: '400px',
@@ -594,9 +639,9 @@ const debounce = (func: (...args: any[]) => void, delay: number) => {
       <WelcomeScreen
         gameStarted={gameState.gameStarted}
         isLandscape={gameState.isLandscape}
-        floraLoaded={floraLoaded} // Keep passing floraLoaded for now
-        isLoading={gameState.isLoadingAssets} // Pass loading state
-        loadingProgress={gameState.loadingProgress} // Pass loading progress
+        floraLoaded={floraLoaded}
+        isLoading={isActuallyLoading} // Pass comprehensive loading state
+        loadingProgress={gameState.loadingProgress} // Asset loading progress
         startGame={startGame}
         setShowAboutModal={gameState.setShowAboutModal}
       />

@@ -1,5 +1,5 @@
 // src/hooks/useAudio.ts
-import { useRef, useEffect, useState } from 'react'; // Import useState
+import { useRef, useEffect, useState, useCallback } from 'react'; // Import useState and useCallback
 import { ExtendedHTMLAudioElement } from '../types';
 
 export const useAudio = (
@@ -19,7 +19,8 @@ export const useAudio = (
 ) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fallbackTimerRef = useRef<number | null>(null);
-  const [isAudioReady, setIsAudioReady] = useState(false); // Add state for audio readiness
+  const [isAudioContextReady, setIsAudioContextReady] = useState(false); // Renamed for clarity
+  const [isMainSongBuffered, setIsMainSongBuffered] = useState(false); // New state for song buffering
 
   // When no audio data is detected, update the last beat time every 500ms.
   const startFallbackBeatGeneration = () => {
@@ -37,15 +38,36 @@ export const useAudio = (
     // This effect should only run when the game starts or the level changes,
     // not when the pause state changes.
     if (!gameStarted) {
-      setIsAudioReady(false); // Reset when game stops
+      setIsAudioContextReady(false); // Reset when game stops
+      setIsMainSongBuffered(false); // Reset when game stops
       return;
     }
     
-    console.log(`Setting up audio context for level ${currentLevelId}`);
-    setIsAudioReady(false); // Reset ready state on level change/game start
+    console.log(`[Audio] Setting up audio for level ${currentLevelId}`);
+    setIsAudioContextReady(false); // Reset context ready state on level change/game start
+    setIsMainSongBuffered(false); // Reset song buffered state on level change/game start
     
     const audioEl = audioRef.current as ExtendedHTMLAudioElement;
     if (!audioEl) return;
+
+    const handleCanPlayThrough = () => {
+      console.log(`[Audio] Main song can play through for level ${currentLevelId}.`);
+      setIsMainSongBuffered(true);
+      audioEl.removeEventListener('canplaythrough', handleCanPlayThrough);
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      audioEl.removeEventListener('error', handleAudioError);
+    };
+
+    const handleAudioError = (e: Event) => {
+      console.error(`[Audio] Error loading main song for level ${currentLevelId}:`, e);
+      // Consider setting setIsMainSongBuffered(true) or another state to avoid getting stuck,
+      // or implement a timeout. For now, it might prevent playback.
+      audioEl.removeEventListener('canplaythrough', handleCanPlayThrough);
+      audioEl.removeEventListener('error', handleAudioError);
+    };
+
+    audioEl.addEventListener('canplaythrough', handleCanPlayThrough);
+    audioEl.addEventListener('error', handleAudioError);
     
     // Use a type assertion that works with the WebkitAudioContext
     const AudioContextClass = window.AudioContext || ((window as unknown) as {webkitAudioContext: typeof AudioContext}).webkitAudioContext;
@@ -87,11 +109,11 @@ export const useAudio = (
 
         // Check state again after attempting resume
         if (audioCtx.state === 'running') {
-          setIsAudioReady(true); // Set ready state only AFTER successful resume
-          console.log("Audio setup complete, isAudioReady set to true.");
+          setIsAudioContextReady(true); // Set context ready state only AFTER successful resume
+          console.log("[Audio] AudioContext setup complete, isAudioContextReady set to true.");
         } else {
-          console.warn(`AudioContext did not resume successfully. State: ${audioCtx.state}. Audio might not play.`);
-          setIsAudioReady(false); // Explicitly false if resume failed
+          console.warn(`[Audio] AudioContext did not resume successfully. State: ${audioCtx.state}. Audio might not play.`);
+          setIsAudioContextReady(false); // Explicitly false if resume failed
           startFallbackBeatGeneration(); // Start fallback if context isn't running
         }
         
@@ -108,8 +130,8 @@ export const useAudio = (
           }
         }, 1000);
       } catch (error) {
-        console.error("Error setting up audio:", error);
-        setIsAudioReady(false); // Ensure it's false on error
+        console.error("[Audio] Error setting up audio:", error);
+        setIsAudioContextReady(false); // Ensure it's false on error
         startFallbackBeatGeneration();
       }
     };
@@ -141,8 +163,13 @@ export const useAudio = (
         clearInterval(fallbackTimerRef.current);
         fallbackTimerRef.current = null;
       }
+      // Cleanup event listeners for audio element
+      if (audioEl) {
+        audioEl.removeEventListener('canplaythrough', handleCanPlayThrough);
+        audioEl.removeEventListener('error', handleAudioError);
+      }
     };
-  }, [gameStarted, currentLevelId]); // Removed isPaused from dependencies
+  }, [gameStarted, currentLevelId, analyserRef, dataArrayRef, lastBeatTimeRef]); // Added refs to dependency array as per ESLint suggestion if they were used inside callbacks not defined in effect
   
   useEffect(() => {
     if (!gameStarted) return;
@@ -173,9 +200,9 @@ export const useAudio = (
   useEffect(() => {
     if (!audioRef.current || !gameStarted) return;
 
-    // Only attempt to play if not paused AND not currently loading assets AND audio is ready
-    if (isPaused || isLoadingAssets || !isAudioReady) {
-      console.log(`Pausing audio (isPaused: ${isPaused}, isLoadingAssets: ${isLoadingAssets}, isAudioReady: ${isAudioReady})`);
+    // Only attempt to play if not paused AND not currently loading assets AND audio context is ready AND main song is buffered
+    if (isPaused || isLoadingAssets || !isAudioContextReady || !isMainSongBuffered) {
+      console.log(`[Audio] Pausing/deferring play (isPaused: ${isPaused}, isLoadingAssets: ${isLoadingAssets}, isAudioContextReady: ${isAudioContextReady}, isMainSongBuffered: ${isMainSongBuffered})`);
       audioRef.current.pause();
       if (fallbackTimerRef.current) {
         clearInterval(fallbackTimerRef.current);
@@ -183,20 +210,26 @@ export const useAudio = (
       }
     } else {
       // Attempt to play audio
-      console.log("Attempting to play audio (Conditions met: !paused, !loading, ready)");
+      console.log("[Audio] Attempting to play audio (Conditions met: !paused, !loading, contextReady, songBuffered)");
       audioRef.current.play().catch(error => {
         if (error.name === 'AbortError') return; // Ignore expected AbortError
-        console.error("Error playing audio:", error);
+        console.error("[Audio] Error playing audio:", error);
         // If playback fails and no audio data is detected, start fallback beat generation
-        if (!fallbackTimerRef.current) {
-           // Note: Fallback beat generation is handled by the setupAudio effect
-           // This catch block primarily logs errors and could potentially
-           // trigger fallback if setupAudio didn't for some reason, but
-           // the main trigger is in setupAudio based on initial data check.
+        // This might be redundant if setupAudio already handles fallback.
+        if (!fallbackTimerRef.current && analyserRef.current && dataArrayRef.current) {
+            analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+            let sum = 0;
+            for (let i = 0; i < dataArrayRef.current.length; i++) {
+              sum += dataArrayRef.current[i];
+            }
+            if (sum === 0) {
+              console.log("[Audio] Playback error led to fallback beat generation due to no audio data.");
+              startFallbackBeatGeneration();
+            }
         }
       });
     }
-  }, [isPaused, gameStarted, isLoadingAssets, isAudioReady]); // Added isAudioReady to dependencies
+  }, [isPaused, gameStarted, isLoadingAssets, isAudioContextReady, isMainSongBuffered, analyserRef, dataArrayRef]); // Added dependencies
 
   const getAverageAmplitude = (): number => {
     const analyser = analyserRef.current;
@@ -247,6 +280,8 @@ export const useAudio = (
   return {
     audioRef,
     getAverageAmplitude,
-    detectBeat
+    detectBeat,
+    isMainSongBuffered, // Expose this state
+    isAudioContextReady // Expose this state for clarity if needed elsewhere
   };
 };

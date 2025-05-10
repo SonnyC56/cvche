@@ -300,7 +300,7 @@ useEffect(() => {
               background: '#0066FF',
             }}
           >
-            Play Music
+            Play Game
           </button>
         )}
       </div>
