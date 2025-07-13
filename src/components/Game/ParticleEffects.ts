@@ -1,5 +1,32 @@
 import { Particle, Player } from '../../types';
 import { getParticleColorFromStreak } from '../../utils/colorUtils';
+import { ObjectPool, ColorCache } from '../../utils/objectPool';
+
+// Initialize color cache for performance
+const colorCache = new ColorCache();
+
+// Initialize particle pool
+const particlePool = new ObjectPool<Particle>(
+  // Create function
+  () => ({
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    life: 1.0,
+    color: '#FFFFFF',
+    size: 5,
+    opacity: 1,
+    shape: 'circle'
+  }),
+  // Reset function
+  (particle) => {
+    particle.life = 1.0;
+    particle.opacity = 1;
+  },
+  100, // Initial size
+  500  // Max size
+);
 
 /**
  * Draw a heart shape particle
@@ -16,10 +43,9 @@ export const drawHeart = (ctx: CanvasRenderingContext2D, x: number, y: number, s
   ctx.bezierCurveTo(size / 2, 0, 0, 0, 0, topCurveHeight);
   ctx.closePath();
   
-  let r = parseInt(color.slice(1), 16) >> 16;
-  let g = (parseInt(color.slice(1), 16) >> 8) & 255;
-  let b = parseInt(color.slice(1), 16) & 255;
-  ctx.fillStyle = `rgba(${r},${g},${b},${opacity})`;
+  // Use color cache for performance
+  const { r, g, b } = colorCache.parseColor(color);
+  ctx.fillStyle = colorCache.toRGBA(r, g, b, opacity);
   ctx.fill();
   ctx.restore();
 };
@@ -29,17 +55,17 @@ export const drawHeart = (ctx: CanvasRenderingContext2D, x: number, y: number, s
  */
 export const createParticles = (particles: Particle[], x: number, y: number, color: string, count: number, shape: 'circle' | 'heart' = 'circle') => {
   for (let i = 0; i < count; i++) {
-    particles.push({
-      x,
-      y,
-      vx: (Math.random() - 0.5) * 8,
-      vy: (Math.random() - 0.5) * 8,
-      life: 1.0,
-      color,
-      size: 3 + Math.random() * 2,
-      opacity: 0.7,
-      shape,
-    });
+    const particle = particlePool.acquire();
+    particle.x = x;
+    particle.y = y;
+    particle.vx = (Math.random() - 0.5) * 8;
+    particle.vy = (Math.random() - 0.5) * 8;
+    particle.life = 1.0;
+    particle.color = color;
+    particle.size = 3 + Math.random() * 2;
+    particle.opacity = 0.7;
+    particle.shape = shape;
+    particles.push(particle);
   }
 };
 
@@ -50,20 +76,20 @@ export const createSwimParticles = (particles: Particle[], player: Player, strea
   const fishCenterX = player.x + player.width;
   const fishCenterY = player.y + player.height / 2;
   const tailX = fishCenterX - player.width;
-  const particleCount = 1 + Math.floor(streak / 10);
+  const particleCount = Math.min(1 + Math.floor(streak / 10), 5); // Cap max particles
   
   for (let i = 0; i < particleCount; i++) {
-    particles.push({
-      x: tailX + (Math.random() - 0.5) * 10,
-      y: fishCenterY + (Math.random() - 0.5) * 10,
-      vx: -2 - Math.random() * 2 - (streak * 0.1),
-      vy: (Math.random() - 0.5) * (0.5 + streak * 0.05),
-      life: 1.0,
-      color: customColor || getParticleColorFromStreak(streak),
-      size: 4 + Math.random() * 3 + (streak * 0.1),
-      opacity: 0.8,
-      shape: 'circle',
-    });
+    const particle = particlePool.acquire();
+    particle.x = tailX + (Math.random() - 0.5) * 10;
+    particle.y = fishCenterY + (Math.random() - 0.5) * 10;
+    particle.vx = -2 - Math.random() * 2 - (streak * 0.1);
+    particle.vy = (Math.random() - 0.5) * (0.5 + streak * 0.05);
+    particle.life = 1.0;
+    particle.color = customColor || getParticleColorFromStreak(streak);
+    particle.size = 4 + Math.random() * 3 + (streak * 0.1);
+    particle.opacity = 0.8;
+    particle.shape = 'circle';
+    particles.push(particle);
   }
 };
 
@@ -72,17 +98,17 @@ export const createSwimParticles = (particles: Particle[], player: Player, strea
  */
 export const createPortraitParticles = (particles: Particle[], x: number, y: number) => {
   for (let i = 0; i < 2; i++) {
-    particles.push({
-      x,
-      y: y + (Math.random() - 0.5) * 10,
-      vx: -2 - Math.random() * 2,
-      vy: (Math.random() - 0.5) * 0.5,
-      life: 1.0,
-      color: '#FFD700',
-      size: 4 + Math.random() * 3,
-      opacity: 0.8,
-      shape: 'circle'
-    });
+    const particle = particlePool.acquire();
+    particle.x = x;
+    particle.y = y + (Math.random() - 0.5) * 10;
+    particle.vx = -2 - Math.random() * 2;
+    particle.vy = (Math.random() - 0.5) * 0.5;
+    particle.life = 1.0;
+    particle.color = '#FFD700';
+    particle.size = 4 + Math.random() * 3;
+    particle.opacity = 0.8;
+    particle.shape = 'circle';
+    particles.push(particle);
   }
 };
 
@@ -100,8 +126,10 @@ export const updateAndDrawParticles = (ctx: CanvasRenderingContext2D, particles:
     // Update life and opacity
     p.life -= 0.02 * factor;
     p.opacity *= 0.97;
-    // Remove dead particles using swap-and-pop for efficiency
-    if (p.life <= 0) {
+    // Remove dead particles and return to pool
+    if (p.life <= 0 || p.opacity <= 0.01) {
+      // Return to pool
+      particlePool.release(p);
       // Swap the dead particle with the last particle
       particles[i] = particles[particles.length - 1];
       // Remove the last particle (which is now the dead one or a duplicate)
@@ -115,8 +143,9 @@ export const updateAndDrawParticles = (ctx: CanvasRenderingContext2D, particles:
     } else {
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-      const opacityHex = Math.floor(p.opacity * 255).toString(16).padStart(2, '0');
-      ctx.fillStyle = `${p.color}${opacityHex}`;
+      // Use color cache for performance
+      const { r, g, b } = colorCache.parseColor(p.color);
+      ctx.fillStyle = colorCache.toRGBA(r, g, b, p.opacity);
       ctx.fill();
     }
   }

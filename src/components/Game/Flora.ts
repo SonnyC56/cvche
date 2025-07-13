@@ -1,4 +1,8 @@
 import { Flora } from '../../types';
+import { TrigCache } from '../../utils/objectPool';
+
+// Initialize trig cache for performance
+const trigCache = new TrigCache();
 
 /**
  * Initialize flora elements
@@ -48,6 +52,11 @@ export const drawFlora = (
   
   const canvas = ctx.canvas;
   const time = Date.now() / 1000;
+  const amplitudeSway = 5 + amplitude / 10;
+  
+  // Batch similar operations
+  ctx.save();
+  ctx.globalAlpha = 0.50;
   
   floraItems.forEach((flora) => {
     // Update position
@@ -61,16 +70,18 @@ export const drawFlora = (
     // Set y position at bottom of canvas
     flora.y = canvas.height;
     
-    // Draw with swaying effect
-    ctx.save();
-    const sway = Math.sin(time * flora.swaySpeed + flora.swayOffset) * (5 + amplitude / 10);
+    // Draw with swaying effect using cached trig
+    const swayAngle = time * flora.swaySpeed + flora.swayOffset;
+    const sway = trigCache.sin(swayAngle) * amplitudeSway;
     const pivotX = flora.x + flora.width / 2;
     const pivotY = flora.y;
     
+    ctx.save();
     ctx.translate(pivotX, pivotY);
     ctx.rotate(sway * 0.05);
-    ctx.globalAlpha = 0.50;
     ctx.drawImage(flora.image, -flora.width / 2, -flora.height, flora.width, flora.height);
     ctx.restore();
   });
+  
+  ctx.restore();
 };

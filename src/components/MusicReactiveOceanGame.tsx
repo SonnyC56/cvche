@@ -58,7 +58,10 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
     getAverageAmplitude,
     detectBeat,
     isMainSongBuffered,
-    isAudioContextReady
+    isAudioContextReady,
+    needsUserInteraction,
+    fallbackAudioRef,
+    usingFallbackAudio
   } = useAudio(
     gameState.gameStarted,
     gameState.isPaused,
@@ -101,6 +104,14 @@ const MusicReactiveOceanGame: React.FC<GameProps> = ({ onGameStart }): React.Rea
       // Set the new audio source based on the current level
       audioRef.current.src = gameState.currentLevel.songFile;
       audioRef.current.load(); // Ensure the new source is loaded
+      
+      // Also set up fallback audio for iOS mute switch workaround
+      if (fallbackAudioRef && fallbackAudioRef.current) {
+        fallbackAudioRef.current.pause();
+        fallbackAudioRef.current.currentTime = 0;
+        fallbackAudioRef.current.src = gameState.currentLevel.songFile;
+        fallbackAudioRef.current.load();
+      }
 
       // Reset audio-related state
       gameState.setAudioProgress(0);
@@ -557,8 +568,66 @@ const debounce = (func: (...args: any[]) => void, delay: number) => {
         </video>
       )}
 
+      {/* iOS Fallback Audio Indicator */}
+      {gameState.gameStarted && usingFallbackAudio && !needsUserInteraction && (
+        <div style={{
+          position: 'fixed',
+          top: '10px',
+          right: '10px',
+          backgroundColor: 'rgba(255, 165, 0, 0.9)',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '8px',
+          fontSize: '14px',
+          fontFamily: 'Orbitron, sans-serif',
+          zIndex: 999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>🔇</span>
+          <span>Audio playing in compatibility mode</span>
+        </div>
+      )}
+
+      {/* iOS Audio Interaction Prompt */}
+      {gameState.gameStarted && needsUserInteraction && (
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          color: 'white',
+          padding: '40px',
+          borderRadius: '12px',
+          zIndex: 1001,
+          textAlign: 'center',
+          fontFamily: 'Orbitron, sans-serif',
+          maxWidth: '90%',
+          width: '400px',
+          border: '2px solid #4CAF50'
+        }}>
+          <h3 style={{ marginTop: 0, fontSize: '24px', color: '#4CAF50' }}>🎵 Enable Audio</h3>
+          <p style={{ fontSize: '18px', marginBottom: '30px' }}>
+            Tap anywhere to start the music and play!
+          </p>
+          <div style={{
+            fontSize: '48px',
+            animation: 'pulse 1.5s ease-in-out infinite'
+          }}>👆</div>
+          <style>{`
+            @keyframes pulse {
+              0% { transform: scale(1); }
+              50% { transform: scale(1.2); }
+              100% { transform: scale(1); }
+            }
+          `}</style>
+        </div>
+      )}
+
       {/* Unified Loading indicator */}
-      {isActuallyLoading && (
+      {isActuallyLoading && !needsUserInteraction && (
         <div style={{
           position: 'fixed',
           top: 0,

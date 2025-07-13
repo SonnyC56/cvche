@@ -1,4 +1,5 @@
 import { FrameAnimatorManager, FrameAnimator } from './GifAnimator';
+import { loadOptimizedImage, shouldOptimizeImage, getImageMemoryUsage } from './imageOptimizer';
 
 // Define the callback type for progress updates
 type ProgressCallback = (loaded: number, total: number) => void;
@@ -48,6 +49,10 @@ export class AssetLoader {
   level2AssetsLoaded = false;
   level2VideoLoaded = false;
   level3AssetsLoaded = false;
+  
+  // Memory tracking
+  private totalMemoryUsage = 0;
+  private optimizedImagesCount = 0;
 
   // Video element for level 2
   level2Video: HTMLVideoElement | null = null;
@@ -56,7 +61,7 @@ export class AssetLoader {
 
   // Load basic game assets
   async loadBasicAssets(onProgress?: ProgressCallback): Promise<void> {
-    console.log('Loading basic game assets...');
+    console.log('Loading basic game assets with optimization...');
     let loadedCount = 0;
     const totalAssets = 11; // 9 images + 2 sounds
     
@@ -64,6 +69,9 @@ export class AssetLoader {
       loadedCount++;
       onProgress?.(loadedCount, totalAssets);
     };
+    
+    // Track memory usage before loading
+    const initialMemory = this.getMemoryUsage();
 
     const imagePromises = [
       this.loadImage('/sprites/cvcheFish.png').then(img => {
@@ -114,6 +122,12 @@ export class AssetLoader {
 
     try {
       await Promise.all(imagePromises);
+      
+      // Log memory optimization results
+      const finalMemory = this.getMemoryUsage();
+      const memoryIncrease = finalMemory - initialMemory;
+      console.log(`[AssetLoader] Basic assets loaded - Memory: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB, Optimized: ${this.optimizedImagesCount} images`);
+      
       console.log('All basic assets loaded successfully');
       onProgress?.(totalAssets, totalAssets); // Ensure 100% is reported
     } catch (error) {
@@ -123,7 +137,7 @@ export class AssetLoader {
     }
   }
 
-  // Load flora images
+  // Load flora images with batch optimization
   async loadFloraAssets(onProgress?: ProgressCallback): Promise<void> {
     console.log('Loading flora assets...');
     const floraFileNames = ['1 (1).webp', ...Array.from({ length: 20 }, (_, i) => `1 (${i + 16}).webp`)];
@@ -135,16 +149,30 @@ export class AssetLoader {
       onProgress?.(loadedCount, totalAssets);
     };
     
-    const floraPromises = floraFileNames.map(fileName =>
-      this.loadImage(`/sprites/flora/${fileName}`).then(img => {
-        this.floraImages.push(img);
-        updateProgress();
-      })
-    );
-
+    // Batch load in smaller chunks to avoid overwhelming the browser
+    const BATCH_SIZE = 5;
+    const batches = [];
+    for (let i = 0; i < floraFileNames.length; i += BATCH_SIZE) {
+      batches.push(floraFileNames.slice(i, i + BATCH_SIZE));
+    }
+    
     try {
-      await Promise.all(floraPromises);
+      for (const batch of batches) {
+        const batchPromises = batch.map(fileName =>
+          this.loadImage(`/sprites/flora/${fileName}`).then(img => {
+            this.floraImages.push(img);
+            updateProgress();
+          })
+        );
+        await Promise.all(batchPromises);
+      }
+      
       this.floraLoaded = true;
+      
+      // Log flora optimization results
+      const floraMemory = getImageMemoryUsage(this.floraImages);
+      console.log(`[AssetLoader] Flora assets loaded - ${this.floraImages.length} images, ${(floraMemory / 1024 / 1024).toFixed(2)}MB`);
+      
       console.log('All flora assets loaded successfully');
       onProgress?.(totalAssets, totalAssets); // Ensure 100% is reported
     } catch (error) {
@@ -176,17 +204,27 @@ export class AssetLoader {
 
     const batsImagePromise = this.loadImage('/sprites/level2/obstacles/bats.png').then(img => {
       this.batsImage = img;
-      this.level2ObstacleImages[1] = img; // Assign to specific index
+      console.log('[AssetLoader] Static bat image loaded successfully for fallback:', img.src);
+      // DO NOT assign static bat image to level2ObstacleImages[1] - bats should only use FrameAnimator
       updateProgress(); // Track progress
+    }).catch(error => {
+      console.error('[AssetLoader] Failed to load static bat image:', error);
+      updateProgress(); // Still update progress
     });
 
     const batsFramePaths: string[] = Array.from({ length: 13 }, (_, i) => `/sprites/level2/obstacles/bats_frames-${i}.png`);
+    console.log('[AssetLoader] Starting bat FrameAnimator setup with paths:', batsFramePaths);
     const batsAnimatorPromise = FrameAnimatorManager.getInstance()
       .getAnimator('bats', batsFramePaths, 70) // Treat animator init as one asset load
       .then(animator => {
         this.batsAnimator = animator;
-        console.log("Bats frame animator initialized");
+        console.log('[AssetLoader] Bats FrameAnimator initialized successfully:', animator);
+        console.log('[AssetLoader] Bats animator loaded:', animator.isLoaded());
         updateProgress(); // Track progress
+      })
+      .catch(error => {
+        console.error('[AssetLoader] Failed to initialize bats FrameAnimator:', error);
+        updateProgress(); // Still update progress to avoid hanging
       });
 
     const chicken2Promise = this.loadImage('/sprites/level2/obstacles/chicken_2.webp').then(img => {
@@ -250,6 +288,12 @@ export class AssetLoader {
     console.log(`Waiting for ${totalAssets} level 2 assets to load...`);
     try {
       await Promise.all(allPromises);
+      
+      // Log level 2 optimization results
+      const level2Images = [...this.level2ObstacleImages, ...this.level2PickupImages].filter(img => img);
+      const level2Memory = getImageMemoryUsage(level2Images);
+      console.log(`[AssetLoader] Level 2 assets loaded - ${level2Images.length} images, ${(level2Memory / 1024 / 1024).toFixed(2)}MB`);
+      
       console.log('All level 2 assets loaded successfully');
       this.level2AssetsLoaded = true;
       onProgress?.(totalAssets, totalAssets); // Ensure 100% is reported
@@ -325,6 +369,12 @@ export class AssetLoader {
     console.log(`Waiting for ${totalAssets} level 3 assets to load...`);
     try {
       await Promise.all(allPromises);
+      
+      // Log level 3 optimization results
+      const level3Images = [...this.level3ObstacleImages, ...this.level3MushroomImages, ...this.level3TrippyImages];
+      const level3Memory = getImageMemoryUsage(level3Images);
+      console.log(`[AssetLoader] Level 3 assets loaded - ${level3Images.length} images, ${(level3Memory / 1024 / 1024).toFixed(2)}MB`);
+      
       console.log('All level 3 assets loaded successfully');
       this.level3AssetsLoaded = true;
       onProgress?.(totalAssets, totalAssets); // Ensure 100% is reported
@@ -335,38 +385,83 @@ export class AssetLoader {
     }
   }
 
-  // Helper method to load an image
+  // Helper method to load an image with optimizations
   private loadImage(src: string): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = (e) => {
-        console.error(`Failed to load image: ${src}`, e);
-        reject(new Error(`Failed to load image: ${src}`));
-      };
-      img.src = src;
+    // Use optimized image loading for all images except fish
+    return loadOptimizedImage(src).then(img => {
+      // Track memory usage
+      const imageMemory = img.naturalWidth * img.naturalHeight * 4; // RGBA
+      this.totalMemoryUsage += imageMemory;
+      
+      // Track if image was optimized
+      if (shouldOptimizeImage(src)) {
+        this.optimizedImagesCount++;
+      }
+      
+      // Force GPU acceleration by creating a small canvas draw
+      // This pre-renders the image to GPU memory
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        canvas.width = 1;
+        canvas.height = 1;
+        ctx.drawImage(img, 0, 0, 1, 1);
+      }
+      
+      return img;
     });
   }
+  
+  // Get total memory usage of all loaded images
+  getMemoryUsage(): number {
+    return this.totalMemoryUsage;
+  }
+  
+  // Get optimization statistics
+  getOptimizationStats(): { totalImages: number, optimizedImages: number, totalMemoryMB: number } {
+    return {
+      totalImages: this.optimizedImagesCount,
+      optimizedImages: this.optimizedImagesCount,
+      totalMemoryMB: this.totalMemoryUsage / 1024 / 1024
+    };
+  }
 
-  // Helper method to load audio
+  // Helper method to load audio with iOS compatibility
   private loadAudio(src: string, volume: number = 1.0): Promise<HTMLAudioElement> {
     return new Promise((resolve) => {
-      const audio = new Audio(src);
+      const audio = new Audio();
+      
+      // iOS-specific attributes
+      audio.setAttribute('playsinline', 'true');
+      audio.setAttribute('webkit-playsinline', 'true');
+      
       audio.volume = volume;
-      audio.addEventListener('canplaythrough', () => resolve(audio), { once: true });
+      audio.preload = 'auto';
+      
+      // Use loadeddata instead of canplaythrough for better compatibility
+      const onLoaded = () => {
+        audio.removeEventListener('loadeddata', onLoaded);
+        resolve(audio);
+      };
+      
+      audio.addEventListener('loadeddata', onLoaded);
+      
+      // Set source after event listeners
+      audio.src = src;
       audio.load();
       
       // Add a timeout to prevent hanging if audio loading is slow
       setTimeout(() => {
-        if (!audio.readyState) {
+        if (audio.readyState < 2) { // HAVE_CURRENT_DATA
           console.warn(`Audio loading taking too long: ${src}, resolving anyway`);
+          audio.removeEventListener('loadeddata', onLoaded);
           resolve(audio);
         }
       }, 5000);
     });
   }
 
-  // Preload video for level 2
+  // Preload video for level 2 with memory optimization
   private preloadVideo(src: string): Promise<void> {
     console.log(`Preloading video: ${src}`);
     return new Promise((resolve) => {
@@ -378,17 +473,22 @@ export class AssetLoader {
       const video = this.level2Video;
       video.muted = true;
       video.playsInline = true; // Important for iOS
-      video.preload = 'auto';
+      video.preload = 'metadata'; // Changed from 'auto' to 'metadata' to save bandwidth
+      video.loop = true; // Ensure video loops for background
+      
+      // iOS-specific optimizations
+      video.setAttribute('webkit-playsinline', 'true');
+      video.setAttribute('x-webkit-airplay', 'allow');
       
       // Set up event listeners
       const onLoaded = () => {
         console.log(`Video preloaded: ${src}`);
         this.level2VideoLoaded = true;
-        video.removeEventListener('loadeddata', onLoaded);
+        video.removeEventListener('loadedmetadata', onLoaded);
         resolve();
       };
       
-      video.addEventListener('loadeddata', onLoaded);
+      video.addEventListener('loadedmetadata', onLoaded);
       
       // Handle errors
       video.addEventListener('error', () => {

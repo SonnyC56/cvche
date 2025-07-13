@@ -17,19 +17,26 @@ export class FrameAnimator {
     this.frames = [];
     
     // Load all frames in parallel
-    const loadPromises = this.framePaths.map(path => {
+    const loadPromises = this.framePaths.map((path, index) => {
       return new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error(`Failed to load frame: ${path}`));
+        img.onload = () => {
+          console.log(`[FrameAnimator] Loaded frame ${index}: ${path}`);
+          resolve(img);
+        };
+        img.onerror = (error) => {
+          console.error(`[FrameAnimator] Failed to load frame ${index}: ${path}`, error);
+          reject(new Error(`Failed to load frame: ${path}`));
+        };
         img.src = path;
       });
     });
     
     try {
+      console.log(`[FrameAnimator] Loading ${this.framePaths.length} frames:`, this.framePaths);
       this.frames = await Promise.all(loadPromises);
       this.loaded = true;
-      console.log(`Loaded ${this.frames.length} animation frames`);
+      console.log(`[FrameAnimator] Successfully loaded ${this.frames.length} animation frames`);
     } catch (error) {
       console.error('Error loading animation frames:', error);
       throw error;
@@ -96,12 +103,27 @@ export class FrameAnimatorManager {
 
   // Get or create a FrameAnimator for a given key and set of frames
   async getAnimator(key: string, framePaths: string[], frameDelay?: number): Promise<FrameAnimator> {
+    console.log(`[FrameAnimatorManager] Getting animator for key: ${key}`);
+    
     if (!this.frameAnimators.has(key)) {
-      const animator = new FrameAnimator(framePaths, frameDelay);
-      await animator.load();
-      this.frameAnimators.set(key, animator);
+      console.log(`[FrameAnimatorManager] Creating new animator for ${key} with ${framePaths.length} frames`);
+      try {
+        const animator = new FrameAnimator(framePaths, frameDelay);
+        console.log(`[FrameAnimatorManager] Starting load for ${key}...`);
+        await animator.load();
+        console.log(`[FrameAnimatorManager] Successfully loaded animator for ${key}`);
+        this.frameAnimators.set(key, animator);
+      } catch (error) {
+        console.error(`[FrameAnimatorManager] Failed to load animator for ${key}:`, error);
+        throw error;
+      }
+    } else {
+      console.log(`[FrameAnimatorManager] Using existing animator for ${key}`);
     }
-    return this.frameAnimators.get(key)!;
+    
+    const animator = this.frameAnimators.get(key)!;
+    console.log(`[FrameAnimatorManager] Returning animator for ${key}, loaded:`, animator.isLoaded());
+    return animator;
   }
 }
 

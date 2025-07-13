@@ -1,4 +1,9 @@
 import { Bubble, LevelToggles } from '../../types';
+import { GradientCache, ColorCache } from '../../utils/objectPool';
+
+// Initialize caches for performance
+const gradientCache = new GradientCache();
+const colorCache = new ColorCache();
 
 /**
  * Draw the background of the game
@@ -36,21 +41,35 @@ export const drawBackground = (
   ctx.fillStyle = backgroundColorRef.current;
   ctx.fillRect(0, 0, width, height);
   
-  // Create radial gradient for glow effect
+  // Create radial gradient for glow effect using cache
   const gradientSize = Math.max(width, height) * (0.8 + amplitudeFactor * 0.4);
-  const gradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, gradientSize);
   const alpha = 0.15 + amplitudeFactor * 0.2;
-  gradient.addColorStop(0, `rgba(255,255,255,${alpha})`);
-  gradient.addColorStop(0.5, `rgba(255,255,255,${alpha * 0.5})`);
-  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  const gradient = gradientCache.getRadialGradient(
+    ctx,
+    width / 2, height / 2, 0,
+    width / 2, height / 2, gradientSize,
+    [
+      [0, `rgba(255,255,255,${alpha})`],
+      [0.5, `rgba(255,255,255,${alpha * 0.5})`],
+      [1, 'rgba(255,255,255,0)']
+    ]
+  );
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
   
-  // Create vignette effect
-  const vignetteGradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.7);
-  vignetteGradient.addColorStop(0, 'rgba(0,0,0,0)');
-  vignetteGradient.addColorStop(0.7, `rgba(0,0,0,${0.2 + amplitudeFactor * 0.1})`);
-  vignetteGradient.addColorStop(1, `rgba(0,0,0,${0.3 + amplitudeFactor * 0.15})`);
+  // Create vignette effect using cache
+  const vignetteAlpha1 = 0.2 + amplitudeFactor * 0.1;
+  const vignetteAlpha2 = 0.3 + amplitudeFactor * 0.15;
+  const vignetteGradient = gradientCache.getRadialGradient(
+    ctx,
+    width / 2, height / 2, 0,
+    width / 2, height / 2, width * 0.7,
+    [
+      [0, 'rgba(0,0,0,0)'],
+      [0.7, `rgba(0,0,0,${vignetteAlpha1})`],
+      [1, `rgba(0,0,0,${vignetteAlpha2})`]
+    ]
+  );
   ctx.fillStyle = vignetteGradient;
   ctx.fillRect(0, 0, width, height);
   
@@ -75,14 +94,17 @@ export const drawBackgroundPattern = (
   const height = ctx.canvas.height;
   const currentTime = Date.now();
   
-  // Create wave pattern at bottom
-  for (let x = 0; x <= width; x += 5) {
-    const timeOffset = currentTime / 1000;
-    const frequency = 4 + Math.sin(timeOffset) * 2 * (1 + amplitudeFactor * 0.5);
-    const y = height + Math.sin((x / width * frequency * Math.PI) + timeOffset) * (50 + amplitudeFactor * 70);
+  // Create wave pattern at bottom - optimized
+  const timeOffset = currentTime / 1000;
+  const baseFrequency = 4 + Math.sin(timeOffset) * 2 * (1 + amplitudeFactor * 0.5);
+  const waveAmplitude = 50 + amplitudeFactor * 70;
+  
+  // Reduce iteration frequency and bubble spawn rate
+  for (let x = 0; x <= width; x += 10) { // Changed from 5 to 10
+    const y = height + Math.sin((x / width * baseFrequency * Math.PI) + timeOffset) * waveAmplitude;
     
-    // Randomly add bubbles
-    if (Math.random() < 0.1) {
+    // Randomly add bubbles with reduced frequency
+    if (Math.random() < 0.05 && bgPatternBubblesRef.current.length < 50) { // Limit total bubbles
       bgPatternBubblesRef.current.push({
         x,
         y,
@@ -134,31 +156,20 @@ export const drawSpectrum = (
   
   for (let i = 0; i < dataArray.length; i++) {
     const barHeight = dataArray[i] / 2;
-    const gradient = ctx.createLinearGradient(0, ctx.canvas.height, 0, ctx.canvas.height - barHeight);
+    // Use color cache for performance
+    const { r, g, b } = colorCache.parseColor(waveColorRef.current);
+    const startColor = colorCache.toRGBA(r, g, b, 0.3);
+    const endColor = colorCache.toRGBA(r, g, b, 0);
     
-    let startColor = waveColorRef.current, endColor = waveColorRef.current;
-    
-    // Handle rgba color format
-    if (waveColorRef.current.startsWith('rgba')) {
-      const components = waveColorRef.current.match(/[\d.]+/g);
-      if (components && components.length >= 4) {
-        const [r, g, b] = components;
-        startColor = `rgba(${r}, ${g}, ${b}, 0.3)`;
-        endColor = `rgba(${r}, ${g}, ${b}, 0)`;
-      }
-    } 
-    // Handle hex color format
-    else if (waveColorRef.current.startsWith('#')) {
-      const hex = waveColorRef.current.slice(1);
-      const r = parseInt(hex.substring(0, 2), 16);
-      const g = parseInt(hex.substring(2, 4), 16);
-      const b = parseInt(hex.substring(4, 6), 16);
-      startColor = `rgba(${r}, ${g}, ${b}, 0.3)`;
-      endColor = `rgba(${r}, ${g}, ${b}, 0)`;
-    }
-    
-    gradient.addColorStop(0, startColor);
-    gradient.addColorStop(1, endColor);
+    const gradient = gradientCache.getLinearGradient(
+      ctx,
+      0, ctx.canvas.height,
+      0, ctx.canvas.height - barHeight,
+      [
+        [0, startColor],
+        [1, endColor]
+      ]
+    );
     
     ctx.fillStyle = gradient;
     ctx.fillRect(posX, ctx.canvas.height - barHeight, barWidth, barHeight);

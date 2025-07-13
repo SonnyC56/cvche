@@ -1,7 +1,8 @@
 import { LevelToggles, GameState, Level3TimedEvents } from '../../types';
-import { drawItem, getSpawnY } from './GameLoop';
+import { drawItem, getSpawnY, getSafeSpawnY } from './GameLoop';
 import { createParticles } from './ParticleEffects';
 import { getParticleColorFromStreak } from '../../utils/colorUtils';
+import { FrameAnimatorManager } from '../../utils/GifAnimator';
 
 // Declare global window properties
 declare global {
@@ -681,7 +682,8 @@ export const processLevel2Events = (
           height = 100;
           break;
         case 'bats':
-          img = level2ObstacleImages[1] || null;
+          // Bats use FrameAnimator only - no static image needed
+          img = null; // Will be handled by animator
           width = 100;
           height = 100;
           break;
@@ -692,17 +694,60 @@ export const processLevel2Events = (
           break;
       }
 
-      if (img) {
+      // Special handling for bats - they use FrameAnimator instead of static image
+      if (event.type === 'bats') {
+        console.log(`[DEBUG] Bat event triggered at ${audioTime.toFixed(1)}s`);
+        console.log(`[DEBUG] Global assetLoaderRef:`, !!window.assetLoaderRef);
+        console.log(`[DEBUG] AssetLoader current:`, !!window.assetLoaderRef?.current);
+        // Try to get the bats animator from AssetLoader first
+        let batsAnimator = window.assetLoaderRef?.current?.batsAnimator;
+        console.log(`[DEBUG] AssetLoader batsAnimator:`, !!batsAnimator, 'Loaded:', batsAnimator?.isLoaded?.());
+        
+        // If AssetLoader doesn't have it, try getting it directly from FrameAnimatorManager (synchronous)
+        if (!batsAnimator || !batsAnimator.isLoaded()) {
+          console.log(`[DEBUG] Trying direct access to FrameAnimatorManager...`);
+          try {
+            // Access the cached animator directly from the FrameAnimatorManager
+            const manager = FrameAnimatorManager.getInstance();
+            // Since we know the animator should be cached, access it directly
+            batsAnimator = manager['frameAnimators']?.get('bats');
+            console.log(`[DEBUG] Direct FrameAnimatorManager access:`, !!batsAnimator, 'Loaded:', batsAnimator?.isLoaded?.());
+          } catch (error) {
+            console.error(`[DEBUG] Failed to get animator from FrameAnimatorManager:`, error);
+          }
+        }
+        
+        if (batsAnimator && batsAnimator.isLoaded()) {
+          gameState.obstacles.push({
+            x: canvas.width,
+            y: getSafeSpawnY(canvas, height, gameState.obstacles, 120),
+            width,
+            height,
+            type: 'obstacle',
+            speed: 1 + Math.random() * 2,
+            rotation: 0, // Don't rotate animated bats
+            pickupImage: undefined, // No static image for animated bats
+            animator: batsAnimator // Use FrameAnimator for flapping wings
+          });
+        } else {
+          console.warn(`[DEBUG] Bat animator not ready at ${audioTime.toFixed(1)}s - skipping spawn until fixed`);
+        }
+      } else if (img) {
+        // Regular obstacles (bus, chickens) use static images
+        const spawnY = event.type === 'chicken' ? 
+          getSafeSpawnY(canvas, height, gameState.obstacles, 120) : 
+          getSpawnY(canvas, height);
+        
         gameState.obstacles.push({
           x: canvas.width,
-          y: getSpawnY(canvas, height),
+          y: spawnY,
           width,
           height,
           type: 'obstacle',
           speed: 1 + Math.random() * 2,
           rotation: event.type === 'bus' ? 0 : Math.random() * Math.PI * 2,
           pickupImage: img,
-          animator: event.type === 'bats' ? window.assetLoaderRef?.current?.batsAnimator : null // Use the bats animator for bat events
+          animator: null // No animator for regular obstacles
         });
       }
     }
@@ -1227,7 +1272,7 @@ export const spawnItemsOnBeat = (
         if (Math.random() < baseProbability) {
           gameState.obstacles.push({
             x: canvas.width,
-            y: getSpawnY(canvas, 60),
+            y: getSafeSpawnY(canvas, 100, gameState.obstacles, 120),
             width: 100,
             height: 100,
             type: 'obstacle',
@@ -1238,24 +1283,40 @@ export const spawnItemsOnBeat = (
         }
       }
 
-      // Bats obstacle (index 1)
-      if (levelToggles.showBats && level2ObstacleImages.length > 1 && level2ObstacleImages[1]) {
-        // Try to get the bats animator from the global AssetLoader instance
-        const batsAnimator = window.assetLoaderRef?.current?.batsAnimator;
+      // Bats obstacle - use FrameAnimator only
+      if (levelToggles.showBats) {
+        // Try to get the bats animator - first from AssetLoader, then from FrameAnimatorManager
+        let batsAnimator = window.assetLoaderRef?.current?.batsAnimator;
+        
+        // If AssetLoader doesn't have it, try FrameAnimatorManager directly
+        if (!batsAnimator || !batsAnimator.isLoaded()) {
+          try {
+            const manager = FrameAnimatorManager.getInstance();
+            batsAnimator = manager['frameAnimators']?.get('bats');
+          } catch (error) {
+            console.error(`[DEBUG] Beat-based: Failed to get animator from FrameAnimatorManager:`, error);
+          }
+        }
 
         if (Math.random() < baseProbability) {
-          // Normal bat spawning early in the song
-          gameState.obstacles.push({
-            x: canvas.width,
-            y: getSpawnY(canvas, 60),
-            width: 100,
-            height: 100,
-            type: 'obstacle',
-            speed: 1 + Math.random() * 2,
-            rotation: Math.random() * Math.PI * 2,
-            pickupImage: level2ObstacleImages[1],
-            animator: batsAnimator // Attach the GIF animator if available
-          });
+          console.log(`[DEBUG] Beat-based bat spawn - Animator available:`, !!batsAnimator, 'Loaded:', batsAnimator?.isLoaded?.());
+          
+          if (batsAnimator && batsAnimator.isLoaded()) {
+            // Use animated bat
+            gameState.obstacles.push({
+              x: canvas.width,
+              y: getSafeSpawnY(canvas, 100, gameState.obstacles, 120),
+              width: 100,
+              height: 100,
+              type: 'obstacle',
+              speed: 1 + Math.random() * 2,
+              rotation: 0, // Don't rotate animated bats
+              pickupImage: undefined, // No static image for animated bats
+              animator: batsAnimator // Use FrameAnimator for flapping wings
+            });
+          } else {
+            console.log(`[DEBUG] Beat-based bat animator not ready - skipping spawn`);
+          }
         }
       }
     }

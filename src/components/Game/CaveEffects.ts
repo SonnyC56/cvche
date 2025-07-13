@@ -1,5 +1,13 @@
 import { CaveState, Player, Particle } from '../../types';
 import { createParticles } from './ParticleEffects';
+import { TrigCache } from '../../utils/objectPool';
+
+// Initialize trig cache for performance
+const trigCache = new TrigCache();
+
+// Cache for cave boundary calculations
+let lastCaveUpdate = 0;
+const CAVE_UPDATE_INTERVAL = 50; // Update cave every 50ms instead of every frame
 
 /**
  * Update cave boundaries based on audio amplitude
@@ -12,7 +20,15 @@ export const updateCaveBoundaries = (
 ) => {
   if (!canvas) return;
   
-  const time = Date.now() / 1000;
+  const now = Date.now();
+  
+  // Only update cave boundaries at intervals, not every frame
+  if (now - lastCaveUpdate < CAVE_UPDATE_INTERVAL) {
+    return;
+  }
+  lastCaveUpdate = now;
+  
+  const time = now / 1000;
   cave.upper.points = [];
   cave.lower.points = [];
   
@@ -28,11 +44,11 @@ export const updateCaveBoundaries = (
   
   const centerY = canvas.height / 2;
   
-  // Create cave boundary points
-  for (let x = 0; x <= canvas.width; x += 10) {
-    const waveOffset = Math.sin(x / 150 + time * 3) * effectiveBeatAmplitude +
-      Math.sin(x / 75 + time * 2) * (effectiveBeatAmplitude * 0.5) +
-      Math.sin(x / 37.5 + time * 4) * (effectiveBeatAmplitude * 0.25);
+  // Create cave boundary points with reduced frequency and cached trig
+  for (let x = 0; x <= canvas.width; x += 20) { // Increased from 10 to 20
+    const waveOffset = trigCache.sin(x / 150 + time * 3) * effectiveBeatAmplitude +
+      trigCache.sin(x / 75 + time * 2) * (effectiveBeatAmplitude * 0.5) +
+      trigCache.sin(x / 37.5 + time * 4) * (effectiveBeatAmplitude * 0.25);
     
     const curveY = centerY + waveOffset;
     
@@ -71,12 +87,12 @@ export const drawCaveEffect = (
   
   if (isLevel2) {
     caveFillOpacity = isWarningPeriod
-      ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 100)) // Only animate during warning
+      ? 0.5 + 0.5 * Math.abs(trigCache.sin(Date.now() / 100)) // Only animate during warning
       : 0.9; // Fixed opacity for level 2 outside warning period
   } else {
     // Original behavior for level 1
     caveFillOpacity = isWarningPeriod
-      ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 100))
+      ? 0.5 + 0.5 * Math.abs(trigCache.sin(Date.now() / 100))
       : 0.75;
   }
   
